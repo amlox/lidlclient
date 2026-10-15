@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "lidlclient",
+	"version": "${version}",
+	"name": "Lidl Client",
+	"description": "lowk hate the gews",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/lidlclient/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.lidl.lidlclient.LidlClient"
+		],
+		"fabric-datagen": [
+			"net.lidl.lidlclient.LidlClientDataGenerator"
+		],
+		"client": [
+			"net.lidl.lidlclient.GuiTest.GuiTest",
+			"net.lidl.lidlclient.PartyCMDS.PartyCommands"
+		],
+		"config": [
+			"net.lidl.lidlclient.Config.Config"
+		]
+	},
+	"mixins": [
+		"lidlclient.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.1.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

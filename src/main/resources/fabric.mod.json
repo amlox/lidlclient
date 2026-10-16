@@ -24,7 +24,8 @@
     "client": [
       "net.lidl.lidlclient.PartyCMDS.PartyCommands",
       "net.lidl.lidlclient.slots.Slots",
-      "net.lidl.lidlclient.gui.ModuleFramework"
+      "net.lidl.lidlclient.gui.ModuleFramework",
+      "net.lidl.lidlclient.prank.PuzzleFailPrank"
     ]
   },
   "mixins": [

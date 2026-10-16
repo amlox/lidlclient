@@ -12,7 +12,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 
 import java.util.Locale;
 
-/** One local prank ten seconds after the local player's puzzle failure. */
+/** One local prank ten seconds after !ban in party, co-op, or whisper chat. */
 public final class PuzzleFailPrank implements ClientModInitializer {
     private static final long DELAY_NS = 10_000_000_000L;
     private ClientPacketListener pendingConnection;
@@ -26,9 +26,21 @@ public final class PuzzleFailPrank implements ClientModInitializer {
         return host.equals("hypixel.net") || host.endsWith(".hypixel.net");
     }
 
+    private void receiveCommand(Component message) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || !isHypixel(client)
+                || pendingConnection != null || !ChatBanTrigger.matches(message.getString())) return;
+        pendingConnection = client.getConnection();
+        queuedAt = System.nanoTime();
+        preview = false;
+        LidlClient.LOGGER.info("Chat ban prank queued.");
+        client.player.sendSystemMessage(Component.literal(
+                "[LidlClient] !ban received. Disconnecting in 10 seconds."));
+    }
+
     @Override
     public void onInitializeClient() {
-        LidlClient.LOGGER.info("Puzzle fail prank initialized; use /puzzleprank test to preview.");
+        LidlClient.LOGGER.info("Chat ban prank initialized; use /puzzleprank test to preview.");
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("puzzleprank")
                         .then(ClientCommands.literal("test").executes(context -> {
@@ -42,18 +54,10 @@ public final class PuzzleFailPrank implements ClientModInitializer {
                         }))));
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            Minecraft client = Minecraft.getInstance();
-            if (overlay || client.player == null || !isHypixel(client)
-                    || pendingConnection != null) return;
-            if (PuzzleFailTrigger.matches(message.getString(), client.player.getName().getString())) {
-                pendingConnection = client.getConnection();
-                queuedAt = System.nanoTime();
-                preview = false;
-                LidlClient.LOGGER.info("Puzzle fail prank queued from: {}", message.getString());
-                client.player.sendSystemMessage(Component.literal(
-                        "[LidlClient] Puzzle fail detected. Prank in 10 seconds."));
-            }
+            if (!overlay) receiveCommand(message);
         });
+        ClientReceiveMessageEvents.CHAT.register(
+                (message, signedMessage, sender, params, timestamp) -> receiveCommand(message));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (pendingConnection == null) return;

@@ -1,6 +1,7 @@
 package net.lidl.lidlclient.gui;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.lidl.lidlclient.green.GreenScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.minecraft.client.Minecraft;
@@ -8,6 +9,7 @@ import net.minecraft.client.Minecraft;
 /** Permanent client entry point for the module menu. */
 public final class ModuleFramework implements ClientModInitializer {
     @Override public void onInitializeClient() {
+        GreenScreen.initialize();
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("lidl").executes(context -> {
                     Minecraft client = Minecraft.getInstance();

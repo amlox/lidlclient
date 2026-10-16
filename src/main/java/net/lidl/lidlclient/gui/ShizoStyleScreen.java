@@ -15,26 +15,19 @@ public class ShizoStyleScreen extends Screen {
     // COLORS
     // ==============================
 
-    private static final int PINK = 0xFFFF43A5;
     private static final int WHITE = 0xFFFFFFFF;
-    private static final int MUTED = 0xFFBDA8B5;
+    private static final int MUTED = 0xFFBBBBBB;
 
     // Transparent backgrounds
-    private static final int MAIN_BG = 0x80100D12;
+    private static final int MAIN_BG = 0x6008080A;
     private static final int SIDEBAR_BG = 0x44080808;
-    private static final int CARD_BG = 0x66151015;
-    private static final int ENABLED_BG = 0x8042162E;
-    private static final int OUTER_GLOW = 0x223E142E;
-
-    // ==============================
-    // GUI SIZE
-    // ==============================
-
-    private static final int DESIGN_WIDTH = 1000;
-    private static final int DESIGN_HEIGHT = 570;
-
-    private static final float WIDTH_RATIO = 0.60f;
-    private static final float HEIGHT_RATIO = 0.64f;
+    private static final int CARD_BG = 0x4008080A;
+    private static final int ENABLED_BG = 0x60404048;
+    // Tune panel opacity with the alpha byte of MAIN_BG.
+    private static final long SLIDE_DURATION_NS = 500_000_000L;
+    private final long openedAt = System.nanoTime();
+    private final String[] categories = {"General", "Social"};
+    private String selectedCategory = "General";
 
     private int guiX;
     private int guiY;
@@ -65,7 +58,7 @@ public class ShizoStyleScreen extends Screen {
         modules.add(new GuiModule(
                 "PartyCMDS",
                 "Party commands",
-                "General",
+                "Social",
                 () -> ModuleController.setPartyCommandsEnabled(true),
                 () -> ModuleController.setPartyCommandsEnabled(false)
         ));
@@ -106,19 +99,12 @@ public class ShizoStyleScreen extends Screen {
 
     private void calculateGuiLayout() {
 
-        float targetWidth = width * WIDTH_RATIO;
-        float targetHeight = height * HEIGHT_RATIO;
+        guiWidth = Math.min(width, Math.max(200, Math.min(300, Math.round(width * 0.32f))));
+        guiHeight = height;
+        guiScale = guiWidth / 300.0f;
+        guiY = 0;
+        updateSlide();
 
-        guiScale = Math.min(
-                targetWidth / DESIGN_WIDTH,
-                targetHeight / DESIGN_HEIGHT
-        );
-
-        guiWidth = Math.round(DESIGN_WIDTH * guiScale);
-        guiHeight = Math.round(DESIGN_HEIGHT * guiScale);
-
-        guiX = (width - guiWidth) / 2;
-        guiY = (height - guiHeight) / 2;
     }
 
     // ==============================
@@ -195,25 +181,32 @@ public class ShizoStyleScreen extends Screen {
             int borderColor,
             int backgroundColor
     ) {
+        if (rectWidth <= 0 || rectHeight <= 0) return;
         thickness = Math.max(1, thickness);
+        radius = Math.max(0, Math.min(radius, Math.min(rectWidth, rectHeight) / 2));
+        // Draw only the border pixels: a solid rectangle behind a translucent
+        // interior would make the entire button opaque.
+        roundedRect(graphics, x, y, rectWidth, rectHeight, radius, backgroundColor);
+        for (int row = 0; row < rectHeight; row++) {
+            int outer = cornerInset(row, rectHeight, radius);
+            int left = x + outer;
+            int right = x + rectWidth - outer;
+            if (row < thickness || row >= rectHeight - thickness) {
+                graphics.fill(left, y + row, right, y + row + 1, borderColor);
+            } else {
+                int inner = thickness + cornerInset(row - thickness,
+                        rectHeight - 2 * thickness, Math.max(0, radius - thickness));
+                graphics.fill(left, y + row, x + inner, y + row + 1, borderColor);
+                graphics.fill(x + rectWidth - inner, y + row, right, y + row + 1, borderColor);
+            }
+        }
+    }
 
-        roundedRect(
-                graphics,
-                x, y,
-                rectWidth, rectHeight,
-                radius,
-                borderColor
-        );
-
-        roundedRect(
-                graphics,
-                x + thickness,
-                y + thickness,
-                rectWidth - thickness * 2,
-                rectHeight - thickness * 2,
-                Math.max(0, radius - thickness),
-                backgroundColor
-        );
+    private int cornerInset(int row, int height, int radius) {
+        if (radius == 0) return 0;
+        double dy = row < radius ? radius - row - 0.5
+                : (row >= height - radius ? row - (height - radius) + 0.5 : 0);
+        return dy == 0 ? 0 : radius - (int) Math.sqrt(Math.max(0, radius * radius - dy * dy));
     }
 
     // ==============================
@@ -225,28 +218,53 @@ public class ShizoStyleScreen extends Screen {
         calculateGuiLayout();
     }
 
-    // The GUI draws its own buttons instead of Minecraft's gray widgets.
-    // Keep the original module card coordinates for rendering and clicks.
+    private void updateSlide() {
+        double progress = Math.min(1.0, Math.max(0.0,
+                (System.nanoTime() - openedAt) / (double) SLIDE_DURATION_NS));
+        double eased = 1.0 - Math.pow(1.0 - progress, 3);
+        guiX = (int) Math.round(-(guiWidth + scaled(12)) * (1.0 - eased));
+    }
+
+    private boolean visible(int index) {
+        return modules.get(index).tab.equals(selectedCategory);
+    }
+
     private int moduleX() {
-        return guiX + scaled(210);
+        return guiX + scaled(62);
     }
 
     private int dropdownHeight(int index) {
-        // Slots has two settings plus the keybind row.
         return scaled(index == 0 ? 126 : 42);
     }
 
     private int moduleY(int index) {
-        return guiY + scaled(110) + index * scaled(62)
-                + (expandedModule >= 0 && expandedModule < index ? dropdownHeight(expandedModule) + scaled(7) : 0);
+        int row = 0;
+        for (int i = 0; i < index; i++) {
+            if (visible(i)) row++;
+        }
+        return guiY + scaled(38) + row * scaled(62)
+                + (expandedModule >= 0 && visible(expandedModule) && expandedModule < index
+                ? dropdownHeight(expandedModule) + scaled(7) : 0);
     }
 
     private int moduleWidth() {
-        return scaled(765);
+        return guiWidth - scaled(90);
     }
 
     private int moduleHeight() {
         return scaled(48);
+    }
+
+    // Nested low-alpha strips create a soft glow without a shader dependency.
+    private void luminousLine(GuiGraphicsExtractor graphics, int x, int y, int h) {
+        for (int radius = scaled(9); radius >= 1; radius--) {
+            int alpha = Math.max(2, 24 / radius);
+            graphics.fill(x - radius, y, x + radius + 1, y + h,
+                    (alpha << 24) | 0xFFFFFF);
+        }
+        graphics.fill(x, y, x + 1, y + h, WHITE);
+        graphics.fill(x - scaled(4), y, x - scaled(3), y + h, 0x88777777);
+        graphics.fill(x + scaled(3), y, x + scaled(4), y + h, 0xAAFFFFFF);
     }
 
     private boolean hovering(double mouseX, double mouseY,
@@ -266,119 +284,35 @@ public class ShizoStyleScreen extends Screen {
             int mouseY,
             float delta
     ) {
+        updateSlide();
         int x = guiX;
-        int y = guiY;
         int w = guiWidth;
-        int h = guiHeight;
+        graphics.fill(x, 0, x + w, guiHeight, MAIN_BG);
+        graphics.fill(x, 0, x + scaled(50), guiHeight, SIDEBAR_BG);
+        graphics.fill(x + scaled(50), 0, x + scaled(50) + 1, guiHeight, 0xAAFFFFFF);
+        luminousLine(graphics, x + w - scaled(5), 0, guiHeight);
 
-        int mainRadius = scaled(20);
+        for (int category = 0; category < categories.length; category++) {
+            int sideX = x + scaled(6);
+            int sideY = scaled(38) + category * scaled(62);
+            int size = scaled(36);
+            boolean active = categories[category].equals(selectedCategory);
+            boolean hovered = hovering(mouseX, mouseY, sideX, sideY, size, size);
+            roundedBorder(graphics, sideX, sideY, size, size, scaled(6), 1,
+                    active || hovered ? WHITE : 0xFF888888,
+                    active ? ENABLED_BG : CARD_BG);
+            String label = categories[category].substring(0, 1);
+            graphics.text(font, label, sideX + (size - font.width(label)) / 2,
+                    sideY + (size - font.lineHeight) / 2, WHITE, true);
+            if (hovered) {
+                graphics.text(font, categories[category], moduleX(), scaled(15), WHITE, true);
+            }
+        }
 
-
-        // Pink outer glow
-        roundedRect(
-                graphics,
-                x - scaled(5),
-                y - scaled(5),
-                w + scaled(10),
-                h + scaled(10),
-                mainRadius + scaled(5),
-                OUTER_GLOW
-        );
-
-        // Transparent rounded main window
-        roundedBorder(
-                graphics,
-                x, y,
-                w, h,
-                mainRadius,
-                Math.max(1, scaled(2)),
-                0xFF9E286A,
-                MAIN_BG
-        );
-
-        // Transparent sidebar
-        roundedRect(
-                graphics,
-                x + scaled(2),
-                y + scaled(2),
-                scaled(190),
-                h - scaled(4),
-                Math.max(1, mainRadius - scaled(2)),
-                SIDEBAR_BG
-        );
-
-        // Sidebar separator
-        graphics.fill(
-                x + scaled(190),
-                y + scaled(20),
-                x + scaled(191),
-                y + h - scaled(20),
-                0x99472039
-        );
-
-        // LidlClient title
-        graphics.text(
-                font,
-                "LidlClient",
-                x + scaled(20),
-                y + scaled(24),
-                PINK,
-                true
-        );
-
-        // General heading
-        graphics.text(
-                font,
-                "General",
-                x + scaled(210),
-                y + scaled(65),
-                WHITE,
-                true
-        );
-
-        // Divider under General
-        graphics.fill(
-                x + scaled(210),
-                y + scaled(95),
-                x + w - scaled(25),
-                y + scaled(97),
-                0xAA6A4659
-        );
-
-        // Custom General sidebar button, replacing the vanilla gray one.
-        int sideX = x + scaled(12);
-        int sideY = y + scaled(55);
-        int sideW = scaled(170);
-        int sideH = scaled(28);
-
-        roundedRect(
-                graphics,
-                sideX, sideY,
-                sideW, sideH,
-                scaled(7),
-                0x8042162E
-        );
-
-        graphics.fill(
-                sideX + scaled(3),
-                sideY + scaled(5),
-                sideX + scaled(5),
-                sideY + sideH - scaled(5),
-                PINK
-        );
-
-        graphics.text(
-                font,
-                "General",
-                sideX + scaled(17),
-                sideY + (sideH - font.lineHeight) / 2,
-                WHITE,
-                true
-        );
-
-        // Original card positions, now with custom labels and toggle switches.
+        // Category-filtered module buttons and their settings.
         for (int i = 0; i < modules.size(); i++) {
 
+            if (!visible(i)) continue;
             GuiModule module = modules.get(i);
             int cardX = moduleX();
             int cardY = moduleY(i);
@@ -391,90 +325,48 @@ public class ShizoStyleScreen extends Screen {
                     cardW, cardH
             );
 
-            // Draw the module and its dropdown as ONE continuous square panel.
-            // Only the main GUI background has rounded corners.
-            int border = Math.max(1, scaled(1));
+            int border = 1;
             boolean expanded = expandedModule == i;
             int fullHeight = cardH + (expanded ? dropdownHeight(i) : 0);
-            int panelBorder = module.enabled ? PINK
-                    : (hovered ? 0xCCB35A8A : 0x8862515D);
-            int panelBackground = module.enabled ? ENABLED_BG
-                    : (hovered ? 0x99502A41 : CARD_BG);
-
-            graphics.fill(cardX, cardY,
-                    cardX + cardW, cardY + fullHeight, panelBorder);
-            graphics.fill(cardX + border, cardY + border,
-                    cardX + cardW - border, cardY + fullHeight - border,
-                    panelBackground);
-
-            int labelX = cardX + scaled(20);
-
-            graphics.text(
-                    font,
-                    module.name,
-                    labelX,
-                    cardY + scaled(10),
-                    WHITE,
-                    true
-            );
-
-            graphics.text(
-                    font,
-                    module.description,
-                    labelX,
-                    cardY + scaled(27),
-                    MUTED,
-                    true
-            );
-
-            // Square ON/OFF switch matching the module cards.
-            int switchW = scaled(90);
-            int switchH = scaled(28);
-            int switchX = cardX + cardW - switchW - scaled(14);
-            int switchY = cardY + (cardH - switchH) / 2;
-
-            graphics.fill(switchX, switchY,
-                    switchX + switchW, switchY + switchH,
-                    module.enabled ? 0xFFB92F79 : 0xAA302832);
-
-            graphics.fill(switchX + scaled(2), switchY + scaled(2),
-                    switchX + switchW - scaled(2), switchY + switchH - scaled(2),
-                    module.enabled ? 0xFF8C245F : 0xAA201C25);
-
-            String state = module.enabled ? "ON" : "OFF";
-
-            graphics.text(
-                    font,
-                    state,
-                    switchX + (switchW - font.width(state)) / 2,
-                    switchY + (switchH - font.lineHeight) / 2,
-                    module.enabled ? WHITE : MUTED,
-                    true
-            );
+            if (module.enabled || hovered) {
+                for (int spread = scaled(4); spread >= 1; spread--) {
+                    roundedRect(graphics, cardX - spread, cardY - spread,
+                            cardW + spread * 2, fullHeight + spread * 2,
+                            scaled(8) + spread, 0x08FFFFFF);
+                }
+            }
+            roundedBorder(graphics, cardX, cardY, cardW, fullHeight,
+                    scaled(8), border, module.enabled || hovered ? WHITE : 0xFF999999,
+                    module.enabled ? ENABLED_BG : CARD_BG);
+            int labelX = cardX + scaled(10);
+            graphics.text(font, module.name,
+                    cardX + (cardW - font.width(module.name)) / 2,
+                    cardY + (cardH - font.lineHeight) / 2,
+                    module.enabled ? WHITE : MUTED, true);
 
             // Expanded settings share the module's background colour.
             if (expanded) {
                 int dropY = cardY + cardH;
                 int rowH = scaled(42);
-                int rightX = cardX + cardW - scaled(18);
+                int rightX = cardX + cardW - scaled(10);
 
                 if (i == 0) {
                     graphics.fill(cardX + scaled(15), dropY,
                             cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
-                    graphics.text(font, "Mute chat messages", labelX,
+                    graphics.text(font, "Mute chat", labelX,
                             dropY + scaled(15), WHITE, true);
                     String muted = Slots.isMuteMessages() ? "ON" : "OFF";
                     graphics.text(font, muted, rightX - font.width(muted),
-                            dropY + scaled(15), Slots.isMuteMessages() ? PINK : MUTED, true);
+                            dropY + scaled(15), Slots.isMuteMessages() ? WHITE : MUTED, true);
 
                     dropY += rowH;
                     graphics.fill(cardX + scaled(15), dropY,
                             cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
-                    graphics.text(font, "Show bet / balance text", labelX,
+                    graphics.text(font, "Bet / balance", labelX,
                             dropY + scaled(15), WHITE, true);
                     String show = Slots.isShowUi() ? "ON" : "OFF";
                     graphics.text(font, show, rightX - font.width(show),
-                            dropY + scaled(15), Slots.isShowUi() ? PINK : MUTED, true);
+                            dropY + scaled(15), Slots.isShowUi() ? WHITE : MUTED, true);
                     dropY += rowH;
                 }
 
@@ -500,7 +392,18 @@ public class ShizoStyleScreen extends Screen {
     // Left-click: toggle. Right-click: open/close module dropdown.
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        updateSlide();
+        for (int category = 0; category < categories.length; category++) {
+            if (event.button() == 0 && hovering(event.x(), event.y(),
+                    guiX + scaled(6), scaled(38) + category * scaled(62),
+                    scaled(36), scaled(36))) {
+                selectedCategory = categories[category];
+                expandedModule = -1;
+                return true;
+            }
+        }
         for (int i = 0; i < modules.size(); i++) {
+            if (!visible(i)) continue;
             if (hovering(event.x(), event.y(),
                     moduleX(), moduleY(i), moduleWidth(), moduleHeight())) {
                 if (event.button() == 0) {

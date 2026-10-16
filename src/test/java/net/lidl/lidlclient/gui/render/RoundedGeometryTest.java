@@ -5,6 +5,25 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RoundedGeometryTest {
+    @Test void emittedFanAndRingMatchVanillaGuiQuadWinding() {
+        var vertices = new java.util.ArrayList<float[]>();
+        var mesh = new RoundedGeometry.MeshBuilder((x, y, color) -> vertices.add(new float[]{x, y}));
+        float[] inner = RoundedGeometry.contour(0, 0, 120, 38, 8, 0.25f, 12);
+        float[] outer = RoundedGeometry.contour(0, 0, 120, 38, 8, -0.25f, 12);
+        mesh.fan(inner, 0xFFFFFFFF);
+        mesh.ring(outer, inner, 0x00FFFFFF, 0xFFFFFFFF);
+        assertEquals(0, vertices.size() % 4);
+        boolean hasArea = false;
+        for (int i = 0; i < vertices.size(); i += 4) {
+            float[] a = vertices.get(i), b = vertices.get(i + 1), c = vertices.get(i + 2);
+            double area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+            // Minecraft's GUI quads run top-left, bottom-left, bottom-right, top-right.
+            assertTrue(area <= 0.001, "A reversed triangle can disappear with GUI face culling");
+            hasArea |= area < -0.001;
+        }
+        assertTrue(hasArea);
+    }
+
     @Test void outlinePreservesFractionalCoordinatesAndMatchesFramebufferFringe() {
         for (int guiScale : new int[]{1, 2, 3, 4, 6}) {
             float pixel = 1f / guiScale;

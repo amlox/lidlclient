@@ -40,7 +40,7 @@ public final class SmoothRenderer {
     public static void line(GuiGraphicsExtractor graphics, float x, float y, float height,
                             float thickness, int color, float glow, ScreenRectangle clip) {
         panel(graphics, x, y, thickness, height, thickness / 2,
-                color, color, thickness / 2, glow, clip);
+                color, color, 0, glow, clip);
     }
 
     private static float glowAlpha(float t) {
@@ -51,47 +51,6 @@ public final class SmoothRenderer {
         return (Math.clamp(Math.round((color >>> 24) * multiplier), 0, 255) << 24) | (color & 0xFFFFFF);
     }
 
-    private static final class MeshBuilder {
-        private final VertexConsumer consumer;
-        private final Matrix3x2f pose;
-
-        MeshBuilder(VertexConsumer consumer, Matrix3x2f pose) {
-            this.consumer = consumer;
-            this.pose = pose;
-        }
-
-        private void vertex(float x, float y, int color) {
-            consumer.addVertexWith2DPose(pose, x, y).setColor(color);
-        }
-
-        void fan(float[] points, int color) {
-            float cx = 0, cy = 0;
-            int count = points.length / 2;
-            for (int i = 0; i < points.length; i += 2) { cx += points[i]; cy += points[i + 1]; }
-            cx /= count;
-            cy /= count;
-            for (int i = 0; i < count; i++) {
-                int next = (i + 1) % count;
-                // A degenerate quad is a triangle in the standard batched GUI pipeline.
-                vertex(cx, cy, color);
-                vertex(points[2 * i], points[2 * i + 1], color);
-                vertex(points[2 * next], points[2 * next + 1], color);
-                vertex(points[2 * next], points[2 * next + 1], color);
-            }
-        }
-
-        void ring(float[] outer, float[] inner, int outerColor, int innerColor) {
-            int count = outer.length / 2;
-            for (int i = 0; i < count; i++) {
-                int next = (i + 1) % count;
-                vertex(outer[2 * i], outer[2 * i + 1], outerColor);
-                vertex(outer[2 * next], outer[2 * next + 1], outerColor);
-                vertex(inner[2 * next], inner[2 * next + 1], innerColor);
-                vertex(inner[2 * i], inner[2 * i + 1], innerColor);
-            }
-        }
-    }
-
     private record MeshState(Matrix3x2f pose, ScreenRectangle bounds, ScreenRectangle scissorArea,
                              float x, float y, float width, float height, float radius,
                              int fill, int border, float stroke, float glow, float pixel)
@@ -99,7 +58,8 @@ public final class SmoothRenderer {
         @Override public RenderPipeline pipeline() { return RenderPipelines.GUI; }
         @Override public TextureSetup textureSetup() { return TextureSetup.noTexture(); }
         @Override public void buildVertices(VertexConsumer consumer) {
-            var mesh = new MeshBuilder(consumer, pose);
+            var mesh = new RoundedGeometry.MeshBuilder((vx, vy, color) ->
+                    consumer.addVertexWith2DPose(pose, vx, vy).setColor(color));
             int segments = Math.clamp((int) Math.ceil(Math.sqrt(radius / pixel) * 3), 6, 24);
 
             if (glow > 0) {

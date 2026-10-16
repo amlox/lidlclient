@@ -24,4 +24,42 @@ final class RoundedGeometry {
         return points;
     }
 
+    @FunctionalInterface
+    interface VertexSink { void vertex(float x, float y, int color); }
+
+    static final class MeshBuilder {
+        private final VertexSink sink;
+
+        MeshBuilder(VertexSink sink) { this.sink = sink; }
+
+        private void vertex(float x, float y, int color) { sink.vertex(x, y, color); }
+
+        void fan(float[] points, int color) {
+            float cx = 0, cy = 0;
+            int count = points.length / 2;
+            for (int i = 0; i < points.length; i += 2) { cx += points[i]; cy += points[i + 1]; }
+            cx /= count;
+            cy /= count;
+            for (int i = 0; i < count; i++) {
+                int next = (i + 1) % count;
+                // A degenerate quad is a triangle in the standard batched GUI pipeline.
+                vertex(cx, cy, color);
+                vertex(points[2 * next], points[2 * next + 1], color);
+                vertex(points[2 * i], points[2 * i + 1], color);
+                vertex(points[2 * i], points[2 * i + 1], color);
+            }
+        }
+
+        void ring(float[] outer, float[] inner, int outerColor, int innerColor) {
+            int count = outer.length / 2;
+            for (int i = 0; i < count; i++) {
+                int next = (i + 1) % count;
+                vertex(outer[2 * i], outer[2 * i + 1], outerColor);
+                vertex(inner[2 * i], inner[2 * i + 1], innerColor);
+                vertex(inner[2 * next], inner[2 * next + 1], innerColor);
+                vertex(outer[2 * next], outer[2 * next + 1], outerColor);
+            }
+        }
+    }
+
 }

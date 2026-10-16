@@ -1,436 +1,289 @@
 package net.lidl.lidlclient.gui;
 
+import net.lidl.lidlclient.gui.render.SmoothRenderer;
+import net.lidl.lidlclient.gui.settings.BooleanSetting;
+import net.lidl.lidlclient.gui.settings.ModuleSetting;
+import net.lidl.lidlclient.gui.settings.NumberSetting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.lidl.lidlclient.slots.Slots;
-import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 
+/** Layout and widgets depend only on module declarations, never feature names or indices. */
 public class ShizoStyleScreen extends Screen {
-
-    // ==============================
-    // COLORS
-    // ==============================
-
-    private static final int WHITE = 0xFFFFFFFF;
-    private static final int MUTED = 0xFFBBBBBB;
-
-    // Transparent backgrounds
-    private static final int MAIN_BG = 0x6008080A;
-    private static final int SIDEBAR_BG = 0x44080808;
-    private static final int CARD_BG = 0x4008080A;
-    private static final int ENABLED_BG = 0x60404048;
-    // Tune panel opacity with the alpha byte of MAIN_BG.
     private static final long SLIDE_DURATION_NS = 500_000_000L;
+    private static final int PANEL = 0x6008080A;
+    private static final int WHITE = 0xFFF4F4FA;
+    private static final int MUTED = 0xFFABAAB5;
+    private static final int HEADER = 38;
+    private static final int SETTING = 34;
+    private static final int GAP = 10;
+    private static final int TOP = 40;
+    private static final int BOTTOM = 24;
+    private static final int RAIL = 48;
+    private static final int CATEGORY_PITCH = 46;
+
+    private final List<GuiModule> modules;
+    private final List<String> categories;
     private final long openedAt = System.nanoTime();
-    private final String[] categories = {"General", "Social"};
-    private String selectedCategory = "General";
+    private String selectedCategory;
+    private String expandedId;
+    private float panelX;
+    private int panelWidth;
+    private double scroll;
+    private double categoryScroll;
+    private NumberSetting draggingNumber;
+    private boolean draggingScrollbar;
+    private double scrollbarGrab;
 
-    private int guiX;
-    private int guiY;
-    private int guiWidth;
-    private int guiHeight;
-    private float guiScale;
+    public ShizoStyleScreen() { this(ModuleRegistry.modules()); }
 
-    // ==============================
-    // MODULES
-    // ==============================
-
-    private final List<GuiModule> modules = new ArrayList<>();
-
-    // Right-click a module to expand its settings. Only one opens at a time.
-    private int expandedModule = -1;
-
-    public ShizoStyleScreen() {
+    /** Also useful for custom registries and stress-testing large menus. */
+    public ShizoStyleScreen(List<GuiModule> modules) {
         super(Component.literal("LidlClient"));
-
-        modules.add(new GuiModule(
-                "Slots",
-                "Slots module",
-                "General",
-                () -> ModuleController.setSlotsEnabled(true),
-                () -> ModuleController.setSlotsEnabled(false)
-        ));
-
-        modules.add(new GuiModule(
-                "PartyCMDS",
-                "Party commands",
-                "Social",
-                () -> ModuleController.setPartyCommandsEnabled(true),
-                () -> ModuleController.setPartyCommandsEnabled(false)
-        ));
-
-        modules.add(new GuiModule(
-                "Circle",
-                "Circle module",
-                "General",
-                () -> ModuleController.setCircleEnabled(true),
-                () -> ModuleController.setCircleEnabled(false)
-        ));
-
-        // Restore module states when GUI opens
-        for (GuiModule module : modules) {
-            switch (module.name) {
-                case "Slots" ->
-                        module.enabled =
-                                ModuleController.isSlotsEnabled();
-
-                case "PartyCMDS" ->
-                        module.enabled =
-                                ModuleController.isPartyCommandsEnabled();
-
-                case "Circle" ->
-                        module.enabled =
-                                ModuleController.isCircleEnabled();
-            }
-        }
+        this.modules = ModuleRegistry.validate(modules);
+        this.categories = ModuleLayout.categories(this.modules);
+        this.selectedCategory = categories.isEmpty() ? "" : categories.getFirst();
     }
 
-    // ==============================
-    // SCALING
-    // ==============================
-
-    private int scaled(float value) {
-        return Math.max(1, Math.round(value * guiScale));
-    }
-
-    private void calculateGuiLayout() {
-
-        guiWidth = Math.min(width, Math.max(200, Math.min(300, Math.round(width * 0.32f))));
-        guiHeight = height;
-        guiScale = guiWidth / 300.0f;
-        guiY = 0;
+    @Override protected void init() {
+        panelWidth = Math.min(width, Math.max(220, Math.min(300, Math.round(width * 0.32f))));
+        clampScroll();
         updateSlide();
-
-    }
-
-    // ==============================
-    // ROUNDED RECTANGLES
-    // ==============================
-
-    private void roundedRect(
-            GuiGraphicsExtractor graphics,
-            int x,
-            int y,
-            int rectWidth,
-            int rectHeight,
-            int radius,
-            int color
-    ) {
-        if (rectWidth <= 0 || rectHeight <= 0) {
-            return;
-        }
-
-        radius = Math.max(
-                0,
-                Math.min(
-                        radius,
-                        Math.min(rectWidth, rectHeight) / 2
-                )
-        );
-
-        if (radius == 0) {
-            graphics.fill(
-                    x, y,
-                    x + rectWidth,
-                    y + rectHeight,
-                    color
-            );
-            return;
-        }
-
-        for (int row = 0; row < rectHeight; row++) {
-            int inset = 0;
-
-            if (row < radius) {
-                double dy = radius - row - 0.5;
-
-                inset = radius - (int) Math.sqrt(
-                        Math.max(0, radius * radius - dy * dy)
-                );
-            } else if (row >= rectHeight - radius) {
-                double dy =
-                        row - (rectHeight - radius) + 0.5;
-
-                inset = radius - (int) Math.sqrt(
-                        Math.max(0, radius * radius - dy * dy)
-                );
-            }
-
-            graphics.fill(
-                    x + inset,
-                    y + row,
-                    x + rectWidth - inset,
-                    y + row + 1,
-                    color
-            );
-        }
-    }
-
-    private void roundedBorder(
-            GuiGraphicsExtractor graphics,
-            int x,
-            int y,
-            int rectWidth,
-            int rectHeight,
-            int radius,
-            int thickness,
-            int borderColor,
-            int backgroundColor
-    ) {
-        if (rectWidth <= 0 || rectHeight <= 0) return;
-        thickness = Math.max(1, thickness);
-        radius = Math.max(0, Math.min(radius, Math.min(rectWidth, rectHeight) / 2));
-        // Draw only the border pixels: a solid rectangle behind a translucent
-        // interior would make the entire button opaque.
-        roundedRect(graphics, x, y, rectWidth, rectHeight, radius, backgroundColor);
-        for (int row = 0; row < rectHeight; row++) {
-            int outer = cornerInset(row, rectHeight, radius);
-            int left = x + outer;
-            int right = x + rectWidth - outer;
-            if (row < thickness || row >= rectHeight - thickness) {
-                graphics.fill(left, y + row, right, y + row + 1, borderColor);
-            } else {
-                int inner = thickness + cornerInset(row - thickness,
-                        rectHeight - 2 * thickness, Math.max(0, radius - thickness));
-                graphics.fill(left, y + row, x + inner, y + row + 1, borderColor);
-                graphics.fill(x + rectWidth - inner, y + row, right, y + row + 1, borderColor);
-            }
-        }
-    }
-
-    private int cornerInset(int row, int height, int radius) {
-        if (radius == 0) return 0;
-        double dy = row < radius ? radius - row - 0.5
-                : (row >= height - radius ? row - (height - radius) + 0.5 : 0);
-        return dy == 0 ? 0 : radius - (int) Math.sqrt(Math.max(0, radius * radius - dy * dy));
-    }
-
-    // ==============================
-    // INITIALIZATION
-    // ==============================
-
-    @Override
-    protected void init() {
-        calculateGuiLayout();
     }
 
     private void updateSlide() {
-        double progress = Math.min(1.0, Math.max(0.0,
-                (System.nanoTime() - openedAt) / (double) SLIDE_DURATION_NS));
-        double eased = 1.0 - Math.pow(1.0 - progress, 3);
-        guiX = (int) Math.round(-(guiWidth + scaled(12)) * (1.0 - eased));
+        double t = Math.clamp((System.nanoTime() - openedAt) / (double) SLIDE_DURATION_NS, 0, 1);
+        panelX = (float) (-(panelWidth + 12) * Math.pow(1 - t, 3));
     }
 
-    private boolean visible(int index) {
-        return modules.get(index).tab.equals(selectedCategory);
+    private List<ModuleLayout.Row> rows() {
+        return ModuleLayout.rows(modules, selectedCategory, expandedId, HEADER, SETTING, GAP);
     }
 
-    private int moduleX() {
-        return guiX + scaled(62);
+    private int viewportHeight() { return Math.max(0, height - TOP - BOTTOM); }
+    private int cardX() { return Math.round(panelX) + RAIL + 10; }
+    private int cardWidth() { return Math.max(1, panelWidth - RAIL - 28); }
+    private int categoryHeight() { return Math.max(0, categories.size() * CATEGORY_PITCH - 10); }
+
+    private void clampScroll() {
+        scroll = ModuleLayout.clampScroll(scroll, ModuleLayout.contentHeight(rows()), viewportHeight());
+        categoryScroll = ModuleLayout.clampScroll(categoryScroll, categoryHeight(), viewportHeight());
     }
 
-    private int dropdownHeight(int index) {
-        return scaled(index == 0 ? 126 : 42);
+    private ScreenRectangle contentClip() {
+        return new ScreenRectangle(Math.max(0, Math.round(panelX) + RAIL + 3), TOP,
+                Math.max(0, Math.min(width, Math.round(panelX) + panelWidth - 8)
+                        - Math.max(0, Math.round(panelX) + RAIL + 3)), viewportHeight());
     }
 
-    private int moduleY(int index) {
-        int row = 0;
-        for (int i = 0; i < index; i++) {
-            if (visible(i)) row++;
-        }
-        return guiY + scaled(38) + row * scaled(62)
-                + (expandedModule >= 0 && visible(expandedModule) && expandedModule < index
-                ? dropdownHeight(expandedModule) + scaled(7) : 0);
+    private ScreenRectangle railClip() {
+        int left = Math.max(0, Math.round(panelX));
+        return new ScreenRectangle(left, TOP,
+                Math.max(0, Math.min(width, Math.round(panelX) + RAIL) - left), viewportHeight());
     }
 
-    private int moduleWidth() {
-        return guiWidth - scaled(90);
+    private boolean contains(double x, double y, double left, double top, double w, double h) {
+        return x >= left && x < left + w && y >= top && y < top + h;
     }
 
-    private int moduleHeight() {
-        return scaled(48);
+    private void text(GuiGraphicsExtractor graphics, String value, int x, int y, int maxWidth, int color) {
+        if (maxWidth <= 0) return;
+        String clipped = font.width(value) <= maxWidth ? value
+                : font.plainSubstrByWidth(value, Math.max(0, maxWidth - font.width("…"))) + "…";
+        graphics.text(font, clipped, x, y, color, false);
     }
 
-    // Nested low-alpha strips create a soft glow without a shader dependency.
-    private void luminousLine(GuiGraphicsExtractor graphics, int x, int y, int h) {
-        for (int radius = scaled(9); radius >= 1; radius--) {
-            int alpha = Math.max(2, 24 / radius);
-            graphics.fill(x - radius, y, x + radius + 1, y + h,
-                    (alpha << 24) | 0xFFFFFF);
-        }
-        graphics.fill(x, y, x + 1, y + h, WHITE);
-        graphics.fill(x - scaled(4), y, x - scaled(3), y + h, 0x88777777);
-        graphics.fill(x + scaled(3), y, x + scaled(4), y + h, 0xAAFFFFFF);
-    }
-
-    private boolean hovering(double mouseX, double mouseY,
-                             int x, int y, int w, int h) {
-        return mouseX >= x && mouseX < x + w
-                && mouseY >= y && mouseY < y + h;
-    }
-
-    // ==============================
-    // RENDERING
-    // ==============================
-
-    @Override
-    public void extractRenderState(
-            GuiGraphicsExtractor graphics,
-            int mouseX,
-            int mouseY,
-            float delta
-    ) {
+    @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         updateSlide();
-        int x = guiX;
-        int w = guiWidth;
-        graphics.fill(x, 0, x + w, guiHeight, MAIN_BG);
-        graphics.fill(x, 0, x + scaled(50), guiHeight, SIDEBAR_BG);
-        graphics.fill(x + scaled(50), 0, x + scaled(50) + 1, guiHeight, 0xAAFFFFFF);
-        luminousLine(graphics, x + w - scaled(5), 0, guiHeight);
+        clampScroll();
+        graphics.fill(Math.round(panelX), 0, Math.round(panelX) + panelWidth, height, PANEL);
+        graphics.fill(Math.round(panelX), 0, Math.round(panelX) + RAIL, height, 0x30000000);
+        SmoothRenderer.line(graphics, panelX + RAIL, 0, height, 0.65f, 0x66FFFFFF, 0, null);
+        SmoothRenderer.line(graphics, panelX + panelWidth - 5, 0, height, 0.9f, WHITE, 6, null);
+        SmoothRenderer.line(graphics, panelX + panelWidth - 8, 0, height, 0.5f, 0x80FFFFFF, 0, null);
+        text(graphics, selectedCategory.isEmpty() ? "LidlClient" : selectedCategory,
+                cardX(), 16, cardWidth(), WHITE);
 
-        for (int category = 0; category < categories.length; category++) {
-            int sideX = x + scaled(6);
-            int sideY = scaled(38) + category * scaled(62);
-            int size = scaled(36);
-            boolean active = categories[category].equals(selectedCategory);
-            boolean hovered = hovering(mouseX, mouseY, sideX, sideY, size, size);
-            roundedBorder(graphics, sideX, sideY, size, size, scaled(6), 1,
-                    active || hovered ? WHITE : 0xFF888888,
-                    active ? ENABLED_BG : CARD_BG);
-            String label = categories[category].substring(0, 1);
-            graphics.text(font, label, sideX + (size - font.width(label)) / 2,
-                    sideY + (size - font.lineHeight) / 2, WHITE, true);
-            if (hovered) {
-                graphics.text(font, categories[category], moduleX(), scaled(15), WHITE, true);
+        ScreenRectangle rail = railClip();
+        graphics.enableScissor(rail.left(), TOP, rail.right(), TOP + viewportHeight());
+        for (int i = 0; i < categories.size(); i++) {
+            float y = TOP + i * CATEGORY_PITCH - (float) categoryScroll;
+            if (y + 36 < TOP || y > height - BOTTOM) continue;
+            String category = categories.get(i);
+            boolean active = category.equals(selectedCategory);
+            boolean hovered = contains(mouseX, mouseY, panelX + 7, y, 34, 36);
+            SmoothRenderer.panel(graphics, panelX + 7, y, 34, 36, 7,
+                    active ? 0x405D5D70 : 0x200C0C12,
+                    active || hovered ? WHITE : 0x668D8D9A, 0.8f, active || hovered ? 3 : 0, rail);
+            String letter = category.substring(0, category.offsetByCodePoints(0, 1));
+            graphics.text(font, letter, Math.round(panelX + 24 - font.width(letter) / 2f),
+                    Math.round(y + (36 - font.lineHeight) / 2f), active ? WHITE : MUTED, false);
+        }
+        graphics.disableScissor();
+
+        ScreenRectangle clip = contentClip();
+        graphics.enableScissor(clip.left(), TOP, clip.right(), TOP + viewportHeight());
+        for (ModuleLayout.Row row : rows()) {
+            float y = TOP + row.top() - (float) scroll;
+            if (y + row.height() < TOP || y > height - BOTTOM) continue;
+            GuiModule module = row.module();
+            boolean enabled = module.isEnabled();
+            boolean hovered = contains(mouseX, mouseY, cardX(), y, cardWidth(), HEADER);
+            SmoothRenderer.panel(graphics, cardX(), y, cardWidth(), row.height(), 8,
+                    enabled ? 0x304F4F60 : 0x2007070D,
+                    enabled || hovered ? WHITE : 0x667F7F8C, 0.8f, enabled || hovered ? 4 : 0, clip);
+            text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - font.lineHeight) / 2f),
+                    cardWidth() - 34, enabled ? WHITE : MUTED);
+            // State marker stays visible independently of hover or the text colour.
+            SmoothRenderer.panel(graphics, cardX() + cardWidth() - 17, y + HEADER / 2f - 2,
+                    4, 4, 2, enabled ? WHITE : 0x407F7F8C, 0, 0, 0, clip);
+            if (!row.expanded()) continue;
+            for (int index = 0; index < module.settings().size(); index++) {
+                float sy = y + HEADER + index * SETTING;
+                if (sy + SETTING < TOP || sy > height - BOTTOM) continue;
+                renderSetting(graphics, module.settings().get(index), sy, clip);
             }
         }
+        graphics.disableScissor();
 
-        // Category-filtered module buttons and their settings.
-        for (int i = 0; i < modules.size(); i++) {
-
-            if (!visible(i)) continue;
-            GuiModule module = modules.get(i);
-            int cardX = moduleX();
-            int cardY = moduleY(i);
-            int cardW = moduleWidth();
-            int cardH = moduleHeight();
-
-            boolean hovered = hovering(
-                    mouseX, mouseY,
-                    cardX, cardY,
-                    cardW, cardH
-            );
-
-            int border = 1;
-            boolean expanded = expandedModule == i;
-            int fullHeight = cardH + (expanded ? dropdownHeight(i) : 0);
-            if (module.enabled || hovered) {
-                for (int spread = scaled(4); spread >= 1; spread--) {
-                    roundedRect(graphics, cardX - spread, cardY - spread,
-                            cardW + spread * 2, fullHeight + spread * 2,
-                            scaled(8) + spread, 0x08FFFFFF);
-                }
-            }
-            roundedBorder(graphics, cardX, cardY, cardW, fullHeight,
-                    scaled(8), border, module.enabled || hovered ? WHITE : 0xFF999999,
-                    module.enabled ? ENABLED_BG : CARD_BG);
-            int labelX = cardX + scaled(10);
-            graphics.text(font, module.name,
-                    cardX + (cardW - font.width(module.name)) / 2,
-                    cardY + (cardH - font.lineHeight) / 2,
-                    module.enabled ? WHITE : MUTED, true);
-
-            // Expanded settings share the module's background colour.
-            if (expanded) {
-                int dropY = cardY + cardH;
-                int rowH = scaled(42);
-                int rightX = cardX + cardW - scaled(10);
-
-                if (i == 0) {
-                    graphics.fill(cardX + scaled(15), dropY,
-                            cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
-                    graphics.text(font, "Mute chat", labelX,
-                            dropY + scaled(15), WHITE, true);
-                    String muted = Slots.isMuteMessages() ? "ON" : "OFF";
-                    graphics.text(font, muted, rightX - font.width(muted),
-                            dropY + scaled(15), Slots.isMuteMessages() ? WHITE : MUTED, true);
-
-                    dropY += rowH;
-                    graphics.fill(cardX + scaled(15), dropY,
-                            cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
-                    graphics.text(font, "Bet / balance", labelX,
-                            dropY + scaled(15), WHITE, true);
-                    String show = Slots.isShowUi() ? "ON" : "OFF";
-                    graphics.text(font, show, rightX - font.width(show),
-                            dropY + scaled(15), Slots.isShowUi() ? WHITE : MUTED, true);
-                    dropY += rowH;
-                }
-
-                graphics.fill(cardX + scaled(15), dropY,
-                        cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
-                graphics.text(font, "Keybind", labelX,
-                        dropY + scaled(15), WHITE, true);
-                String keybind = "Not Bound";
-                graphics.text(font, keybind,
-                        rightX - font.width(keybind),
-                        dropY + scaled(15), MUTED, true);
-            }
-        }
-
-        // Preserve the Screen render lifecycle.
-        super.extractRenderState(
-                graphics,
-                mouseX,
-                mouseY,
-                delta
-        );
+        renderScrollbars(graphics);
+        String hint = "LMB toggle · RMB settings";
+        text(graphics, hint, cardX(), height - 14, cardWidth(), MUTED);
+        if (modules.isEmpty()) text(graphics, "No modules registered", cardX(), TOP + 8, cardWidth(), MUTED);
+        super.extractRenderState(graphics, mouseX, mouseY, delta);
     }
-    // Left-click: toggle. Right-click: open/close module dropdown.
-    @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        updateSlide();
-        for (int category = 0; category < categories.length; category++) {
-            if (event.button() == 0 && hovering(event.x(), event.y(),
-                    guiX + scaled(6), scaled(38) + category * scaled(62),
-                    scaled(36), scaled(36))) {
-                selectedCategory = categories[category];
-                expandedModule = -1;
-                return true;
-            }
+
+    private void renderSetting(GuiGraphicsExtractor graphics, ModuleSetting setting, float y, ScreenRectangle clip) {
+        SmoothRenderer.panel(graphics, cardX() + 10, y, cardWidth() - 20, 0.6f,
+                0, 0x207F7F8C, 0, 0, 0, clip);
+        String value = setting.valueText();
+        int valueWidth = Math.min(font.width(value), Math.max(24, cardWidth() / 3));
+        int right = cardX() + cardWidth() - 12;
+        text(graphics, setting.label(), cardX() + 12, Math.round(y + 9),
+                cardWidth() - valueWidth - 32, WHITE);
+        text(graphics, value, right - valueWidth, Math.round(y + 9), valueWidth,
+                setting instanceof BooleanSetting bool && bool.value() ? WHITE : MUTED);
+        if (setting instanceof NumberSetting number) {
+            int trackWidth = cardWidth() - 24;
+            SmoothRenderer.panel(graphics, cardX() + 12, y + 26, trackWidth, 2, 1,
+                    0x407F7F8C, 0, 0, 0, clip);
+            SmoothRenderer.panel(graphics, cardX() + 12, y + 26,
+                    Math.max(1, trackWidth * (float) number.fraction()), 2, 1,
+                    WHITE, 0, 0, 0, clip);
         }
-        for (int i = 0; i < modules.size(); i++) {
-            if (!visible(i)) continue;
-            if (hovering(event.x(), event.y(),
-                    moduleX(), moduleY(i), moduleWidth(), moduleHeight())) {
-                if (event.button() == 0) {
-                    modules.get(i).toggle();
-                    return true;
-                }
-                if (event.button() == 1) {
-                    expandedModule = (expandedModule == i) ? -1 : i;
+    }
+
+    private int contentHeight() { return ModuleLayout.contentHeight(rows()); }
+    private int thumbHeight(int contentHeight) {
+        return Math.min(viewportHeight(), Math.max(16, viewportHeight() * viewportHeight() / Math.max(1, contentHeight)));
+    }
+    private float thumbY(int contentHeight, double offset) {
+        return TOP + (float) (offset / Math.max(1, contentHeight - viewportHeight())
+                * (viewportHeight() - thumbHeight(contentHeight)));
+    }
+
+    private void renderScrollbars(GuiGraphicsExtractor graphics) {
+        if (contentHeight() > viewportHeight()) {
+            SmoothRenderer.panel(graphics, panelX + panelWidth - 13, thumbY(contentHeight(), scroll),
+                    2, thumbHeight(contentHeight()), 1, 0x99FFFFFF, 0, 0, 0, null);
+        }
+        if (categoryHeight() > viewportHeight()) {
+            SmoothRenderer.panel(graphics, panelX + RAIL - 4, thumbY(categoryHeight(), categoryScroll),
+                    1, thumbHeight(categoryHeight()), 0.5f, 0x66FFFFFF, 0, 0, 0, null);
+        }
+    }
+
+    @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        updateSlide();
+        clampScroll();
+        if (!contains(event.x(), event.y(), panelX, TOP, panelWidth, viewportHeight())) {
+            return super.mouseClicked(event, doubleClick);
+        }
+        if (event.button() == 0 && event.x() < panelX + RAIL) {
+            for (int i = 0; i < categories.size(); i++) {
+                if (contains(event.x(), event.y(), panelX + 7,
+                        TOP + i * CATEGORY_PITCH - categoryScroll, 34, 36)) {
+                    selectedCategory = categories.get(i);
+                    expandedId = null;
+                    scroll = 0;
+                    draggingNumber = null;
                     return true;
                 }
             }
-
-            if (expandedModule == i && hovering(event.x(), event.y(),
-                    moduleX(), moduleY(i) + moduleHeight(),
-                    moduleWidth(), dropdownHeight(i))) {
-                if (event.button() == 0 && i == 0) {
-                    int relativeY = (int) event.y() - moduleY(i) - moduleHeight();
-                    if (relativeY < scaled(42)) {
-                        Slots.setMuteMessages(!Slots.isMuteMessages());
-                    } else if (relativeY < scaled(84)) {
-                        Slots.setShowUi(!Slots.isShowUi());
-                    }
+            return true;
+        }
+        if (event.button() == 0 && contentHeight() > viewportHeight()
+                && event.x() >= panelX + panelWidth - 16 && event.x() < panelX + panelWidth - 9) {
+            draggingScrollbar = true;
+            float thumbTop = thumbY(contentHeight(), scroll);
+            scrollbarGrab = event.y() >= thumbTop && event.y() < thumbTop + thumbHeight(contentHeight())
+                    ? event.y() - thumbTop : thumbHeight(contentHeight()) / 2.0;
+            dragScrollbar(event.y());
+            return true;
+        }
+        for (ModuleLayout.Row row : rows()) {
+            double y = TOP + row.top() - scroll;
+            if (contains(event.x(), event.y(), cardX(), y, cardWidth(), HEADER)) {
+                if (event.button() == 0) row.module().toggle();
+                else if (event.button() == 1 && !row.module().settings().isEmpty()) {
+                    expandedId = row.module().id().equals(expandedId) ? null : row.module().id();
+                    clampScroll();
                 }
-                // Keybind remains display-only.
+                return true;
+            }
+            if (row.expanded() && contains(event.x(), event.y(), cardX(), y + HEADER,
+                    cardWidth(), row.height() - HEADER)) {
+                int index = (int) ((event.y() - y - HEADER) / SETTING);
+                ModuleSetting setting = row.module().settings().get(index);
+                if (setting instanceof NumberSetting number && event.button() == 0) {
+                    if (event.y() - y - HEADER - index * SETTING >= 21) {
+                        draggingNumber = number;
+                        dragNumber(event.x());
+                    } else number.change(1);
+                } else if (event.button() == 0 || event.button() == 1) {
+                    setting.change(event.button() == 0 ? 1 : -1);
+                }
                 return true;
             }
         }
-        return super.mouseClicked(event, doubleClick);
+        return true;
+    }
+
+    private void dragNumber(double mouseX) {
+        draggingNumber.setFraction((mouseX - cardX() - 12) / Math.max(1, cardWidth() - 24));
+    }
+
+    private void dragScrollbar(double mouseY) {
+        int travel = viewportHeight() - thumbHeight(contentHeight());
+        scroll = travel <= 0 ? 0 : (mouseY - TOP - scrollbarGrab) / travel
+                * (contentHeight() - viewportHeight());
+        clampScroll();
+    }
+
+    @Override public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (event.button() == 0 && draggingNumber != null) { dragNumber(event.x()); return true; }
+        if (event.button() == 0 && draggingScrollbar) { dragScrollbar(event.y()); return true; }
+        return super.mouseDragged(event, deltaX, deltaY);
+    }
+
+    @Override public boolean mouseReleased(MouseButtonEvent event) {
+        boolean dragging = draggingNumber != null || draggingScrollbar;
+        draggingNumber = null;
+        draggingScrollbar = false;
+        return dragging || super.mouseReleased(event);
+    }
+
+    @Override public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        updateSlide();
+        if (!contains(mouseX, mouseY, panelX, TOP, panelWidth, viewportHeight())) return false;
+        if (mouseX < panelX + RAIL) categoryScroll -= vertical * CATEGORY_PITCH;
+        else scroll -= vertical * 30;
+        draggingNumber = null;
+        clampScroll();
+        return true;
     }
 }

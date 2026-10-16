@@ -1,42 +1,33 @@
-
 package net.lidl.lidlclient.gui;
 
-public class GuiModule {
+import net.lidl.lidlclient.gui.settings.ModuleSetting;
 
-    public final String name;
-    public final String description;
-    public final String tab;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
-    public boolean enabled = false;
-
-    private final Runnable onEnable;
-    private final Runnable onDisable;
-
-    public GuiModule(
-            String name,
-            String description,
-            String tab,
-            Runnable onEnable,
-            Runnable onDisable
-    ) {
-        this.name = name;
-        this.description = description;
-        this.tab = tab;
-        this.onEnable = onEnable;
-        this.onDisable = onDisable;
-    }
-
-    public void toggle() {
-        enabled = !enabled;
-
-        if (enabled) {
-            if (onEnable != null) {
-                onEnable.run();
-            }
-        } else {
-            if (onDisable != null) {
-                onDisable.run();
-            }
+/** A declaration of a feature; state lives in the feature, never in the screen. */
+public record GuiModule(String id, String name, String category, String description,
+                        BooleanSupplier enabled, Consumer<Boolean> setEnabled,
+                        List<ModuleSetting> settings) {
+    public GuiModule {
+        if (id == null || id.isBlank() || name == null || name.isBlank()
+                || category == null || category.isBlank()) {
+            throw new IllegalArgumentException("Module id, name and category must not be blank");
         }
+        Objects.requireNonNull(description);
+        Objects.requireNonNull(enabled);
+        Objects.requireNonNull(setEnabled);
+        settings = List.copyOf(settings);
     }
+
+    public GuiModule(String id, String name, String category, String description,
+                     BooleanSupplier enabled, Consumer<Boolean> setEnabled,
+                     ModuleSetting... settings) {
+        this(id, name, category, description, enabled, setEnabled, List.of(settings));
+    }
+
+    public boolean isEnabled() { return enabled.getAsBoolean(); }
+    public void toggle() { setEnabled.accept(!isEnabled()); }
 }

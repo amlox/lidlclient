@@ -4,7 +4,6 @@ import net.lidl.lidlclient.slots.Slots;
 
 public class ModuleController {
 
-    private static boolean slotsEnabled = false;
     private static boolean partyCommandsEnabled = false;
     private static boolean circleEnabled = false;
 
@@ -14,8 +13,6 @@ public class ModuleController {
     // --- Mutators (Setters) ---
 
     public static void setSlotsEnabled(boolean enabled) {
-        slotsEnabled = enabled;
-
         // Connect this to your existing Slots class
         Slots.setEnabled(enabled);
     }
@@ -35,7 +32,7 @@ public class ModuleController {
     // --- Accessors (Getters) ---
 
     public static boolean isSlotsEnabled() {
-        return slotsEnabled;
+        return Slots.isEnabled();
     }
 
     public static boolean isPartyCommandsEnabled() {
@@ -46,3 +43,4 @@ public class ModuleController {
         return circleEnabled;
     }
 }
+

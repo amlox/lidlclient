@@ -5,7 +5,6 @@ import net.lidl.lidlclient.slots.Slots;
 public class ModuleController {
 
     private static boolean partyCommandsEnabled = false;
-    private static boolean circleEnabled = false;
 
     private ModuleController() {
     }
@@ -23,12 +22,6 @@ public class ModuleController {
         // Connect this to your existing PartyCMDs class
     }
 
-    public static void setCircleEnabled(boolean enabled) {
-        circleEnabled = enabled;
-
-        // Connect this to your existing Circle class
-    }
-
     // --- Accessors (Getters) ---
 
     public static boolean isSlotsEnabled() {
@@ -39,8 +32,4 @@ public class ModuleController {
         return partyCommandsEnabled;
     }
 
-    public static boolean isCircleEnabled() {
-        return circleEnabled;
-    }
 }
-

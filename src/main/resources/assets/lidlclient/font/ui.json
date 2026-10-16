@@ -1,0 +1,6 @@
+{
+  "providers": [
+    {"type": "ttf", "file": "lidlclient:ui.ttf", "size": 11, "oversample": 4, "shift": [0, 0]},
+    {"type": "reference", "id": "minecraft:default"}
+  ]
+}

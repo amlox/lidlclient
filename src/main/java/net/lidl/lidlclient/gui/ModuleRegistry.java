@@ -19,11 +19,9 @@ public final class ModuleRegistry {
                 new BooleanSetting("Mute chat", Slots::isMuteMessages, Slots::setMuteMessages),
                 new BooleanSetting("Bet / balance", Slots::isShowUi, Slots::setShowUi)));
 
-        // These retain the existing controller placeholders until the features are connected.
+        // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",
                 ModuleController::isPartyCommandsEnabled, ModuleController::setPartyCommandsEnabled));
-        modules.add(new GuiModule("circle", "Circle", "General", "Circle module",
-                ModuleController::isCircleEnabled, ModuleController::setCircleEnabled));
 
         return validate(modules);
     }

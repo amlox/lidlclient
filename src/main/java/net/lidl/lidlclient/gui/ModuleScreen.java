@@ -1,6 +1,8 @@
 package net.lidl.lidlclient.gui;
 
 import net.lidl.lidlclient.gui.render.SmoothRenderer;
+import net.lidl.lidlclient.gui.render.ConstellationRenderer;
+import net.lidl.lidlclient.gui.render.UiText;
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
 import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
@@ -13,16 +15,16 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 
 /** Layout and widgets depend only on module declarations, never feature names or indices. */
-public class ShizoStyleScreen extends Screen {
+public class ModuleScreen extends Screen {
     private static final long SLIDE_DURATION_NS = 500_000_000L;
-    private static final int PANEL = 0x6008080A;
+    private static final int PANEL = 0x9805070D;
     private static final int WHITE = 0xFFF4F4FA;
     private static final int MUTED = 0xFFABAAB5;
     private static final int HEADER = 38;
     private static final int SETTING = 34;
     private static final int GAP = 10;
     private static final int TOP = 40;
-    private static final int BOTTOM = 24;
+    private static final int BOTTOM = 14;
     private static final int RAIL = 48;
     private static final int CATEGORY_PITCH = 46;
 
@@ -38,14 +40,16 @@ public class ShizoStyleScreen extends Screen {
     private NumberSetting draggingNumber;
     private boolean draggingScrollbar;
     private double scrollbarGrab;
+    private double starOffset;
+    private long lastFrame = System.nanoTime();
     private String layoutCategory;
     private String layoutExpandedId;
     private List<ModuleLayout.Row> layoutRows = List.of();
 
-    public ShizoStyleScreen() { this(ModuleRegistry.modules()); }
+    public ModuleScreen() { this(ModuleRegistry.modules()); }
 
     /** Also useful for custom registries and stress-testing large menus. */
-    public ShizoStyleScreen(List<GuiModule> modules) {
+    public ModuleScreen(List<GuiModule> modules) {
         super(Component.literal("LidlClient"));
         this.modules = ModuleRegistry.validate(modules);
         this.categories = ModuleLayout.categories(this.modules);
@@ -102,16 +106,21 @@ public class ShizoStyleScreen extends Screen {
     }
 
     private void text(GuiGraphicsExtractor graphics, String value, int x, int y, int maxWidth, int color) {
-        if (maxWidth <= 0) return;
-        String clipped = font.width(value) <= maxWidth ? value
-                : font.plainSubstrByWidth(value, Math.max(0, maxWidth - font.width("…"))) + "…";
-        graphics.text(font, clipped, x, y, color, false);
+        UiText.draw(graphics, font, value, x, y, maxWidth, color);
     }
 
     @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         updateSlide();
         clampScroll();
+        long now = System.nanoTime();
+        double elapsed = Math.min(.1, (now - lastFrame) / 1_000_000_000.0);
+        lastFrame = now;
+        starOffset += (scroll * .14 - starOffset) * (1 - Math.exp(-elapsed * 12));
         graphics.fill(Math.round(panelX), 0, Math.round(panelX) + panelWidth, height, PANEL);
+        int backgroundLeft = Math.max(0, Math.round(panelX));
+        int backgroundRight = Math.max(backgroundLeft, Math.min(width, Math.round(panelX) + panelWidth - 9));
+        ConstellationRenderer.background(graphics, panelX, panelWidth - 9, height, starOffset,
+                new ScreenRectangle(backgroundLeft, 0, backgroundRight - backgroundLeft, height));
         graphics.fill(Math.round(panelX), 0, Math.round(panelX) + RAIL, height, 0x30000000);
         SmoothRenderer.line(graphics, panelX + RAIL, 0, height, 0.65f, 0x66FFFFFF, 0, null);
         SmoothRenderer.line(graphics, panelX + panelWidth - 5, 0, height, 0.9f, WHITE, 6, null);
@@ -131,8 +140,8 @@ public class ShizoStyleScreen extends Screen {
                     active ? 0x405D5D70 : 0x200C0C12,
                     active || hovered ? WHITE : 0x668D8D9A, 0.8f, active || hovered ? 3 : 0, rail);
             String letter = category.substring(0, category.offsetByCodePoints(0, 1));
-            graphics.text(font, letter, Math.round(panelX + 24 - font.width(letter) / 2f),
-                    Math.round(y + (36 - font.lineHeight) / 2f), active ? WHITE : MUTED, false);
+            text(graphics, letter, Math.round(panelX + 24 - UiText.width(font, letter) / 2f),
+                    Math.round(y + (36 - UiText.HEIGHT) / 2f), 24, active ? WHITE : MUTED);
         }
         graphics.disableScissor();
 
@@ -147,7 +156,7 @@ public class ShizoStyleScreen extends Screen {
             SmoothRenderer.panel(graphics, cardX(), y, cardWidth(), row.height(), 8,
                     enabled ? 0x304F4F60 : 0x2007070D,
                     enabled || hovered ? WHITE : 0x667F7F8C, 0.8f, enabled || hovered ? 4 : 0, clip);
-            text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - font.lineHeight) / 2f),
+            text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f),
                     cardWidth() - 34, enabled ? WHITE : MUTED);
             // State marker stays visible independently of hover or the text colour.
             SmoothRenderer.panel(graphics, cardX() + cardWidth() - 17, y + HEADER / 2f - 2,
@@ -162,8 +171,6 @@ public class ShizoStyleScreen extends Screen {
         graphics.disableScissor();
 
         renderScrollbars(graphics);
-        String hint = "LMB toggle · RMB settings";
-        text(graphics, hint, cardX(), height - 14, cardWidth(), MUTED);
         if (modules.isEmpty()) text(graphics, "No modules registered", cardX(), TOP + 8, cardWidth(), MUTED);
         super.extractRenderState(graphics, mouseX, mouseY, delta);
     }
@@ -172,7 +179,7 @@ public class ShizoStyleScreen extends Screen {
         SmoothRenderer.panel(graphics, cardX() + 10, y, cardWidth() - 20, 0.6f,
                 0, 0x207F7F8C, 0, 0, 0, clip);
         String value = setting.valueText();
-        int valueWidth = Math.min(font.width(value), Math.max(24, cardWidth() / 3));
+        int valueWidth = Math.min(UiText.width(font, value), Math.max(24, cardWidth() / 3));
         int right = cardX() + cardWidth() - 12;
         text(graphics, setting.label(), cardX() + 12, Math.round(y + 9),
                 cardWidth() - valueWidth - 32, WHITE);
@@ -198,10 +205,8 @@ public class ShizoStyleScreen extends Screen {
     }
 
     private void renderScrollbars(GuiGraphicsExtractor graphics) {
-        if (contentHeight() > viewportHeight()) {
-            SmoothRenderer.panel(graphics, panelX + panelWidth - 13, thumbY(contentHeight(), scroll),
-                    2, thumbHeight(contentHeight()), 1, 0x99FFFFFF, 0, 0, 0, null);
-        }
+        ConstellationRenderer.star(graphics, panelX + panelWidth - 5, indicatorY(),
+                9, contentHeight() > viewportHeight() ? 1 : .68f, null);
         if (categoryHeight() > viewportHeight()) {
             SmoothRenderer.panel(graphics, panelX + RAIL - 4, thumbY(categoryHeight(), categoryScroll),
                     1, thumbHeight(categoryHeight()), 0.5f, 0x66FFFFFF, 0, 0, 0, null);
@@ -211,6 +216,14 @@ public class ShizoStyleScreen extends Screen {
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         updateSlide();
         clampScroll();
+        // The star straddles the edge, so its complete hit area is tested first.
+        if (event.button() == 0 && contentHeight() > viewportHeight()
+                && contains(event.x(), event.y(), panelX + panelWidth - 16, TOP, 23, viewportHeight())) {
+            draggingScrollbar = true;
+            scrollbarGrab = Math.abs(event.y() - indicatorY()) <= 10 ? event.y() - indicatorY() : 0;
+            dragScrollbar(event.y());
+            return true;
+        }
         if (!contains(event.x(), event.y(), panelX, TOP, panelWidth, viewportHeight())) {
             return super.mouseClicked(event, doubleClick);
         }
@@ -225,15 +238,6 @@ public class ShizoStyleScreen extends Screen {
                     return true;
                 }
             }
-            return true;
-        }
-        if (event.button() == 0 && contentHeight() > viewportHeight()
-                && event.x() >= panelX + panelWidth - 16 && event.x() < panelX + panelWidth - 9) {
-            draggingScrollbar = true;
-            float thumbTop = thumbY(contentHeight(), scroll);
-            scrollbarGrab = event.y() >= thumbTop && event.y() < thumbTop + thumbHeight(contentHeight())
-                    ? event.y() - thumbTop : thumbHeight(contentHeight()) / 2.0;
-            dragScrollbar(event.y());
             return true;
         }
         for (ModuleLayout.Row row : rows()) {
@@ -268,10 +272,15 @@ public class ShizoStyleScreen extends Screen {
         draggingNumber.setFraction((mouseX - cardX() - 12) / Math.max(1, cardWidth() - 24));
     }
 
+    private double indicatorTop() { return TOP + Math.min(10, viewportHeight() / 2.0); }
+    private double indicatorBottom() { return Math.max(indicatorTop(), height - BOTTOM - 10); }
+    private float indicatorY() {
+        return (float) ScrollIndicator.position(scroll, contentHeight() - viewportHeight(),
+                indicatorTop(), indicatorBottom());
+    }
     private void dragScrollbar(double mouseY) {
-        int travel = viewportHeight() - thumbHeight(contentHeight());
-        scroll = travel <= 0 ? 0 : (mouseY - TOP - scrollbarGrab) / travel
-                * (contentHeight() - viewportHeight());
+        scroll = ScrollIndicator.scroll(mouseY - scrollbarGrab, contentHeight() - viewportHeight(),
+                indicatorTop(), indicatorBottom());
         clampScroll();
     }
 
@@ -290,7 +299,7 @@ public class ShizoStyleScreen extends Screen {
 
     @Override public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
         updateSlide();
-        if (!contains(mouseX, mouseY, panelX, TOP, panelWidth, viewportHeight())) return false;
+        if (!contains(mouseX, mouseY, panelX, TOP, panelWidth + 7, viewportHeight())) return false;
         if (mouseX < panelX + RAIL) categoryScroll -= vertical * CATEGORY_PITCH;
         else scroll -= vertical * 30;
         draggingNumber = null;

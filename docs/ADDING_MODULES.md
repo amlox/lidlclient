@@ -68,9 +68,8 @@ This means changes made elsewhere are reflected the next frame and when reopenin
 Persistence across game restarts is the responsibility of your feature/config storage;
 this refactor does not add a new disk config format.
 
-Slots uses its real getter/setter, including its existing settings. PartyCMDS and
-Circle retain their existing controller placeholders; connect their feature behavior
-when those implementations are ready. The old display-only keybind row is omitted;
+Slots uses its real getter/setter, including its existing settings. PartyCMDS retains its existing controller placeholder; connect its feature behavior
+when that implementation is ready. The obsolete Circle demo has been removed. The old display-only keybind row is omitted;
 this framework does not pretend to provide working keybind assignment.
 
 ## Appearance
@@ -80,10 +79,21 @@ a one-physical-pixel alpha fringe. It uses Minecraft's existing batched GUI pipe
 without custom shaders or a separate native renderer. Borders and glow are gradient
 meshes, not stepped stacks of integer rectangles. Antialiasing width adapts to GUI scale.
 
-`ShizoStyleScreen` controls panel colors and spacing. `PANEL` is an ARGB color: its first
+`ModuleScreen` controls panel colors and spacing. `PANEL` is an ARGB color: its first
 byte controls opacity (`00` transparent, `FF` opaque). `SLIDE_DURATION_NS` controls the
-slide-in; 500,000,000 means 0.5 seconds. Typography still uses Minecraft's default font;
-the smooth renderer changes shapes, borders and glow, not font assets.
+slide-in; 500,000,000 means 0.5 seconds. Typography uses the bundled DejaVu Sans subset through a 4x oversampled TrueType provider.
+`UiText` applies and measures that font for every label; unsupported glyphs fall back
+to Minecraft. The font definition is `assets/lidlclient/font/ui.json` and its license
+is included under `assets/lidlclient/licenses`.
+
+`ConstellationRenderer` owns the white stars, dark outlines and slim connections.
+The background moves at 14% of the module scroll distance with a short easing delay.
+The four-point star on the outer edge is the draggable scroll indicator. It is dimmed
+and stationary when the category fits without scrolling.
+
+`ModuleFramework` is the permanent client entry point for `/lidl`; `ModuleScreen`
+is the reusable screen. The old GuiTest and Config circle demos and their entrypoints
+were removed. Automated JUnit tests remain in `src/test` intentionally.
 
 ## Checks
 

@@ -51,26 +51,6 @@ public final class SmoothRenderer {
         return (Math.clamp(Math.round((color >>> 24) * multiplier), 0, 255) << 24) | (color & 0xFFFFFF);
     }
 
-    private static float[] contour(float x, float y, float width, float height,
-                                   float radius, float inset, int segments) {
-        float w = Math.max(0.001f, width - 2 * inset);
-        float h = Math.max(0.001f, height - 2 * inset);
-        float r = Math.clamp(radius - inset, 0, Math.min(w, h) / 2);
-        float left = x + inset, top = y + inset;
-        float[] points = new float[4 * (segments + 1) * 2];
-        for (int corner = 0; corner < 4; corner++) {
-            float cx = (corner == 0 || corner == 3) ? left + r : left + w - r;
-            float cy = corner < 2 ? top + r : top + h - r;
-            for (int step = 0; step <= segments; step++) {
-                double angle = Math.toRadians(180 + 90 * corner + 90.0 * step / segments);
-                int i = (corner * (segments + 1) + step) * 2;
-                points[i] = cx + (float) Math.cos(angle) * r;
-                points[i + 1] = cy + (float) Math.sin(angle) * r;
-            }
-        }
-        return points;
-    }
-
     private static final class MeshBuilder {
         private final VertexConsumer consumer;
         private final Matrix3x2f pose;
@@ -121,34 +101,34 @@ public final class SmoothRenderer {
         @Override public void buildVertices(VertexConsumer consumer) {
             var mesh = new MeshBuilder(consumer, pose);
             int segments = Math.clamp((int) Math.ceil(Math.sqrt(radius / pixel) * 3), 6, 24);
-    
+
             if (glow > 0) {
                 // Non-overlapping gradient rings, rather than stacked opaque rectangles.
                 for (int ring = 8; ring > 0; ring--) {
                     float far = glow * ring / 8;
                     float near = glow * (ring - 1) / 8;
-                    mesh.ring(contour(x, y, width, height, radius, -far, segments),
-                            contour(x, y, width, height, radius, -near, segments),
+                    mesh.ring(RoundedGeometry.contour(x, y, width, height, radius, -far, segments),
+                            RoundedGeometry.contour(x, y, width, height, radius, -near, segments),
                             alpha(border, glowAlpha(far / glow)),
                             alpha(border, glowAlpha(near / glow)));
                 }
             }
-    
-            float[] outside = contour(x, y, width, height, radius, -pixel / 2, segments);
-            float[] inside = contour(x, y, width, height, radius, pixel / 2, segments);
+
+            float[] outside = RoundedGeometry.contour(x, y, width, height, radius, -pixel / 2, segments);
+            float[] inside = RoundedGeometry.contour(x, y, width, height, radius, pixel / 2, segments);
             mesh.fan(inside, fill);
             mesh.ring(outside, inside, alpha(fill, 0), fill);
-    
+
             if ((border >>> 24) != 0 && stroke > 0) {
                 float edge = Math.min(pixel / 2, stroke / 2);
-                float[] outerSolid = contour(x, y, width, height, radius, edge, segments);
-                float[] innerSolid = contour(x, y, width, height, radius, stroke - edge, segments);
-                float[] innerFade = contour(x, y, width, height, radius, stroke + edge, segments);
+                float[] outerSolid = RoundedGeometry.contour(x, y, width, height, radius, edge, segments);
+                float[] innerSolid = RoundedGeometry.contour(x, y, width, height, radius, stroke - edge, segments);
+                float[] innerFade = RoundedGeometry.contour(x, y, width, height, radius, stroke + edge, segments);
                 mesh.ring(outside, outerSolid, alpha(border, 0), border);
                 mesh.ring(outerSolid, innerSolid, border, border);
                 mesh.ring(innerSolid, innerFade, border, alpha(border, 0));
             }
-    
+
         }
     }
 }

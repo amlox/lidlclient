@@ -38,6 +38,9 @@ public class ShizoStyleScreen extends Screen {
     private NumberSetting draggingNumber;
     private boolean draggingScrollbar;
     private double scrollbarGrab;
+    private String layoutCategory;
+    private String layoutExpandedId;
+    private List<ModuleLayout.Row> layoutRows = List.of();
 
     public ShizoStyleScreen() { this(ModuleRegistry.modules()); }
 
@@ -50,6 +53,8 @@ public class ShizoStyleScreen extends Screen {
     }
 
     @Override protected void init() {
+        draggingNumber = null;
+        draggingScrollbar = false;
         panelWidth = Math.min(width, Math.max(220, Math.min(300, Math.round(width * 0.32f))));
         clampScroll();
         updateSlide();
@@ -61,7 +66,13 @@ public class ShizoStyleScreen extends Screen {
     }
 
     private List<ModuleLayout.Row> rows() {
-        return ModuleLayout.rows(modules, selectedCategory, expandedId, HEADER, SETTING, GAP);
+        if (!java.util.Objects.equals(layoutCategory, selectedCategory)
+                || !java.util.Objects.equals(layoutExpandedId, expandedId)) {
+            layoutRows = ModuleLayout.rows(modules, selectedCategory, expandedId, HEADER, SETTING, GAP);
+            layoutCategory = selectedCategory;
+            layoutExpandedId = expandedId;
+        }
+        return layoutRows;
     }
 
     private int viewportHeight() { return Math.max(0, height - TOP - BOTTOM); }

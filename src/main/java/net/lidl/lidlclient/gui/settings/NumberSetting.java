@@ -25,6 +25,11 @@ public record NumberSetting(String label, double min, double max, double step,
     public void set(double value) {
         if (!Double.isFinite(value)) return;
         double clamped = Math.clamp(value, min, max);
+        // The endpoints remain reachable even when the step does not divide the range.
+        if (clamped == min || clamped == max) {
+            setter.accept(clamped);
+            return;
+        }
         double snapped = min + Math.round((clamped - min) / step) * step;
         setter.accept(Math.clamp(snapped, min, max));
     }
@@ -33,7 +38,11 @@ public record NumberSetting(String label, double min, double max, double step,
     public void setFraction(double fraction) {
         if (Double.isFinite(fraction)) set(min + Math.clamp(fraction, 0, 1) * (max - min));
     }
-    @Override public void change(int direction) { set(value() + (direction < 0 ? -step : step)); }
+    @Override public void change(int direction) {
+        double index = (value() - min) / step;
+        double next = direction < 0 ? Math.ceil(index - 1e-9) - 1 : Math.floor(index + 1e-9) + 1;
+        set(min + next * step);
+    }
     @Override public String valueText() {
         return BigDecimal.valueOf(value()).setScale(6, java.math.RoundingMode.HALF_UP)
                 .stripTrailingZeros().toPlainString();

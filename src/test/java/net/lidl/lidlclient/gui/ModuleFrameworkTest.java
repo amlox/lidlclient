@@ -102,6 +102,15 @@ class ModuleFrameworkTest {
         assertEquals("A", value.get());
     }
 
+    @Test void sliderCanReachMaximumWhenStepDoesNotDivideRange() {
+        var value = new AtomicReference<>(0.0);
+        var setting = new NumberSetting("Count", 0, 10, 3, value::get, value::set);
+        setting.setFraction(1);
+        assertEquals(10.0, value.get());
+        setting.change(-1);
+        assertEquals(9.0, value.get());
+    }
+
     @Test void declarationsDefensivelyCopySettings() {
         var mutable = new ArrayList<net.lidl.lidlclient.gui.settings.ModuleSetting>();
         var module = new GuiModule("a", "A", "General", "", () -> false, value -> { }, mutable);

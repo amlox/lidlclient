@@ -10,17 +10,32 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
 import org.joml.Matrix3x2f;
 
-/** Deliberately sparse original arrangements inspired by the supplied references. */
+/** Layered original starfield arrangements inspired by the supplied references. */
 public final class ConstellationRenderer {
     private static final float TILE = 240;
     private static final float[][] POINTS = {
             {.12f, 36}, {.31f, 57}, {.44f, 30}, {.63f, 70}, {.82f, 49},
-            {.23f, 147}, {.43f, 123}, {.69f, 153}, {.59f, 196}, {.84f, 211}
+            {.23f, 147}, {.43f, 123}, {.69f, 153}, {.59f, 196}, {.84f, 211},
+            {.08f, 93}, {.22f, 111}, {.37f, 92}
     };
-    private static final int[][] EDGES = {{0,1},{1,2},{2,3},{3,4},{5,6},{6,7},{7,8},{8,5},{8,9}};
-    private static final float[][] DUST = {
-            {.07f,95},{.74f,18},{.52f,95},{.92f,133},{.12f,215},{.36f,221},{.78f,102},{.06f,170}
+    private static final int[][] EDGES = {{0,1},{1,2},{2,3},{3,4},{5,6},{6,7},{7,8},{8,5},{8,9},{10,11},{11,12}};
+    private static final float[][] SPARKLES = {
+            {.13f, 81, 6}, {.84f, 118, 5}, {.16f, 222, 6}, {.76f, 230, 4}, {.52f, 101, 3.5f}
     };
+    private static final float[][] DUST = createDust();
+
+    // Fixed seed: stars never flicker or change arrangement between frames.
+    private static float[][] createDust() {
+        var random = new java.util.Random(0x51A7C0DEL);
+        float[][] dust = new float[48][4];
+        for (float[] point : dust) {
+            point[0] = .03f + random.nextFloat() * .94f;
+            point[1] = random.nextFloat() * TILE;
+            point[2] = .45f + random.nextFloat() * .65f;
+            point[3] = .28f + random.nextFloat() * .45f;
+        }
+        return dust;
+    }
     private ConstellationRenderer() { }
 
     public static void background(GuiGraphicsExtractor graphics, float x, float width,
@@ -38,15 +53,22 @@ public final class ConstellationRenderer {
             for (int i = 0; i < POINTS.length; i++) {
                 float sx = x + px(POINTS[i][0], width, mirror), sy = originY + POINTS[i][1];
                 if (sy < -12 || sy > height + 12) continue;
-                if (i == 1 || i == 4 || i == 8) star(graphics, sx, sy, i == 8 ? 6 : 4, .36f, clip);
+                if (i == 1 || i == 4 || i == 8) star(graphics, sx, sy, i == 8 ? 7 : 4.5f, .64f, clip);
                 else SmoothRenderer.panel(graphics, sx - .8f, sy - .8f, 1.6f, 1.6f, .8f,
-                        0x60FFFFFF, 0x40FFFFFF, 0, 1.5f, clip);
+                        0xA0FFFFFF, 0x70FFFFFF, 0, 2.5f, clip);
+            }
+            for (float[] point : SPARKLES) {
+                float sy = originY + point[1];
+                if (sy < -16 || sy > height + 16) continue;
+                star(graphics, x + px(point[0], width, mirror), sy, point[2], .72f, clip);
             }
             for (float[] point : DUST) {
                 float sy = originY + point[1];
                 if (sy < 0 || sy > height) continue;
                 float sx = x + px(point[0], width, mirror);
-                SmoothRenderer.panel(graphics, sx, sy, .8f, .8f, .4f, 0x40FFFFFF, 0, 0, 0, clip);
+                float size = point[2];
+                SmoothRenderer.panel(graphics, sx, sy, size, size, size / 2,
+                        color(0xFFFFFF, point[3]), 0, 0, 0, clip);
             }
         }
     }
@@ -62,14 +84,14 @@ public final class ConstellationRenderer {
         graphics.pose().translate(x0, y0);
         graphics.pose().rotate((float) Math.atan2(y1 - y0, x1 - x0));
         SmoothRenderer.panel(graphics, 0, -.3f, length, .6f, .3f,
-                0x30FFFFFF, 0x24FFFFFF, 0, 1.5f, clip);
+                0x58FFFFFF, 0x66FFFFFF, 0, 2.5f, clip);
         graphics.pose().popMatrix();
     }
 
     public static void star(GuiGraphicsExtractor graphics, float x, float y, float radius,
                             float opacity, ScreenRectangle clip) {
         Matrix3x2f pose = new Matrix3x2f(graphics.pose());
-        int pad = (int) Math.ceil(radius * 1.9f);
+        int pad = (int) Math.ceil(radius * 2.3f);
         ScreenRectangle bounds = new ScreenRectangle((int) Math.floor(x) - pad,
                 (int) Math.floor(y) - pad, pad * 2 + 2, pad * 2 + 2).transformMaxBounds(pose);
         if (clip != null) bounds = bounds.intersection(clip);
@@ -99,9 +121,9 @@ public final class ConstellationRenderer {
             var mesh = new RoundedGeometry.MeshBuilder((vx, vy, rgba) ->
                     consumer.addVertexWith2DPose(pose, vx, vy).setColor(rgba));
             for (int i = 6; i > 0; i--) {
-                float outer = 1 + i * .14f, inner = 1 + (i - 1) * .14f;
-                float a0 = opacity * .25f * (float) Math.pow(1 - i / 6f, 2);
-                float a1 = opacity * .25f * (float) Math.pow(1 - (i - 1) / 6f, 2);
+                float outer = 1 + i * .19f, inner = 1 + (i - 1) * .19f;
+                float a0 = opacity * .55f * (float) Math.pow(1 - i / 6f, 2);
+                float a1 = opacity * .55f * (float) Math.pow(1 - (i - 1) / 6f, 2);
                 mesh.ring(points(x,y,radius*outer), points(x,y,radius*inner),
                         color(0xFFFFFF,a0), color(0xFFFFFF,a1));
             }

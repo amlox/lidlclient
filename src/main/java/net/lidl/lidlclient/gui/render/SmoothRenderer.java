@@ -23,6 +23,13 @@ public final class SmoothRenderer {
     public static void panel(GuiGraphicsExtractor graphics, float x, float y, float width,
                              float height, float radius, int fill, int border, float stroke,
                              float glow, ScreenRectangle clip) {
+        panel(graphics, x, y, width, height, radius, fill, border, stroke, glow, .24f, clip);
+    }
+
+    /** Glow radius and brightness can be tuned independently for hover and enabled states. */
+    public static void panel(GuiGraphicsExtractor graphics, float x, float y, float width,
+                             float height, float radius, int fill, int border, float stroke,
+                             float glow, float glowStrength, ScreenRectangle clip) {
         if (width <= 0 || height <= 0) return;
         float pixel = (float) (1.0 / Minecraft.getInstance().getWindow().getGuiScale());
         Matrix3x2f pose = new Matrix3x2f(graphics.pose());
@@ -34,7 +41,7 @@ public final class SmoothRenderer {
                 .transformMaxBounds(pose);
         if (clip != null) bounds = clip.intersection(bounds);
         if (bounds == null) return;
-        graphics.guiRenderState.addGuiElement(new MeshState(pose, bounds, clip, x, y, width, height, radius, fill, border, stroke, glow, pixel));
+        graphics.guiRenderState.addGuiElement(new MeshState(pose, bounds, clip, x, y, width, height, radius, fill, border, stroke, glow, pixel, glowStrength));
     }
 
     public static void line(GuiGraphicsExtractor graphics, float x, float y, float height,
@@ -43,8 +50,8 @@ public final class SmoothRenderer {
                 color, color, 0, glow, clip);
     }
 
-    private static float glowAlpha(float t) {
-        return 0.16f * (float) Math.exp(-5 * t * t) * (1 - t);
+    private static float glowAlpha(float t, float strength) {
+        return strength * (float) Math.exp(-5 * t * t) * (1 - t);
     }
 
     private static int alpha(int color, float multiplier) {
@@ -53,7 +60,7 @@ public final class SmoothRenderer {
 
     private record MeshState(Matrix3x2f pose, ScreenRectangle bounds, ScreenRectangle scissorArea,
                              float x, float y, float width, float height, float radius,
-                             int fill, int border, float stroke, float glow, float pixel)
+                             int fill, int border, float stroke, float glow, float pixel, float glowStrength)
             implements GuiElementRenderState {
         @Override public RenderPipeline pipeline() { return RenderPipelines.GUI; }
         @Override public TextureSetup textureSetup() { return TextureSetup.noTexture(); }
@@ -69,8 +76,8 @@ public final class SmoothRenderer {
                     float near = glow * (ring - 1) / 8;
                     mesh.ring(RoundedGeometry.contour(x, y, width, height, radius, -far, segments),
                             RoundedGeometry.contour(x, y, width, height, radius, -near, segments),
-                            alpha(border, glowAlpha(far / glow)),
-                            alpha(border, glowAlpha(near / glow)));
+                            alpha(border, glowAlpha(far / glow, glowStrength)),
+                            alpha(border, glowAlpha(near / glow, glowStrength)));
                 }
             }
 

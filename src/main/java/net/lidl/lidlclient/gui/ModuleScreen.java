@@ -137,8 +137,9 @@ public class ModuleScreen extends Screen {
             boolean active = category.equals(selectedCategory);
             boolean hovered = contains(mouseX, mouseY, panelX + 7, y, 34, 36);
             SmoothRenderer.panel(graphics, panelX + 7, y, 34, 36, 7,
-                    active ? 0x405D5D70 : 0x200C0C12,
-                    active || hovered ? WHITE : 0x668D8D9A, 0.8f, active || hovered ? 3 : 0, rail);
+                    active ? 0xBC344055 : (hovered ? 0xA0283243 : 0x8A10151F),
+                    active || hovered ? WHITE : 0xA5798598, 1,
+                    active ? 7 : (hovered ? 5 : 1), active ? .42f : .24f, rail);
             String letter = category.substring(0, category.offsetByCodePoints(0, 1));
             text(graphics, letter, Math.round(panelX + 24 - UiText.width(font, letter) / 2f),
                     Math.round(y + (36 - UiText.HEIGHT) / 2f), 24, active ? WHITE : MUTED);
@@ -154,18 +155,30 @@ public class ModuleScreen extends Screen {
             boolean enabled = module.isEnabled();
             boolean hovered = contains(mouseX, mouseY, cardX(), y, cardWidth(), HEADER);
             SmoothRenderer.panel(graphics, cardX(), y, cardWidth(), row.height(), 8,
-                    enabled ? 0x304F4F60 : 0x2007070D,
-                    enabled || hovered ? WHITE : 0x667F7F8C, 0.8f, enabled || hovered ? 4 : 0, clip);
+                    enabled ? 0xC0364258 : (hovered ? 0xB4263042 : 0x94101520),
+                    enabled ? WHITE : (hovered ? 0xFFE0E8F7 : 0xA5798598),
+                    enabled ? 1.3f : .9f, enabled ? 10 : (hovered ? 6 : 1.5f),
+                    enabled ? .55f : (hovered ? .32f : .14f), clip);
+            if (enabled) {
+                SmoothRenderer.panel(graphics, cardX() + 3, y + 10, 2, HEADER - 20, 1,
+                        WHITE, WHITE, 0, 3, .38f, clip);
+            }
             text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f),
-                    cardWidth() - 34, enabled ? WHITE : MUTED);
-            // State marker stays visible independently of hover or the text colour.
-            SmoothRenderer.panel(graphics, cardX() + cardWidth() - 17, y + HEADER / 2f - 2,
-                    4, 4, 2, enabled ? WHITE : 0x407F7F8C, 0, 0, 0, clip);
+                    cardWidth() - 60, enabled ? WHITE : 0xFFD6DAE4);
+            int badgeX = cardX() + cardWidth() - 43;
+            float badgeY = y + (HEADER - 18) / 2f;
+            SmoothRenderer.panel(graphics, badgeX, badgeY, 33, 18, 5,
+                    enabled ? 0xE8DAE4F5 : 0xB0080D17,
+                    enabled ? WHITE : 0x70748298, .7f, enabled ? 3 : 0, .3f, clip);
+            String state = enabled ? "ON" : "OFF";
+            text(graphics, state, badgeX + (33 - UiText.width(font, state)) / 2,
+                    Math.round(badgeY + (18 - UiText.HEIGHT) / 2f), 33,
+                    enabled ? 0xFF101827 : 0xFFADB7C9);
             if (!row.expanded()) continue;
             for (int index = 0; index < module.settings().size(); index++) {
                 float sy = y + HEADER + index * SETTING;
                 if (sy + SETTING < TOP || sy > height - BOTTOM) continue;
-                renderSetting(graphics, module.settings().get(index), sy, clip);
+                renderSetting(graphics, module.settings().get(index), sy, mouseX, mouseY, clip);
             }
         }
         graphics.disableScissor();
@@ -175,16 +188,21 @@ public class ModuleScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
     }
 
-    private void renderSetting(GuiGraphicsExtractor graphics, ModuleSetting setting, float y, ScreenRectangle clip) {
-        SmoothRenderer.panel(graphics, cardX() + 10, y, cardWidth() - 20, 0.6f,
-                0, 0x207F7F8C, 0, 0, 0, clip);
+    private void renderSetting(GuiGraphicsExtractor graphics, ModuleSetting setting, float y,
+                               int mouseX, int mouseY, ScreenRectangle clip) {
+        boolean on = setting instanceof BooleanSetting bool && bool.value();
+        boolean hovered = contains(mouseX, mouseY, cardX(), y, cardWidth(), SETTING);
+        SmoothRenderer.panel(graphics, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
+                on ? 0x883E4D67 : (hovered ? 0x782B374B : 0x50080D17),
+                on ? 0xAACFDDF5 : (hovered ? 0x907F90AB : 0x303F4D66),
+                .7f, on ? 3 : (hovered ? 2 : 0), on ? .3f : .18f, clip);
         String value = setting.valueText();
         int valueWidth = Math.min(UiText.width(font, value), Math.max(24, cardWidth() / 3));
         int right = cardX() + cardWidth() - 12;
         text(graphics, setting.label(), cardX() + 12, Math.round(y + 9),
                 cardWidth() - valueWidth - 32, WHITE);
         text(graphics, value, right - valueWidth, Math.round(y + 9), valueWidth,
-                setting instanceof BooleanSetting bool && bool.value() ? WHITE : MUTED);
+                on ? WHITE : MUTED);
         if (setting instanceof NumberSetting number) {
             int trackWidth = cardWidth() - 24;
             SmoothRenderer.panel(graphics, cardX() + 12, y + 26, trackWidth, 2, 1,

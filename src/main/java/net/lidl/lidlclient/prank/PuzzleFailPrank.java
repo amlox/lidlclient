@@ -12,11 +12,9 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 
 import java.util.Locale;
 
-/** One local prank ten seconds after !ban in party, co-op, or whisper chat. */
+/** Instant local disconnect prank for !ban in party, co-op, or whisper chat. */
 public final class PuzzleFailPrank implements ClientModInitializer {
-    private static final long DELAY_NS = 10_000_000_000L;
     private ClientPacketListener pendingConnection;
-    private long queuedAt;
     private boolean preview;
 
     private static boolean isHypixel(Minecraft client) {
@@ -31,11 +29,8 @@ public final class PuzzleFailPrank implements ClientModInitializer {
         if (client.player == null || !isHypixel(client)
                 || pendingConnection != null || !ChatBanTrigger.matches(message.getString())) return;
         pendingConnection = client.getConnection();
-        queuedAt = System.nanoTime();
         preview = false;
-        LidlClient.LOGGER.info("Chat ban prank queued.");
-        client.player.sendSystemMessage(Component.literal(
-                "[LidlClient] !ban received. Disconnecting in 10 seconds."));
+        LidlClient.LOGGER.info("Chat ban prank received; disconnecting on this tick.");
     }
 
     @Override
@@ -46,10 +41,9 @@ public final class PuzzleFailPrank implements ClientModInitializer {
                         .then(ClientCommands.literal("test").executes(context -> {
                             Minecraft client = Minecraft.getInstance();
                             pendingConnection = client.getConnection();
-                            queuedAt = System.nanoTime();
                             preview = true;
                             context.getSource().sendFeedback(Component.literal(
-                                    "[LidlClient] Fake ban test in 10 seconds. You WILL be disconnected."));
+                                    "[LidlClient] Fake ban test: disconnecting now."));
                             return 1;
                         }))));
 
@@ -66,7 +60,6 @@ public final class PuzzleFailPrank implements ClientModInitializer {
                 pendingConnection = null;
                 return;
             }
-            if (System.nanoTime() - queuedAt < DELAY_NS) return;
             pendingConnection = null;
             preview = false;
             client.disconnect(new FakeBanScreen(), false);

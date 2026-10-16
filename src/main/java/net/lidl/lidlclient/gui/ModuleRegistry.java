@@ -23,6 +23,26 @@ public final class ModuleRegistry {
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",
                 ModuleController::isPartyCommandsEnabled, ModuleController::setPartyCommandsEnabled));
 
+        // Temporary modules for testing scrolling.
+        for (int i = 1; i <= 30; i++) {
+            final boolean[] enabled = {false};
+            final boolean[] option = {false};
+
+            modules.add(new GuiModule(
+                    "scroll_test_" + i,
+                    "Test Module " + i,
+                    "General",
+                    "Temporary scrolling test",
+                    () -> enabled[0],
+                    value -> enabled[0] = value,
+                    new BooleanSetting(
+                            "Test setting",
+                            () -> option[0],
+                            value -> option[0] = value
+                    )
+            ));
+        }
+
         return validate(modules);
     }
 

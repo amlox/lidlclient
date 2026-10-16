@@ -168,7 +168,7 @@ public class ModuleScreen extends Screen {
                 SmoothRenderer.panel(graphics, cardX() + 3, y + 10, 2, HEADER - 20, 1,
                         WHITE, WHITE, 0, 3, .38f, clip);
             }
-            text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f),
+            text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f + 1),
                     cardWidth() - 24, enabled ? WHITE : 0xFFD6DAE4);
             if (!row.expanded()) continue;
             for (int index = 0; index < module.settings().size(); index++) {

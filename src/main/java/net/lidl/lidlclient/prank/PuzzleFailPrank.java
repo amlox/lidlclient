@@ -65,7 +65,7 @@ public final class PuzzleFailPrank implements ClientModInitializer {
             if (System.nanoTime() - queuedAt < DELAY_NS) return;
             pendingConnection = null;
             preview = false;
-            client.disconnect(new FakeBanScreen());
+            client.disconnect(new FakeBanScreen(), false);
         });
     }
 }

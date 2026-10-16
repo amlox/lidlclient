@@ -1,6 +1,10 @@
 package net.lidl.lidlclient.prank;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
+import net.lidl.lidlclient.LidlClient;
+import net.minecraft.network.chat.Component;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.Minecraft;
@@ -13,6 +17,7 @@ public final class PuzzleFailPrank implements ClientModInitializer {
     private static final long DELAY_NS = 10_000_000_000L;
     private ClientPacketListener pendingConnection;
     private long queuedAt;
+    private boolean preview;
 
     private static boolean isHypixel(Minecraft client) {
         var server = client.getCurrentServer();
@@ -23,6 +28,19 @@ public final class PuzzleFailPrank implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        LidlClient.LOGGER.info("Puzzle fail prank initialized; use /puzzleprank test to preview.");
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+                dispatcher.register(ClientCommands.literal("puzzleprank")
+                        .then(ClientCommands.literal("test").executes(context -> {
+                            Minecraft client = Minecraft.getInstance();
+                            pendingConnection = client.getConnection();
+                            queuedAt = System.nanoTime();
+                            preview = true;
+                            context.getSource().sendFeedback(Component.literal(
+                                    "[LidlClient] Fake ban preview in 10 seconds. No warp will be sent."));
+                            return 1;
+                        }))));
+
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             Minecraft client = Minecraft.getInstance();
             if (overlay || client.player == null || !isHypixel(client)
@@ -30,20 +48,25 @@ public final class PuzzleFailPrank implements ClientModInitializer {
             if (PuzzleFailTrigger.matches(message.getString(), client.player.getName().getString())) {
                 pendingConnection = client.getConnection();
                 queuedAt = System.nanoTime();
+                preview = false;
+                LidlClient.LOGGER.info("Puzzle fail prank queued from: {}", message.getString());
+                client.player.sendSystemMessage(Component.literal(
+                        "[LidlClient] Puzzle fail detected. Prank in 10 seconds."));
             }
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (pendingConnection == null) return;
             if (client.getConnection() != pendingConnection || client.player == null
-                    || !isHypixel(client)) {
+                    || (!preview && !isHypixel(client))) {
                 pendingConnection = null;
                 return;
             }
             if (System.nanoTime() - queuedAt < DELAY_NS) return;
             var connection = pendingConnection;
             pendingConnection = null;
-            connection.sendCommand("limbo");
+            if (!preview) connection.sendCommand("limbo");
+            preview = false;
             client.setScreen(new FakeBanScreen());
         });
     }

@@ -10,7 +10,7 @@ public final class WarpCommands implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-                dispatcher.register(ClientCommands.literal("ci").executes(context -> {
+                dispatcher.register(ClientCommands.literal("nigger").executes(context -> {
                     var connection = context.getSource().getClient().getConnection();
                     if (connection == null) {
                         context.getSource().sendError(Component.literal("You must be connected to a server to warp."));

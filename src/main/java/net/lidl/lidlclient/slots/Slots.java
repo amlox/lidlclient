@@ -1,4 +1,3 @@
-
 package net.lidl.lidlclient.slots;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -23,14 +22,38 @@ import net.minecraft.resources.Identifier;
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
+// Import the controller managing your GUI state
+import net.lidl.lidlclient.gui.ModuleController;
+
 public class Slots implements ClientModInitializer {
+
+    // Removed the standalone 'enabled' variable to completely rely on ModuleController
+
+    public static void setEnabled(boolean value) {
+        // Safe-guard to cancel an unfinished spin instantly if turned off mid-run
+        if (!value) {
+            autoRoll = false;
+            autoRollWait = -1;
+            if (rolling) {
+                points = safeAdd(points, currentBet);
+                rolling = false;
+                rollTick = 0;
+                for (int i = 0; i < reels.length; i++) reels[i] = -1;
+            }
+        }
+    }
+
+    public static boolean isEnabled() {
+        return ModuleController.isSlotsEnabled();
+    }
+
 
     // ========================================
     // SETTINGS
     // ========================================
 
-    private static final boolean SHOW_UI = false;
-    private static final boolean MUTE_MESSAGES = true;
+    private static final boolean SHOW_UI = true;
+    private static final boolean MUTE_MESSAGES = false;
     private static final boolean FAST_ROLL = true;
     private static final float FONT_SCALE = 3.0f;
 
@@ -58,7 +81,6 @@ public class Slots implements ClientModInitializer {
             ChatFormatting.BLUE
     };
 
-    // 5 = number seven, our special symbol
     private static final int SEVEN = 5;
 
     // ========================================
@@ -95,6 +117,10 @@ public class Slots implements ClientModInitializer {
                     dispatcher.register(
                             ClientCommands.literal("slots")
                                     .executes(ctx -> {
+                                        if (!isEnabled()) {
+                                            msg("Slots is disabled in the client GUI.", ChatFormatting.RED);
+                                            return 1;
+                                        }
                                         msg("Usage: /slots <bet>", ChatFormatting.YELLOW);
                                         return 1;
                                     })
@@ -110,6 +136,10 @@ public class Slots implements ClientModInitializer {
                     dispatcher.register(
                             ClientCommands.literal("gamble")
                                     .executes(ctx -> {
+                                        if (!isEnabled()) {
+                                            msg("Slots is disabled in the client GUI.", ChatFormatting.RED);
+                                            return 1;
+                                        }
                                         msg("Usage: /gamble <bet>", ChatFormatting.YELLOW);
                                         return 1;
                                     })
@@ -180,6 +210,11 @@ public class Slots implements ClientModInitializer {
 
     private static void placeBet(String input) {
 
+        if (!isEnabled()) {
+            msg("Slots is disabled. Enable it in the GUI.", ChatFormatting.RED);
+            return;
+        }
+
         if (rolling) {
             msg("Already rolling!", ChatFormatting.RED);
             return;
@@ -224,7 +259,6 @@ public class Slots implements ClientModInitializer {
             return;
         }
 
-        // Starting a new bet disables any previous auto-roll
         autoRoll = false;
         currentBet = amount;
 
@@ -237,99 +271,87 @@ public class Slots implements ClientModInitializer {
 
         try {
             long amount = Long.parseLong(input);
-
             if (amount <= 0 || amount > Long.MAX_VALUE - points) {
                 msg("Invalid amount!", ChatFormatting.RED);
                 return;
             }
-
             points += amount;
             msg("Added $" + amount + ". Balance: $" + points,
                     ChatFormatting.GREEN);
-
         } catch (NumberFormatException e) {
             msg("Invalid amount!", ChatFormatting.RED);
         }
     }
-
     // ========================================
-    // AUTO ROLL
-    // ========================================
-
+// AUTO ROLL
+// ========================================
     private static void toggleAutoRoll() {
-
+        if (!isEnabled()) {
+            msg("Slots is disabled. Enable it in the GUI.", ChatFormatting.RED);
+            return;
+        }
         autoRoll = !autoRoll;
-
         if (!autoRoll) {
             autoRollWait = -1;
             msg("Auto-roll DISABLED.", ChatFormatting.AQUA);
             return;
         }
-
         if (currentBet < MIN_BET) {
             autoRoll = false;
-            msg("Set a bet with /slots <bet> first.",
+            msg("Set a bet with /slots  first.",
                     ChatFormatting.RED);
             return;
         }
-
         if (points < currentBet) {
             autoRoll = false;
             msg("Not enough money for auto-roll.",
                     ChatFormatting.RED);
             return;
         }
-
         msg("Auto-roll ENABLED. Betting $" + currentBet,
                 ChatFormatting.AQUA);
-
         if (!rolling) {
             startRolling();
         }
     }
-
     // ========================================
-    // SLOT ANIMATION
-    // ========================================
-
+// SLOT ANIMATION
+// ========================================
     private static void startRolling() {
-
-        if (rolling || points < currentBet) {
+        if (!isEnabled() || rolling || points < currentBet) {
             autoRoll = false;
             return;
         }
-
         points -= currentBet;
-
         if (!MUTE_MESSAGES) {
             msg("Betting $" + currentBet +
                             ". Balance: $" + points,
                     ChatFormatting.GREEN);
         }
-
         rolling = true;
         rollTick = 0;
         autoRollWait = -1;
-
         for (int i = 0; i < 3; i++) {
             reels[i] = -1;
         }
     }
-
     private static void tick(Minecraft client) {
-
+// MASTER KILLSWITCH: If GUI toggles off, immediately clear background loops
+        if (!isEnabled()) {
+            if (rolling || autoRoll) {
+                setEnabled(false); // Triggers clean cleanup resets
+            }
+            return;
+        }
         if (client.player == null) {
             rolling = false;
             autoRoll = false;
             autoRollWait = -1;
             return;
         }
-
-        // Wait briefly between automatic spins
         if (!rolling) {
             if (autoRoll && autoRollWait >= 0) {
                 autoRollWait--;
-
                 if (autoRollWait <= 0) {
                     if (points >= currentBet) {
                         startRolling();
@@ -343,18 +365,12 @@ public class Slots implements ClientModInitializer {
             }
             return;
         }
-
         rollTick++;
-
         double multiplier = FAST_ROLL ? 0.3 : 1.0;
-
         for (int i = 0; i < 3; i++) {
             int stop = (int) (STOP_TIMES[i] * multiplier);
-
             if (rollTick < stop) {
                 reels[i] = randomSymbol();
-
-                // Play a quiet click every 2 ticks
                 if (rollTick % 2 == 0) {
                     playSound(1.5f);
                 }
@@ -362,41 +378,29 @@ public class Slots implements ClientModInitializer {
                 reels[i] = randomSymbol();
             }
         }
-
         int lastStop = (int) (STOP_TIMES[2] * multiplier);
-
-        // Result appears 10 ticks after last reel stops
         if (rollTick >= lastStop + 10) {
             rolling = false;
             showResult();
         }
     }
-
     // ========================================
-    // RESULTS
-    // ========================================
-
+// RESULTS
+// ========================================
     private static void showResult() {
-
         int a = reels[0];
         int b = reels[1];
         int c = reels[2];
-
         long winnings = 0;
-
         totalSpins++;
         totalBet += currentBet;
-
         int sevens = (a == SEVEN ? 1 : 0)
                 + (b == SEVEN ? 1 : 0)
                 + (c == SEVEN ? 1 : 0);
-
         if (a == b && b == c) {
-
             if (a == SEVEN) {
                 winnings = safePayout((double) currentBet * currentBet);
                 playSound(0.65f);
-
                 msg("777 JACKPOT! You won $" + winnings + "!",
                         ChatFormatting.RED);
             } else {
@@ -404,69 +408,51 @@ public class Slots implements ClientModInitializer {
                         currentBet * Math.sqrt(currentBet)
                 );
                 playSound(1.8f);
-
                 msg("✮ JACKPOT! You won $" + winnings + "!",
                         ChatFormatting.GREEN);
             }
-
         } else if (sevens == 2) {
-
             winnings = safePayout(
                     currentBet * Math.sqrt(currentBet)
             );
             playSound(1.3f);
-
             if (!MUTE_MESSAGES) {
                 msg("Lucky double 7! Won $" + winnings,
                         ChatFormatting.GOLD);
             }
-
         } else if (a == b || b == c || a == c) {
-
             winnings = safePayout(
                     currentBet * Math.cbrt(currentBet)
             );
             playSound(1.6f);
-
             if (!MUTE_MESSAGES) {
                 msg("Two matches! Won $" + winnings,
                         ChatFormatting.YELLOW);
             }
-
         } else {
             if (!MUTE_MESSAGES) {
                 msg("No matches. Better luck next time!",
                         ChatFormatting.RED);
             }
         }
-
         if (winnings == 0) {
             totalLosses += currentBet;
         } else {
             totalWinnings += winnings;
         }
-
-        // Prevent signed integer overflow
         points = safeAdd(points, winnings);
-
         if (!MUTE_MESSAGES) {
             msg("Balance: $" + points, ChatFormatting.GOLD);
         }
-
-        // Small pause before next automatic spin
         if (autoRoll) {
             autoRollWait = 15;
         }
     }
-
     // ========================================
-    // STATS
-    // ========================================
-
+// STATS
+// ========================================
     private static void showStats() {
-
         long net = totalWinnings - totalBet;
-
         msg("--- Slot Stats ---", ChatFormatting.AQUA);
         msg("Total Spins: " + totalSpins, ChatFormatting.YELLOW);
         msg("Total Bet: $" + totalBet, ChatFormatting.YELLOW);
@@ -476,36 +462,26 @@ public class Slots implements ClientModInitializer {
                 ChatFormatting.RED);
         msg("Net Profit/Loss: $" + net, ChatFormatting.GOLD);
     }
-
     // ========================================
-    // HUD - NO BACKGROUND
-    // ========================================
-
+// HUD - NO BACKGROUND
+// ========================================
     private static void render(
             GuiGraphicsExtractor graphics,
             DeltaTracker deltaTracker
     ) {
-
-        if (!rolling) return;
-
+// Block overlay rendering if module is toggled off
+        if (!isEnabled() || !rolling) return;
         Minecraft client = Minecraft.getInstance();
-
         int centerX = graphics.guiWidth() / 2;
         int centerY = graphics.guiHeight() / 2;
-
-        // Build colored symbol display
         MutableComponent display =
                 Component.literal("[ ").withStyle(ChatFormatting.WHITE);
-
         for (int i = 0; i < 3; i++) {
-
             if (i > 0) {
                 display.append(Component.literal(" | ")
                         .withStyle(ChatFormatting.WHITE));
             }
-
             int index = reels[i];
-
             if (index == -1) {
                 display.append(Component.literal("?")
                         .withStyle(ChatFormatting.WHITE));
@@ -513,32 +489,19 @@ public class Slots implements ClientModInitializer {
                 MutableComponent symbol =
                         Component.literal(SYMBOLS[index])
                                 .withStyle(COLORS[index]);
-
                 if (index == SEVEN) {
                     symbol.withStyle(ChatFormatting.BOLD);
                 }
-
                 display.append(symbol);
             }
         }
-
         display.append(Component.literal(" ]")
                 .withStyle(ChatFormatting.WHITE));
-
-        // Center the symbols
         int textWidth = client.font.width(display);
-
         float scale = FONT_SCALE;
-
         graphics.pose().pushMatrix();
-
-        graphics.pose().translate(
-                centerX,
-                centerY - 67
-        );
-
+        graphics.pose().translate(centerX, centerY - 67);
         graphics.pose().scale(scale, scale);
-
         graphics.text(
                 client.font,
                 display,
@@ -547,19 +510,14 @@ public class Slots implements ClientModInitializer {
                 0xFFFFFFFF,
                 true
         );
-
         graphics.pose().popMatrix();
-
         if (SHOW_UI) {
-
             Component bet = Component.literal(
                     "Bet: $" + currentBet
             ).withStyle(ChatFormatting.YELLOW);
-
             Component balance = Component.literal(
                     "Balance: $" + points
             ).withStyle(ChatFormatting.GOLD);
-
             graphics.text(
                     client.font,
                     bet,
@@ -568,7 +526,6 @@ public class Slots implements ClientModInitializer {
                     0xFFFFFFFF,
                     true
             );
-
             graphics.text(
                     client.font,
                     balance,
@@ -579,34 +536,27 @@ public class Slots implements ClientModInitializer {
             );
         }
     }
-
     // ========================================
-    // UTILITIES
-    // ========================================
-
+// UTILITIES
+// ========================================
     private static int randomSymbol() {
         return ThreadLocalRandom.current()
                 .nextInt(SYMBOLS.length);
     }
-
     private static long safePayout(double amount) {
         if (!Double.isFinite(amount) || amount < 0) {
             return 0;
         }
         return (long) Math.min(amount, Long.MAX_VALUE);
     }
-
     private static long safeAdd(long a, long b) {
         if (b > Long.MAX_VALUE - a) {
             return Long.MAX_VALUE;
         }
         return a + b;
     }
-
     private static void playSound(float pitch) {
-
         Minecraft client = Minecraft.getInstance();
-
         client.getSoundManager().play(
                 SimpleSoundInstance.forUI(
                         SoundEvents.UI_BUTTON_CLICK,
@@ -614,13 +564,9 @@ public class Slots implements ClientModInitializer {
                 )
         );
     }
-
     private static void msg(String text, ChatFormatting color) {
-
         Minecraft client = Minecraft.getInstance();
-
         if (client.player == null) return;
-
         client.player.sendSystemMessage(
                 Component.literal("[Slots] ")
                         .withStyle(ChatFormatting.AQUA)
@@ -629,3 +575,4 @@ public class Slots implements ClientModInitializer {
         );
     }
 }
+

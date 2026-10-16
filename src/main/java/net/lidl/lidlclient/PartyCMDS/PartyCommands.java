@@ -256,7 +256,12 @@ public class PartyCommands implements ClientModInitializer {
                         "wall breaker left",
                         "okay garmin video schrieben",
                         "schriepen",
-                        "i dislocated my toe"
+                        "i dislocated my toe",
+                        "his dih pattern is recognizable",
+                        "i only have jerk mate premium",
+                        "rocks are made of rocks",
+                        "ive actually gooned to a penguin before",
+                        "that rock over is actually my favourite. \nit reminds me of the penguin",
                 };
 
                 int index = ThreadLocalRandom.current()

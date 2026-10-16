@@ -24,7 +24,8 @@
 		"client": [
 			"net.lidl.lidlclient.GuiTest.GuiTest",
 			"net.lidl.lidlclient.PartyCMDS.PartyCommands",
-			"net.lidl.lidlclient.slots.Slots"
+			"net.lidl.lidlclient.slots.Slots",
+			"net.lidl.lidlclient.LidlClientGui"
 		],
 		"config": [
 			"net.lidl.lidlclient.Config.Config"

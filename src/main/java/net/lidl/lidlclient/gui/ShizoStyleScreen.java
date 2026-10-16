@@ -1,8 +1,8 @@
-
 package net.lidl.lidlclient.gui;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.Button;
+import net.lidl.lidlclient.slots.Slots;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -17,6 +17,7 @@ public class ShizoStyleScreen extends Screen {
 
     private static final int PINK = 0xFFFF43A5;
     private static final int WHITE = 0xFFFFFFFF;
+    private static final int MUTED = 0xFFBDA8B5;
 
     // Transparent backgrounds
     private static final int MAIN_BG = 0x80100D12;
@@ -46,6 +47,9 @@ public class ShizoStyleScreen extends Screen {
     // ==============================
 
     private final List<GuiModule> modules = new ArrayList<>();
+
+    // Right-click a module to expand its settings. Only one opens at a time.
+    private int expandedModule = -1;
 
     public ShizoStyleScreen() {
         super(Component.literal("LidlClient"));
@@ -219,58 +223,36 @@ public class ShizoStyleScreen extends Screen {
     @Override
     protected void init() {
         calculateGuiLayout();
-        rebuildGui();
     }
 
-    private void rebuildGui() {
-        clearWidgets();
+    // The GUI draws its own buttons instead of Minecraft's gray widgets.
+    // Keep the original module card coordinates for rendering and clicks.
+    private int moduleX() {
+        return guiX + scaled(210);
+    }
 
-        // General sidebar
-        addRenderableWidget(
-                Button.builder(
-                        Component.literal("General"),
-                        button -> {}
-                ).bounds(
-                        guiX + scaled(12),
-                        guiY + scaled(55),
-                        scaled(170),
-                        scaled(28)
-                ).build()
-        );
+    private int dropdownHeight(int index) {
+        // Slots has two settings plus the keybind row.
+        return scaled(index == 0 ? 126 : 42);
+    }
 
-        // Module positions
-        int moduleX = guiX + scaled(210);
-        int moduleY = guiY + scaled(110);
+    private int moduleY(int index) {
+        return guiY + scaled(110) + index * scaled(62)
+                + (expandedModule >= 0 && expandedModule < index ? dropdownHeight(expandedModule) + scaled(7) : 0);
+    }
 
-        int moduleWidth = scaled(765);
-        int moduleHeight = scaled(48);
-        int moduleSpacing = scaled(62);
+    private int moduleWidth() {
+        return scaled(765);
+    }
 
-        // Create module buttons
-        for (int i = 0; i < modules.size(); i++) {
+    private int moduleHeight() {
+        return scaled(48);
+    }
 
-            GuiModule module = modules.get(i);
-
-            int cardY = moduleY + i * moduleSpacing;
-
-            addRenderableWidget(
-                    Button.builder(
-                            Component.literal(
-                                    (module.enabled ? "ON  " : "OFF  ")
-                                            + module.name
-                            ),
-                            button -> {
-                                module.toggle();
-                                rebuildGui();
-                            }
-                    ).bounds(
-                            moduleX,
-                            cardY,
-                            moduleWidth,
-                            moduleHeight
-                    ).build()
-            );
-        }
+    private boolean hovering(double mouseX, double mouseY,
+                             int x, int y, int w, int h) {
+        return mouseX >= x && mouseX < x + w
+                && mouseY >= y && mouseY < y + h;
     }
 
     // ==============================
@@ -290,7 +272,7 @@ public class ShizoStyleScreen extends Screen {
         int h = guiHeight;
 
         int mainRadius = scaled(20);
-        int cardRadius = scaled(10);
+
 
         // Pink outer glow
         roundedRect(
@@ -363,41 +345,189 @@ public class ShizoStyleScreen extends Screen {
                 0xAA6A4659
         );
 
-        // Rounded module backgrounds
-        int moduleX = x + scaled(210);
-        int moduleY = y + scaled(110);
-        int moduleWidth = scaled(765);
-        int moduleHeight = scaled(48);
+        // Custom General sidebar button, replacing the vanilla gray one.
+        int sideX = x + scaled(12);
+        int sideY = y + scaled(55);
+        int sideW = scaled(170);
+        int sideH = scaled(28);
 
+        roundedRect(
+                graphics,
+                sideX, sideY,
+                sideW, sideH,
+                scaled(7),
+                0x8042162E
+        );
+
+        graphics.fill(
+                sideX + scaled(3),
+                sideY + scaled(5),
+                sideX + scaled(5),
+                sideY + sideH - scaled(5),
+                PINK
+        );
+
+        graphics.text(
+                font,
+                "General",
+                sideX + scaled(17),
+                sideY + (sideH - font.lineHeight) / 2,
+                WHITE,
+                true
+        );
+
+        // Original card positions, now with custom labels and toggle switches.
         for (int i = 0; i < modules.size(); i++) {
 
             GuiModule module = modules.get(i);
+            int cardX = moduleX();
+            int cardY = moduleY(i);
+            int cardW = moduleWidth();
+            int cardH = moduleHeight();
 
-            int cardY = moduleY + i * scaled(62);
-
-            roundedBorder(
-                    graphics,
-                    moduleX,
-                    cardY,
-                    moduleWidth,
-                    moduleHeight,
-                    cardRadius,
-                    Math.max(1, scaled(1)),
-                    module.enabled
-                            ? PINK
-                            : 0xAA62515D,
-                    module.enabled
-                            ? ENABLED_BG
-                            : CARD_BG
+            boolean hovered = hovering(
+                    mouseX, mouseY,
+                    cardX, cardY,
+                    cardW, cardH
             );
+
+            // Draw the module and its dropdown as ONE continuous square panel.
+            // Only the main GUI background has rounded corners.
+            int border = Math.max(1, scaled(1));
+            boolean expanded = expandedModule == i;
+            int fullHeight = cardH + (expanded ? dropdownHeight(i) : 0);
+            int panelBorder = module.enabled ? PINK
+                    : (hovered ? 0xCCB35A8A : 0x8862515D);
+            int panelBackground = module.enabled ? ENABLED_BG
+                    : (hovered ? 0x99502A41 : CARD_BG);
+
+            graphics.fill(cardX, cardY,
+                    cardX + cardW, cardY + fullHeight, panelBorder);
+            graphics.fill(cardX + border, cardY + border,
+                    cardX + cardW - border, cardY + fullHeight - border,
+                    panelBackground);
+
+            int labelX = cardX + scaled(20);
+
+            graphics.text(
+                    font,
+                    module.name,
+                    labelX,
+                    cardY + scaled(10),
+                    WHITE,
+                    true
+            );
+
+            graphics.text(
+                    font,
+                    module.description,
+                    labelX,
+                    cardY + scaled(27),
+                    MUTED,
+                    true
+            );
+
+            // Square ON/OFF switch matching the module cards.
+            int switchW = scaled(90);
+            int switchH = scaled(28);
+            int switchX = cardX + cardW - switchW - scaled(14);
+            int switchY = cardY + (cardH - switchH) / 2;
+
+            graphics.fill(switchX, switchY,
+                    switchX + switchW, switchY + switchH,
+                    module.enabled ? 0xFFB92F79 : 0xAA302832);
+
+            graphics.fill(switchX + scaled(2), switchY + scaled(2),
+                    switchX + switchW - scaled(2), switchY + switchH - scaled(2),
+                    module.enabled ? 0xFF8C245F : 0xAA201C25);
+
+            String state = module.enabled ? "ON" : "OFF";
+
+            graphics.text(
+                    font,
+                    state,
+                    switchX + (switchW - font.width(state)) / 2,
+                    switchY + (switchH - font.lineHeight) / 2,
+                    module.enabled ? WHITE : MUTED,
+                    true
+            );
+
+            // Expanded settings share the module's background colour.
+            if (expanded) {
+                int dropY = cardY + cardH;
+                int rowH = scaled(42);
+                int rightX = cardX + cardW - scaled(18);
+
+                if (i == 0) {
+                    graphics.fill(cardX + scaled(15), dropY,
+                            cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
+                    graphics.text(font, "Mute chat messages", labelX,
+                            dropY + scaled(15), WHITE, true);
+                    String muted = Slots.isMuteMessages() ? "ON" : "OFF";
+                    graphics.text(font, muted, rightX - font.width(muted),
+                            dropY + scaled(15), Slots.isMuteMessages() ? PINK : MUTED, true);
+
+                    dropY += rowH;
+                    graphics.fill(cardX + scaled(15), dropY,
+                            cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
+                    graphics.text(font, "Show bet / balance text", labelX,
+                            dropY + scaled(15), WHITE, true);
+                    String show = Slots.isShowUi() ? "ON" : "OFF";
+                    graphics.text(font, show, rightX - font.width(show),
+                            dropY + scaled(15), Slots.isShowUi() ? PINK : MUTED, true);
+                    dropY += rowH;
+                }
+
+                graphics.fill(cardX + scaled(15), dropY,
+                        cardX + cardW - scaled(15), dropY + 1, 0x665B4355);
+                graphics.text(font, "Keybind", labelX,
+                        dropY + scaled(15), WHITE, true);
+                String keybind = "Not Bound";
+                graphics.text(font, keybind,
+                        rightX - font.width(keybind),
+                        dropY + scaled(15), MUTED, true);
+            }
         }
 
-        // Render interactive buttons
+        // Preserve the Screen render lifecycle.
         super.extractRenderState(
                 graphics,
                 mouseX,
                 mouseY,
                 delta
         );
+    }
+    // Left-click: toggle. Right-click: open/close module dropdown.
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        for (int i = 0; i < modules.size(); i++) {
+            if (hovering(event.x(), event.y(),
+                    moduleX(), moduleY(i), moduleWidth(), moduleHeight())) {
+                if (event.button() == 0) {
+                    modules.get(i).toggle();
+                    return true;
+                }
+                if (event.button() == 1) {
+                    expandedModule = (expandedModule == i) ? -1 : i;
+                    return true;
+                }
+            }
+
+            if (expandedModule == i && hovering(event.x(), event.y(),
+                    moduleX(), moduleY(i) + moduleHeight(),
+                    moduleWidth(), dropdownHeight(i))) {
+                if (event.button() == 0 && i == 0) {
+                    int relativeY = (int) event.y() - moduleY(i) - moduleHeight();
+                    if (relativeY < scaled(42)) {
+                        Slots.setMuteMessages(!Slots.isMuteMessages());
+                    } else if (relativeY < scaled(84)) {
+                        Slots.setShowUi(!Slots.isShowUi());
+                    }
+                }
+                // Keybind remains display-only.
+                return true;
+            }
+        }
+        return super.mouseClicked(event, doubleClick);
     }
 }

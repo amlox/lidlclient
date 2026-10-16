@@ -81,7 +81,7 @@ meshes, not stepped stacks of integer rectangles. Antialiasing width adapts to G
 
 `ModuleScreen` controls panel colors and spacing. `PANEL` is an ARGB color: its first
 byte controls opacity (`00` transparent, `FF` opaque). `SLIDE_DURATION_NS` controls the
-slide-in; 500,000,000 means 0.5 seconds. Typography uses the bundled DejaVu Sans subset through a 4x oversampled TrueType provider.
+slide-in; 500,000,000 means 0.5 seconds. Typography uses the bundled Roboto Medium subset through a 6x oversampled TrueType provider.
 `UiText` applies and measures that font for every label; unsupported glyphs fall back
 to Minecraft. The font definition is `assets/lidlclient/font/ui.json` and its license
 is included under `assets/lidlclient/licenses`.
@@ -101,3 +101,8 @@ Run `./gradlew build`. JUnit covers live toggle state, setting writes, slider bo
 choice wrapping, category filtering, reordering and scrolling through 500 modules with
 a 100-setting dropdown. In-game checks: open `/lidl`, try both mouse buttons, resize/change
 GUI scale, scroll a long registry and drag number tracks and the scrollbar.
+
+Module enabled state is indicated by its fill, border, accent and glow; there is no
+ON/OFF badge on the module header. Boolean setting rows still display their values.
+Glow clipping has a 12-unit top allowance for fully visible cards/category buttons.
+Partially scrolled items, text, and setting contents retain the normal viewport clip.

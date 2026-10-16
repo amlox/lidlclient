@@ -101,6 +101,11 @@ public class ModuleScreen extends Screen {
                 Math.max(0, Math.min(width, Math.round(panelX) + RAIL) - left), viewportHeight());
     }
 
+    private ScreenRectangle glowClip(ScreenRectangle clip, float itemTop) {
+        int top = GlowClip.top(clip.top(), itemTop, 12);
+        return new ScreenRectangle(clip.left(), top, clip.width(), clip.bottom() - top);
+    }
+
     private boolean contains(double x, double y, double left, double top, double w, double h) {
         return x >= left && x < left + w && y >= top && y < top + h;
     }
@@ -139,7 +144,7 @@ public class ModuleScreen extends Screen {
             SmoothRenderer.panel(graphics, panelX + 7, y, 34, 36, 7,
                     active ? 0xBC344055 : (hovered ? 0xA0283243 : 0x8A10151F),
                     active || hovered ? WHITE : 0xA5798598, 1,
-                    active ? 7 : (hovered ? 5 : 1), active ? .42f : .24f, rail);
+                    active ? 7 : (hovered ? 5 : 1), active ? .42f : .24f, glowClip(rail, y));
             String letter = category.substring(0, category.offsetByCodePoints(0, 1));
             text(graphics, letter, Math.round(panelX + 24 - UiText.width(font, letter) / 2f),
                     Math.round(y + (36 - UiText.HEIGHT) / 2f), 24, active ? WHITE : MUTED);
@@ -158,22 +163,13 @@ public class ModuleScreen extends Screen {
                     enabled ? 0xC0364258 : (hovered ? 0xB4263042 : 0x94101520),
                     enabled ? WHITE : (hovered ? 0xFFE0E8F7 : 0xA5798598),
                     enabled ? 1.3f : .9f, enabled ? 10 : (hovered ? 6 : 1.5f),
-                    enabled ? .55f : (hovered ? .32f : .14f), clip);
+                    enabled ? .55f : (hovered ? .32f : .14f), glowClip(clip, y));
             if (enabled) {
                 SmoothRenderer.panel(graphics, cardX() + 3, y + 10, 2, HEADER - 20, 1,
                         WHITE, WHITE, 0, 3, .38f, clip);
             }
             text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f),
-                    cardWidth() - 60, enabled ? WHITE : 0xFFD6DAE4);
-            int badgeX = cardX() + cardWidth() - 43;
-            float badgeY = y + (HEADER - 18) / 2f;
-            SmoothRenderer.panel(graphics, badgeX, badgeY, 33, 18, 5,
-                    enabled ? 0xE8DAE4F5 : 0xB0080D17,
-                    enabled ? WHITE : 0x70748298, .7f, enabled ? 3 : 0, .3f, clip);
-            String state = enabled ? "ON" : "OFF";
-            text(graphics, state, badgeX + (33 - UiText.width(font, state)) / 2,
-                    Math.round(badgeY + (18 - UiText.HEIGHT) / 2f), 33,
-                    enabled ? 0xFF101827 : 0xFFADB7C9);
+                    cardWidth() - 24, enabled ? WHITE : 0xFFD6DAE4);
             if (!row.expanded()) continue;
             for (int index = 0; index < module.settings().size(); index++) {
                 float sy = y + HEADER + index * SETTING;

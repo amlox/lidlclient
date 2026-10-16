@@ -11,7 +11,7 @@ import net.minecraft.resources.Identifier;
 public final class UiText {
     private static final Style STYLE = Style.EMPTY.withFont(new FontDescription.Resource(
             Identifier.fromNamespaceAndPath("lidlclient", "ui")));
-    public static final int HEIGHT = 11;
+    public static final int HEIGHT = 10;
     private UiText() { }
 
     public static Component component(String text) { return Component.literal(text).withStyle(STYLE); }

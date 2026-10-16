@@ -37,7 +37,7 @@ public final class PuzzleFailPrank implements ClientModInitializer {
                             queuedAt = System.nanoTime();
                             preview = true;
                             context.getSource().sendFeedback(Component.literal(
-                                    "[LidlClient] Fake ban preview in 10 seconds. No warp will be sent."));
+                                    "[LidlClient] Fake ban test in 10 seconds. You WILL be disconnected."));
                             return 1;
                         }))));
 
@@ -63,11 +63,9 @@ public final class PuzzleFailPrank implements ClientModInitializer {
                 return;
             }
             if (System.nanoTime() - queuedAt < DELAY_NS) return;
-            var connection = pendingConnection;
             pendingConnection = null;
-            if (!preview) connection.sendCommand("limbo");
             preview = false;
-            client.setScreen(new FakeBanScreen());
+            client.disconnect(new FakeBanScreen());
         });
     }
 }

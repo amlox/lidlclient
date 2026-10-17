@@ -1,6 +1,9 @@
 package net.lidl.lidlclient.pets;
 
 import net.fabricmc.api.ClientModInitializer;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import net.minecraft.network.HashedStack;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -15,7 +18,7 @@ import net.minecraft.world.item.Items;
 import java.util.List;
 import java.util.Locale;
 
-/** Sends the normal pet click first, then closes locally and suppresses a brief server reopen. */
+/** Sends a server-only pet click without local inventory pickup, then closes immediately. */
 public final class ZeroPingPets implements ClientModInitializer {
     private static boolean enabled = true;
     private static final PetsMenuRules GUARD = new PetsMenuRules();
@@ -40,22 +43,28 @@ public final class ZeroPingPets implements ClientModInitializer {
         return host.equals("hypixel.net") || host.endsWith(".hypixel.net");
     }
 
-    public static void afterClick(AbstractContainerScreen<?> screen, Slot slot, int slotId,
+    public static boolean beforeClick(AbstractContainerScreen<?> screen, Slot slot, int slotId,
                                   int button, ContainerInput input) {
         Minecraft client = Minecraft.getInstance();
         if (!enabled || !onHypixel(client) || client.player == null || slot == null
-                || client.screen != screen || !(screen.getMenu() instanceof ChestMenu chest)) return;
+                || client.getConnection() == null || client.screen != screen
+                || !(screen.getMenu() instanceof ChestMenu chest) || !chest.getCarried().isEmpty()) return false;
         var stack = slot.getItem();
         var lore = stack.get(DataComponents.LORE);
         List<String> lines = lore == null ? List.of() : lore.lines().stream().map(line -> line.getString()).toList();
         if (!PetsMenuRules.isPetSelection(screen.getTitle().getString(),
                 button == 0 && input == ContainerInput.PICKUP, stack.is(Items.PLAYER_HEAD),
-                slotId >= 0 && slotId < chest.getRowCount() * 9, lines)) return;
+                slotId >= 0 && slotId < chest.getRowCount() * 9, lines)) return false;
 
         GUARD.selected(System.nanoTime());
         selectedConnection = client.getConnection();
-        // slotClicked has already submitted the ordinary click packet.
+        // Hypixel interprets this as a menu selection. Do not run vanilla's local
+        // pickup prediction or move the pet icon onto the cursor.
+        selectedConnection.send(new ServerboundContainerClickPacket(
+                chest.containerId, chest.getStateId(), (short) slotId, (byte) button, input,
+                Int2ObjectMaps.<HashedStack>emptyMap(), HashedStack.EMPTY));
         client.player.closeContainer();
+        return true;
     }
 
     public static boolean suppressReopen(Screen next) {

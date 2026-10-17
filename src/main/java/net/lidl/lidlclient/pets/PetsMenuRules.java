@@ -12,7 +12,7 @@ public final class PetsMenuRules {
     private long selectedAt;
 
     private static String plain(String text) {
-        return text.replaceAll("(?i)§[0-9A-FK-ORX]", "").strip();
+        return text.replaceAll("(?i)§[0-9A-FK-ORX]", "").replace('\u00a0', ' ').strip();
     }
 
     public static boolean isPetsMenu(String title) {
@@ -23,8 +23,7 @@ public final class PetsMenuRules {
                                          boolean topContainerSlot, List<String> lore) {
         if (!normalLeftClick || !playerHead || !topContainerSlot || !isPetsMenu(title)) return false;
         return lore.stream().map(line -> plain(line).toLowerCase(Locale.ROOT))
-                .anyMatch(line -> line.equals("click to summon!") || line.equals("click to despawn!")
-                        || line.equals("click to summon") || line.equals("click to despawn"));
+                .anyMatch(line -> line.matches("(?:left[- ]click|click)\\s+to\\s+(?:summon|despawn)!?"));
     }
 
     public void selected(long now) {

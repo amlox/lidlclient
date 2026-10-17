@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 public final class ChatBanTrigger {
     private static final String PLAYER = "(?:\\[[^]\\r\\n]+]\\s*)*[A-Za-z0-9_]{1,16}";
     private static final Pattern COMMAND = Pattern.compile(
-            "^(?:(?:Party|Co-op|Coop)\\s*>\\s*|From\\s+)"
+            "^(?:(?:Party|Co-op|Coop)\\s*>\\s*|(?:From|To)\\s+)"
                     + PLAYER + ":\\s*!ban\\s*$",
             Pattern.CASE_INSENSITIVE);
 

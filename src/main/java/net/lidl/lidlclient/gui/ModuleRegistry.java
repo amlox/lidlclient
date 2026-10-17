@@ -1,6 +1,8 @@
 package net.lidl.lidlclient.gui;
 
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
+import net.lidl.lidlclient.gui.settings.KeybindSetting;
+import net.lidl.lidlclient.hotbar.DungeonbreakerSwap;
 import net.lidl.lidlclient.slots.Slots;
 import net.lidl.lidlclient.green.GreenScreen;
 
@@ -23,6 +25,11 @@ public final class ModuleRegistry {
         modules.add(new GuiModule("green_screen", "im so fucking green", "General",
                 "Transparent green screen tint",
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
+
+        modules.add(new GuiModule("dungeonbreaker_swap", "Dungeonbreaker swap", "General",
+                "Select Dungeonbreaker from your hotbar",
+                DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,
+                new KeybindSetting("Keybind", DungeonbreakerSwap::keyName, DungeonbreakerSwap::bindKey)));
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",

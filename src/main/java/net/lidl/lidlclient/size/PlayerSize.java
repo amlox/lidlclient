@@ -3,12 +3,9 @@ package net.lidl.lidlclient.size;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.loader.api.FabricLoader;
 import net.lidl.lidlclient.LidlClient;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.chat.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -105,23 +102,14 @@ public final class PlayerSize implements ClientModInitializer {
                 localX, localY, localZ, enabled);
     }
 
+    public static void resetSize() {
+        load();
+        localX = localY = localZ = null;
+        save();
+    }
+
     @Override
     public void onInitializeClient() {
         load();
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
-                dispatcher.register(ClientCommands.literal("lidsize")
-                        .executes(context -> {
-                            context.getSource().sendFeedback(Component.literal(
-                                    "Player size: /lidl > Player size (right-click for X/Y/Z sliders). "
-                                    + "Built-in sizes: SyntocxLeftFoot 0.5x; SyntocxRightFoot 3x. "
-                                    + "/lidsize reset restores your default."));
-                            return 1;
-                        })
-                        .then(ClientCommands.literal("reset").executes(context -> {
-                            localX = localY = localZ = null;
-                            save();
-                            context.getSource().sendFeedback(Component.literal("Your X/Y/Z size overrides were reset."));
-                            return 1;
-                        }))));
     }
 }

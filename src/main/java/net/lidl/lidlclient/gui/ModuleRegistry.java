@@ -1,6 +1,7 @@
 package net.lidl.lidlclient.gui;
 
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
+import net.lidl.lidlclient.gui.settings.ActionSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
 import net.lidl.lidlclient.size.PlayerSize;
 import net.lidl.lidlclient.slots.Slots;
@@ -34,7 +35,8 @@ public final class ModuleRegistry {
                 new NumberSetting("Y (height)", 0.25, 3.0, 0.05,
                         PlayerSize::getScaleY, PlayerSize::setScaleY),
                 new NumberSetting("Z (depth)", 0.25, 3.0, 0.05,
-                        PlayerSize::getScaleZ, PlayerSize::setScaleZ)));
+                        PlayerSize::getScaleZ, PlayerSize::setScaleZ),
+                new ActionSetting("Reset to default", PlayerSize::resetSize)));
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",

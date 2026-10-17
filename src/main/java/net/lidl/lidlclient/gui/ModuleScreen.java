@@ -295,6 +295,7 @@ public class ModuleScreen extends Screen {
                     draggingNumber = null;
                     if (event.button() == 0) bindingKey = keybind;
                     else if (event.button() == 1) keybind.bind(InputConstants.UNKNOWN);
+                }
                 if (setting instanceof ActionSetting action) {
                     if (event.button() == 0 && contains(event.x(), event.y(),
                             cardX() + 6, y + HEADER + index * SETTING + 3,

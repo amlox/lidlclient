@@ -12,6 +12,8 @@ import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
 
+import net.lidl.lidlclient.config.ClientConfig;
+import net.lidl.lidlclient.config.ModulePersistence;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,7 +80,7 @@ public final class ModuleRegistry {
             ));
         }
 
-        return validate(modules);
+        return validate(modules.stream().map(module -> ModulePersistence.bind(module, ClientConfig.store())).toList());
     }
 
     public static List<GuiModule> modules() { return MODULES; }

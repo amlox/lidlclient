@@ -1,5 +1,7 @@
 package net.lidl.lidlclient.slots;
 
+import net.lidl.lidlclient.config.ClientConfig;
+
 import com.mojang.brigadier.arguments.StringArgumentType;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -30,6 +32,7 @@ public class Slots implements ClientModInitializer {
     public static void setEnabled(boolean value) {
         if (enabled == value) return;
         enabled = value;
+        ClientConfig.set("slots", "enabled", value);
 
         if (!enabled) {
             autoRoll = false;
@@ -62,6 +65,7 @@ public class Slots implements ClientModInitializer {
 
     public static void setMuteMessages(boolean value) {
         muteMessages = value;
+        ClientConfig.set("slots", "Mute chat", value);
     }
 
     public static boolean isShowUi() {
@@ -70,6 +74,7 @@ public class Slots implements ClientModInitializer {
 
     public static void setShowUi(boolean value) {
         showUi = value;
+        ClientConfig.set("slots", "Bet / balance", value);
     }
 
     private static final boolean FAST_ROLL = true;

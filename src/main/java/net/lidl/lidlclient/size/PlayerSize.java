@@ -23,11 +23,12 @@ public final class PlayerSize implements ClientModInitializer {
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir().resolve("lidlclient-player-size.json");
     private static boolean loaded;
     private static boolean enabled = true;
-    private static Double localScale;
+    private static Double localX, localY, localZ;
 
     private static final class Config {
         boolean enabled = true;
-        Double localScale;
+        Double localScale; // Legacy uniform-size config, migrated on load.
+        Double localX, localY, localZ;
     }
 
     private static void load() {
@@ -38,9 +39,9 @@ public final class PlayerSize implements ClientModInitializer {
             Config config = GSON.fromJson(Files.readString(CONFIG), Config.class);
             if (config == null) return;
             enabled = config.enabled;
-            if (config.localScale != null && Double.isFinite(config.localScale)
-                    && config.localScale >= PlayerSizeRules.MIN
-                    && config.localScale <= PlayerSizeRules.MAX) localScale = config.localScale;
+            localX = PlayerSizeRules.migrateAxis(config.localX, config.localScale);
+            localY = PlayerSizeRules.migrateAxis(config.localY, config.localScale);
+            localZ = PlayerSizeRules.migrateAxis(config.localZ, config.localScale);
         } catch (IOException | RuntimeException exception) {
             LidlClient.LOGGER.warn("Could not load player-size settings", exception);
         }
@@ -49,7 +50,9 @@ public final class PlayerSize implements ClientModInitializer {
     private static void save() {
         Config config = new Config();
         config.enabled = enabled;
-        config.localScale = localScale;
+        config.localX = localX;
+        config.localY = localY;
+        config.localZ = localZ;
         try {
             Files.createDirectories(CONFIG.getParent());
             Path temporary = CONFIG.resolveSibling(CONFIG.getFileName() + ".tmp");
@@ -62,12 +65,15 @@ public final class PlayerSize implements ClientModInitializer {
 
     public static boolean isEnabled() { load(); return enabled; }
 
-    public static double getScale() {
-        load();
-        if (localScale != null) return localScale;
+    private static double ownAxis(Double value) {
+        if (value != null) return value;
         var player = Minecraft.getInstance().player;
         return PlayerSizeRules.defaultScale(player == null ? null : player.getName().getString());
     }
+
+    public static double getScaleX() { load(); return ownAxis(localX); }
+    public static double getScaleY() { load(); return ownAxis(localY); }
+    public static double getScaleZ() { load(); return ownAxis(localZ); }
 
     public static void setEnabled(boolean value) {
         load();
@@ -75,17 +81,28 @@ public final class PlayerSize implements ClientModInitializer {
         save();
     }
 
-    public static void setScale(double value) {
+    public static void setScaleX(double value) { setAxis(0, value); }
+    public static void setScaleY(double value) { setAxis(1, value); }
+    public static void setScaleZ(double value) { setAxis(2, value); }
+
+    private static void setAxis(int axis, double value) {
         if (!Double.isFinite(value)) return;
         load();
-        localScale = Math.clamp(value, PlayerSizeRules.MIN, PlayerSizeRules.MAX);
+        double scale = Math.clamp(value, PlayerSizeRules.MIN, PlayerSizeRules.MAX);
+        switch (axis) {
+            case 0 -> localX = scale;
+            case 1 -> localY = scale;
+            case 2 -> localZ = scale;
+            default -> throw new IllegalArgumentException("Unknown axis");
+        }
         save();
     }
 
-    public static float scaleFor(UUID id, String name) {
+    public static PlayerSizeRules.Axes scalesFor(UUID id, String name) {
         load();
         var player = Minecraft.getInstance().player;
-        return PlayerSizeRules.scaleFor(name, player != null && player.getUUID().equals(id), localScale, enabled);
+        return PlayerSizeRules.axesFor(name, player != null && player.getUUID().equals(id),
+                localX, localY, localZ, enabled);
     }
 
     @Override
@@ -95,15 +112,15 @@ public final class PlayerSize implements ClientModInitializer {
                 dispatcher.register(ClientCommands.literal("lidsize")
                         .executes(context -> {
                             context.getSource().sendFeedback(Component.literal(
-                                    "Player size: /lidl > Player size (right-click for your slider). "
+                                    "Player size: /lidl > Player size (right-click for X/Y/Z sliders). "
                                     + "Built-in sizes: SyntocxLeftFoot 0.5x; SyntocxRightFoot 3x. "
                                     + "/lidsize reset restores your default."));
                             return 1;
                         })
                         .then(ClientCommands.literal("reset").executes(context -> {
-                            localScale = null;
+                            localX = localY = localZ = null;
                             save();
-                            context.getSource().sendFeedback(Component.literal("Your player size override was reset."));
+                            context.getSource().sendFeedback(Component.literal("Your X/Y/Z size overrides were reset."));
                             return 1;
                         }))));
     }

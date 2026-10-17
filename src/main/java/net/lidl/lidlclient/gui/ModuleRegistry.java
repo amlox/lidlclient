@@ -27,10 +27,14 @@ public final class ModuleRegistry {
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
 
         modules.add(new GuiModule("player_size", "Player size", "General",
-                "Built-in player sizes with your own slider",
+                "Built-in sizes with your own X/Y/Z sliders",
                 PlayerSize::isEnabled, PlayerSize::setEnabled,
-                new NumberSetting("Your size", 0.25, 3.0, 0.05,
-                        PlayerSize::getScale, PlayerSize::setScale)));
+                new NumberSetting("X (width)", 0.25, 3.0, 0.05,
+                        PlayerSize::getScaleX, PlayerSize::setScaleX),
+                new NumberSetting("Y (height)", 0.25, 3.0, 0.05,
+                        PlayerSize::getScaleY, PlayerSize::setScaleY),
+                new NumberSetting("Z (depth)", 0.25, 3.0, 0.05,
+                        PlayerSize::getScaleZ, PlayerSize::setScaleZ)));
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",

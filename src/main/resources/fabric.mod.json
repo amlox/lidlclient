@@ -27,6 +27,7 @@
       "net.lidl.lidlclient.gui.ModuleFramework",
       "net.lidl.lidlclient.commands.WarpCommands",
       "net.lidl.lidlclient.pets.ZeroPingPets"
+      "net.lidl.lidlclient.size.PlayerSize"
     ]
   },
   "mixins": [

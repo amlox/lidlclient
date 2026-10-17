@@ -26,8 +26,8 @@
       "net.lidl.lidlclient.slots.Slots",
       "net.lidl.lidlclient.gui.ModuleFramework",
       "net.lidl.lidlclient.commands.WarpCommands",
-      "net.lidl.lidlclient.hotbar.DungeonbreakerSwap"
-      "net.lidl.lidlclient.pets.ZeroPingPets"
+      "net.lidl.lidlclient.hotbar.DungeonbreakerSwap",
+      "net.lidl.lidlclient.pets.ZeroPingPets",
       "net.lidl.lidlclient.size.PlayerSize"
     ]
   },

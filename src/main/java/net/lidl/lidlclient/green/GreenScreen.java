@@ -1,5 +1,7 @@
 package net.lidl.lidlclient.green;
 
+import net.lidl.lidlclient.config.ClientConfig;
+
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.lidl.lidlclient.LidlClient;
@@ -18,6 +20,7 @@ public final class GreenScreen {
 
     public static void setEnabled(boolean value) {
         enabled = value;
+        ClientConfig.set("green_screen", "enabled", value);
     }
 
     public static void initialize() {

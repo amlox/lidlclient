@@ -1,14 +1,8 @@
 package net.lidl.lidlclient.PartyCMDS;
 
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.loader.api.FabricLoader;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.io.IOException;
 import java.util.Map;
+import net.lidl.lidlclient.config.ClientConfig;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
@@ -63,52 +57,21 @@ public class PartyCommands implements ClientModInitializer {
 
 
     private static final PartyCommandSwitches SWITCHES = new PartyCommandSwitches();
-    private static final Gson SETTINGS_JSON = new GsonBuilder().setPrettyPrinting().create();
     private static boolean settingsLoaded;
     private static String pendingCommand;
-
-    private static final class CommandConfig {
-        boolean enabled = true;
-        Map<String, Boolean> commands;
-    }
-
-    private static Path settingsFile() {
-        return FabricLoader.getInstance().getConfigDir().resolve("lidlclient-party-commands.json");
-    }
 
     private static void loadSettings() {
         if (settingsLoaded) return;
         settingsLoaded = true;
-        Path file = settingsFile();
-        if (!Files.exists(file)) return;
-        try {
-            CommandConfig config = SETTINGS_JSON.fromJson(Files.readString(file), CommandConfig.class);
-            if (config == null) return;
-            SWITCHES.setEnabled(config.enabled);
-            if (config.commands != null) {
-                PartyCommandSwitches.COMMANDS.forEach(command -> {
-                    Boolean value = config.commands.get(command);
-                    if (value != null) SWITCHES.set(command, value);
-                });
-            }
-        } catch (IOException | RuntimeException exception) {
-            LOGGER.warn("Could not load party command settings", exception);
-        }
+        ClientConfig.migrateLegacy("party_commands", "lidlclient-party-commands.json", Map.of("enabled", "enabled"));
+        SWITCHES.setEnabled(ClientConfig.bool("party_commands", "enabled", true));
+        PartyCommandSwitches.COMMANDS.forEach(command ->
+                SWITCHES.set(command, ClientConfig.bool("party_commands", command, true)));
     }
 
     private static void saveSettings() {
-        CommandConfig config = new CommandConfig();
-        config.enabled = SWITCHES.isEnabled();
-        config.commands = SWITCHES.snapshot();
-        Path file = settingsFile();
-        try {
-            Files.createDirectories(file.getParent());
-            Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
-            Files.writeString(temporary, SETTINGS_JSON.toJson(config));
-            Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException exception) {
-            LOGGER.warn("Could not save party command settings", exception);
-        }
+        ClientConfig.set("party_commands", "enabled", SWITCHES.isEnabled());
+        SWITCHES.snapshot().forEach((command, value) -> ClientConfig.set("party_commands", command, value));
     }
 
     public static List<String> commandNames() { return PartyCommandSwitches.COMMANDS; }

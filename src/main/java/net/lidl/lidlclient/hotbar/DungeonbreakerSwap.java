@@ -5,6 +5,9 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.lidl.lidlclient.LidlClient;
+import net.lidl.lidlclient.config.ClientConfig;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import java.util.Objects;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -16,9 +19,11 @@ import java.util.List;
 public final class DungeonbreakerSwap implements ClientModInitializer {
     private static KeyMapping key;
     private static boolean enabled = true;
+    private static boolean keysReady;
+    private static String lastSavedKey;
 
     public static boolean isEnabled() { return enabled; }
-    public static void setEnabled(boolean value) { enabled = value; }
+    public static void setEnabled(boolean value) { enabled = value; ClientConfig.set("dungeonbreaker_swap", "enabled", value); }
 
     public static String keyName() {
         return key == null ? "Unbound" : key.getTranslatedKeyMessage().getString();
@@ -30,6 +35,8 @@ public final class DungeonbreakerSwap implements ClientModInitializer {
         key.setDown(false);
         KeyMapping.resetMapping();
         Minecraft.getInstance().options.save();
+        lastSavedKey = input.getName();
+        ClientConfig.set("dungeonbreaker_swap", "Keybind", lastSavedKey);
     }
 
     @Override
@@ -39,7 +46,25 @@ public final class DungeonbreakerSwap implements ClientModInitializer {
                 "key.lidlclient.dungeonbreaker_swap", InputConstants.Type.KEYSYM,
                 InputConstants.UNKNOWN.getValue(), category));
 
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
+            String saved = ClientConfig.string("dungeonbreaker_swap", "Keybind");
+            if (saved != null) {
+                try { bindKey(InputConstants.getKey(saved)); }
+                catch (IllegalArgumentException exception) { LidlClient.LOGGER.warn("Invalid saved Dungeonbreaker key: {}", saved); }
+            }
+            lastSavedKey = KeyMappingHelper.getBoundKeyOf(key).getName();
+            ClientConfig.set("dungeonbreaker_swap", "Keybind", lastSavedKey);
+            keysReady = true;
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (keysReady) {
+                String current = KeyMappingHelper.getBoundKeyOf(key).getName();
+                if (!Objects.equals(current, lastSavedKey)) {
+                    lastSavedKey = current;
+                    ClientConfig.set("dungeonbreaker_swap", "Keybind", current);
+                }
+            }
             while (key.consumeClick()) {
                 if (!enabled || client.player == null || client.screen != null) continue;
                 var inventory = client.player.getInventory();

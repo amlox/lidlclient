@@ -1,63 +1,34 @@
 package net.lidl.lidlclient.size;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.loader.api.FabricLoader;
-import net.lidl.lidlclient.LidlClient;
 import net.minecraft.client.Minecraft;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import java.util.Map;
+import net.lidl.lidlclient.config.ClientConfig;
 
 /** Client-only scaling with built-in player defaults and a local-only override. */
 public final class PlayerSize implements ClientModInitializer {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final Path CONFIG = FabricLoader.getInstance().getConfigDir().resolve("lidlclient-player-size.json");
     private static boolean loaded;
     private static boolean enabled = true;
     private static Double localX, localY, localZ;
 
-    private static final class Config {
-        boolean enabled = true;
-        Double localScale; // Legacy uniform-size config, migrated on load.
-        Double localX, localY, localZ;
-    }
-
     private static void load() {
         if (loaded) return;
         loaded = true;
-        if (!Files.exists(CONFIG)) return;
-        try {
-            Config config = GSON.fromJson(Files.readString(CONFIG), Config.class);
-            if (config == null) return;
-            enabled = config.enabled;
-            localX = PlayerSizeRules.migrateAxis(config.localX, config.localScale);
-            localY = PlayerSizeRules.migrateAxis(config.localY, config.localScale);
-            localZ = PlayerSizeRules.migrateAxis(config.localZ, config.localScale);
-        } catch (IOException | RuntimeException exception) {
-            LidlClient.LOGGER.warn("Could not load player-size settings", exception);
-        }
+        ClientConfig.migrateLegacy("player_size", "lidlclient-player-size.json", Map.of(
+                "enabled", "enabled", "localX", "X (width)", "localY", "Y (height)", "localZ", "Z (depth)"));
+        enabled = ClientConfig.bool("player_size", "enabled", true);
+        localX = PlayerSizeRules.migrateAxis(ClientConfig.number("player_size", "X (width)"), null);
+        localY = PlayerSizeRules.migrateAxis(ClientConfig.number("player_size", "Y (height)"), null);
+        localZ = PlayerSizeRules.migrateAxis(ClientConfig.number("player_size", "Z (depth)"), null);
     }
 
     private static void save() {
-        Config config = new Config();
-        config.enabled = enabled;
-        config.localX = localX;
-        config.localY = localY;
-        config.localZ = localZ;
-        try {
-            Files.createDirectories(CONFIG.getParent());
-            Path temporary = CONFIG.resolveSibling(CONFIG.getFileName() + ".tmp");
-            Files.writeString(temporary, GSON.toJson(config), StandardCharsets.UTF_8);
-            Files.move(temporary, CONFIG, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException exception) {
-            LidlClient.LOGGER.warn("Could not save player-size settings", exception);
-        }
+        ClientConfig.set("player_size", "enabled", enabled);
+        ClientConfig.set("player_size", "X (width)", localX);
+        ClientConfig.set("player_size", "Y (height)", localY);
+        ClientConfig.set("player_size", "Z (depth)", localZ);
     }
 
     public static boolean isEnabled() { load(); return enabled; }

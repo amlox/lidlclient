@@ -1,5 +1,7 @@
 package net.lidl.lidlclient.pets;
 
+import net.lidl.lidlclient.config.ClientConfig;
+
 import net.fabricmc.api.ClientModInitializer;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import net.minecraft.network.HashedStack;
@@ -28,6 +30,7 @@ public final class ZeroPingPets implements ClientModInitializer {
 
     public static void setEnabled(boolean value) {
         enabled = value;
+        ClientConfig.set("instant_pets", "enabled", value);
         reset();
     }
 

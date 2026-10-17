@@ -9,6 +9,7 @@ import net.minecraft.client.Minecraft;
 /** Permanent client entry point for the module menu. */
 public final class ModuleFramework implements ClientModInitializer {
     @Override public void onInitializeClient() {
+        ModuleRegistry.modules(); // Restore settings before the first gameplay frame.
         GreenScreen.initialize();
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("lidl").executes(context -> {

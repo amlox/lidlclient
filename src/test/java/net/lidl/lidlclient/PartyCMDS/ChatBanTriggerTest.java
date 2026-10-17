@@ -1,4 +1,6 @@
-package net.lidl.lidlclient.prank;
+package net.lidl.lidlclient.PartyCMDS;
+
+import net.lidl.lidlclient.PartyCMDS.PartyCommands.ChatBanTrigger;
 
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

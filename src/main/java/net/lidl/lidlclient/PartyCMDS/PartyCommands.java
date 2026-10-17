@@ -5,17 +5,30 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
+import java.util.ArrayList;
+import java.util.List;
+
+
+
+
 
 public class PartyCommands implements ClientModInitializer {
 
@@ -61,6 +74,7 @@ public class PartyCommands implements ClientModInitializer {
     public void onInitializeClient() {
 
         LOGGER.info("Party Commands initialized!");
+        initializeBanCommand();
 
         // Listen to server chat
         ClientReceiveMessageEvents.GAME.register(
@@ -314,4 +328,136 @@ public class PartyCommands implements ClientModInitializer {
             client.getConnection().sendCommand("pc " + message);
         });
     }
+
+
+    private ClientPacketListener pendingConnection;
+    private boolean preview;
+
+    private static boolean isHypixel(Minecraft client) {
+        var server = client.getCurrentServer();
+        if (server == null) return false;
+        String host = server.ip.toLowerCase(Locale.ROOT).split(":", 2)[0];
+        return host.equals("hypixel.net") || host.endsWith(".hypixel.net");
+    }
+
+    private void receiveCommand(Component message) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || !isHypixel(client)
+                || pendingConnection != null || !ChatBanTrigger.matches(message.getString())) return;
+        pendingConnection = client.getConnection();
+        preview = false;
+        LOGGER.info("Chat ban prank received; disconnecting on this tick.");
+    }
+
+    private void initializeBanCommand() {
+        LOGGER.info("Chat ban prank initialized; use /puzzleprank test to preview.");
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+                dispatcher.register(ClientCommands.literal("puzzleprank")
+                        .then(ClientCommands.literal("test").executes(context -> {
+                            Minecraft client = Minecraft.getInstance();
+                            pendingConnection = client.getConnection();
+                            preview = true;
+                            context.getSource().sendFeedback(Component.literal(
+                                    "[LidlClient] Fake ban test: disconnecting now."));
+                            return 1;
+                        }))));
+
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!overlay) receiveCommand(message);
+        });
+        ClientReceiveMessageEvents.CHAT.register(
+                (message, signedMessage, sender, params, timestamp) -> receiveCommand(message));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (pendingConnection == null) return;
+            if (client.getConnection() != pendingConnection || client.player == null
+                    || (!preview && !isHypixel(client))) {
+                pendingConnection = null;
+                return;
+            }
+            pendingConnection = null;
+            preview = false;
+            client.disconnect(new FakeBanScreen(), false);
+        });
+    }
+
+    /** Only exact !ban messages in the supported Hypixel chat channels can trigger. */
+    static final class ChatBanTrigger {
+        private static final String PLAYER = "(?:\\[[^]\\r\\n]+]\\s*)*[A-Za-z0-9_]{1,16}";
+        private static final Pattern COMMAND = Pattern.compile(
+                "^(?:(?:Party|Co-op|Coop)\\s*>\\s*|(?:From|To)\\s+)"
+                        + PLAYER + ":\\s*!ban\\s*$",
+                Pattern.CASE_INSENSITIVE);
+    
+        private ChatBanTrigger() { }
+    
+        public static boolean matches(String message) {
+            String plain = message.replaceAll("(?i)§[0-9A-FK-ORX]", "")
+                    .replace('\u00a0', ' ').strip();
+            return COMMAND.matcher(plain).matches();
+        }
+    }
+    
+    /** A local imitation of the legacy Hypixel ban screen, shown after disconnecting. */
+    private static final class FakeBanScreen extends Screen {
+        private static final Identifier DIRT = Identifier.withDefaultNamespace("textures/block/dirt.png");
+        private final List<FormattedCharSequence> lines = new ArrayList<>();
+        private int textTop;
+    
+        public FakeBanScreen() {
+            super(Component.literal("Failed to connect to the server"));
+        }
+    
+        @Override
+        protected void init() {
+            lines.clear();
+            add(Component.literal("Failed to connect to the server").withStyle(ChatFormatting.GRAY));
+            add(Component.empty());
+            add(Component.literal("You are permanently banned from this server!").withStyle(ChatFormatting.RED));
+            add(Component.empty());
+            add(Component.literal("Reason: ").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal("Cheating through the use of unfair game advantages.").withStyle(ChatFormatting.WHITE)));
+            add(Component.literal("Find out more: ").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal("https://www.hypixel.net/appeal")
+                            .withStyle(ChatFormatting.AQUA, ChatFormatting.UNDERLINE)));
+            add(Component.empty());
+            add(Component.literal("Ban ID: ").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal("#F9DF549F").withStyle(ChatFormatting.WHITE)));
+            add(Component.literal("Sharing your Ban ID may affect the processing of your appeal!").withStyle(ChatFormatting.GRAY));
+            int blockHeight = lines.size() * font.lineHeight;
+            textTop = Math.max(8, height / 2 - blockHeight / 2 - 20);
+            int buttonWidth = Math.min(200, Math.max(1, width - 20));
+            addRenderableWidget(Button.builder(Component.literal("Back to server list"), button -> onClose())
+                    .bounds((width - buttonWidth) / 2,
+                            Math.min(height - 28, textTop + blockHeight + 20), buttonWidth, 20).build());
+        }
+    
+        private void add(Component text) {
+            if (text.getString().isEmpty()) lines.add(Component.empty().getVisualOrderText());
+            else lines.addAll(font.split(text, Math.max(1, width - 32)));
+        }
+    
+        @Override
+        public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+            graphics.blit(RenderPipelines.GUI_TEXTURED, DIRT, 0, 0, 0.0f, 0.0f, width, height, 32, 32);
+            graphics.fill(0, 0, width, height, 0xC0000000);
+            for (int i = 0; i < lines.size(); i++) {
+                FormattedCharSequence line = lines.get(i);
+                graphics.text(font, line, (width - font.width(line)) / 2,
+                        textTop + i * font.lineHeight, 0xFFFFFFFF, true);
+            }
+            super.extractRenderState(graphics, mouseX, mouseY, delta);
+        }
+    
+        @Override
+        public void onClose() {
+            Minecraft.getInstance().setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+        }
+    
+        @Override
+        public boolean isPauseScreen() {
+            return false;
+        }
+    }
+    
 }

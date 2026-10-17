@@ -1,0 +1,39 @@
+package net.lidl.lidlclient.size;
+
+import java.util.Locale;
+import java.util.Map;
+
+/** Shared defaults shipped with every LidlClient build. */
+public final class PlayerSizeRules {
+    public static final double MIN = 0.25;
+    public static final double MAX = 3.0;
+    private static final Map<String, Double> SIZES = Map.of(
+            "syntocxleftfoot", 0.5,
+            "syntocxrightfoot", 3.0);
+
+    private PlayerSizeRules() { }
+
+    public static double defaultScale(String name) {
+        return name == null ? 1 : SIZES.getOrDefault(name.toLowerCase(Locale.ROOT), 1.0);
+    }
+
+    public static float scaleFor(String name, boolean localPlayer, Double localOverride, boolean enabled) {
+        if (!enabled) return 1;
+        if (localPlayer && localOverride != null && Double.isFinite(localOverride)
+                && localOverride >= MIN && localOverride <= MAX) return localOverride.floatValue();
+        return (float) defaultScale(name);
+    }
+
+    public record Axes(float x, float y, float z) { }
+
+    public static Axes axesFor(String name, boolean local, Double x, Double y, Double z, boolean enabled) {
+        return new Axes(scaleFor(name, local, x, enabled),
+                scaleFor(name, local, y, enabled), scaleFor(name, local, z, enabled));
+    }
+
+    public static Double migrateAxis(Double axis, Double legacy) {
+        if (axis != null && Double.isFinite(axis) && axis >= MIN && axis <= MAX) return axis;
+        if (legacy != null && Double.isFinite(legacy) && legacy >= MIN && legacy <= MAX) return legacy;
+        return null;
+    }
+}

@@ -7,6 +7,8 @@ import net.lidl.lidlclient.gui.settings.ActionSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
 import net.lidl.lidlclient.size.PlayerSize;
 import net.lidl.lidlclient.slots.Slots;
+import net.lidl.lidlclient.PartyCMDS.PartyCommands;
+import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
 
@@ -50,7 +52,11 @@ public final class ModuleRegistry {
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",
-                ModuleController::isPartyCommandsEnabled, ModuleController::setPartyCommandsEnabled));
+                PartyCommands::isEnabled, PartyCommands::setEnabled,
+                PartyCommands.commandNames().stream().<ModuleSetting>map(command ->
+                        new BooleanSetting(command,
+                                () -> PartyCommands.isCommandConfigured(command),
+                                value -> PartyCommands.setCommandEnabled(command, value))).toList()));
 
         // Temporary modules for testing scrolling.
         for (int i = 1; i <= 30; i++) {

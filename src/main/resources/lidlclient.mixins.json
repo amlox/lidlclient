@@ -12,6 +12,8 @@
     "requireAnnotations": true
   },
   "client": [
+    "PetsContainerClickMixin",
+    "PetsScreenMixin"
     "PlayerSizeMixin",
     "PlayerSizeStateMixin"
   ]

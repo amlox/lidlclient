@@ -5,6 +5,7 @@ import net.lidl.lidlclient.gui.settings.ActionSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
 import net.lidl.lidlclient.size.PlayerSize;
 import net.lidl.lidlclient.slots.Slots;
+import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
 
 import java.util.ArrayList;
@@ -27,6 +28,9 @@ public final class ModuleRegistry {
                 "Transparent green screen tint",
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
 
+        modules.add(new GuiModule("instant_pets", "Instant Pets close", "SkyBlock",
+                "Close after pet selection and suppress automatic reopen",
+                ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));
         modules.add(new GuiModule("player_size", "Player size", "General",
                 "Built-in sizes with your own X/Y/Z sliders",
                 PlayerSize::isEnabled, PlayerSize::setEnabled,

@@ -15,6 +15,6 @@ public abstract class PlayerSizeMixin {
     @Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V",
             at = @At("TAIL"))
     private void lidlclient$applySize(Avatar player, AvatarRenderState state, float partialTick, CallbackInfo ci) {
-        state.scale *= PlayerSize.scaleFor(player.getUUID());
+        state.scale *= PlayerSize.scaleFor(player.getUUID(), player.getName().getString());
     }
 }

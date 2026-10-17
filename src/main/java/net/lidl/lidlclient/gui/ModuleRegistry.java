@@ -27,7 +27,7 @@ public final class ModuleRegistry {
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
 
         modules.add(new GuiModule("player_size", "Player size", "General",
-                "Visual player size; /lidsize copy to share",
+                "Built-in player sizes with your own slider",
                 PlayerSize::isEnabled, PlayerSize::setEnabled,
                 new NumberSetting("Your size", 0.25, 3.0, 0.05,
                         PlayerSize::getScale, PlayerSize::setScale)));

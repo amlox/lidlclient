@@ -4,6 +4,11 @@ import net.lidl.lidlclient.gui.render.SmoothRenderer;
 import net.lidl.lidlclient.gui.render.ConstellationRenderer;
 import net.lidl.lidlclient.gui.render.UiText;
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
+import net.lidl.lidlclient.gui.settings.KeybindSetting;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.input.KeyEvent;
+import org.lwjgl.glfw.GLFW;
+import net.lidl.lidlclient.gui.settings.ActionSetting;
 import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -38,6 +43,7 @@ public class ModuleScreen extends Screen {
     private double scroll;
     private double categoryScroll;
     private NumberSetting draggingNumber;
+    private KeybindSetting bindingKey;
     private boolean draggingScrollbar;
     private double scrollbarGrab;
     private double starOffset;
@@ -57,6 +63,7 @@ public class ModuleScreen extends Screen {
     }
 
     @Override protected void init() {
+        bindingKey = null;
         draggingNumber = null;
         draggingScrollbar = false;
         panelWidth = Math.min(width, Math.max(220, Math.min(300, Math.round(width * 0.32f))));
@@ -186,13 +193,24 @@ public class ModuleScreen extends Screen {
 
     private void renderSetting(GuiGraphicsExtractor graphics, ModuleSetting setting, float y,
                                int mouseX, int mouseY, ScreenRectangle clip) {
+        if (setting instanceof ActionSetting action) {
+            boolean hovered = contains(mouseX, mouseY, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6);
+            SmoothRenderer.panel(graphics, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
+                    hovered ? 0xB4425573 : 0xA02B374B, hovered ? WHITE : 0x907F90AB,
+                    .9f, hovered ? 3 : 1, .24f, clip);
+            int available = cardWidth() - 24;
+            int labelWidth = Math.min(available, UiText.width(font, action.label()));
+            text(graphics, action.label(), cardX() + (cardWidth() - labelWidth) / 2,
+                    Math.round(y + (SETTING - UiText.HEIGHT) / 2f), available, WHITE);
+            return;
+        }
         boolean on = setting instanceof BooleanSetting bool && bool.value();
         boolean hovered = contains(mouseX, mouseY, cardX(), y, cardWidth(), SETTING);
         SmoothRenderer.panel(graphics, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
                 on ? 0x883E4D67 : (hovered ? 0x782B374B : 0x50080D17),
                 on ? 0xAACFDDF5 : (hovered ? 0x907F90AB : 0x303F4D66),
                 .7f, on ? 3 : (hovered ? 2 : 0), on ? .3f : .18f, clip);
-        String value = setting.valueText();
+        String value = setting == bindingKey ? "Press key..." : setting.valueText();
         int valueWidth = Math.min(UiText.width(font, value), Math.max(24, cardWidth() / 3));
         int right = cardX() + cardWidth() - 12;
         text(graphics, setting.label(), cardX() + 12, Math.round(y + 9),
@@ -228,6 +246,11 @@ public class ModuleScreen extends Screen {
     }
 
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        if (bindingKey != null) {
+            bindingKey.bind(InputConstants.Type.MOUSE.getOrCreate(event.button()));
+            bindingKey = null;
+            return true;
+        }
         updateSlide();
         clampScroll();
         // The star straddles the edge, so its complete hit area is tested first.
@@ -268,7 +291,19 @@ public class ModuleScreen extends Screen {
                     cardWidth(), row.height() - HEADER)) {
                 int index = (int) ((event.y() - y - HEADER) / SETTING);
                 ModuleSetting setting = row.module().settings().get(index);
-                if (setting instanceof NumberSetting number && event.button() == 0) {
+                if (setting instanceof KeybindSetting keybind) {
+                    draggingNumber = null;
+                    if (event.button() == 0) bindingKey = keybind;
+                    else if (event.button() == 1) keybind.bind(InputConstants.UNKNOWN);
+                }
+                if (setting instanceof ActionSetting action) {
+                    if (event.button() == 0 && contains(event.x(), event.y(),
+                            cardX() + 6, y + HEADER + index * SETTING + 3,
+                            cardWidth() - 12, SETTING - 6)) {
+                        draggingNumber = null;
+                        action.activate();
+                    }
+                } else if (setting instanceof NumberSetting number && event.button() == 0) {
                     if (event.y() - y - HEADER - index * SETTING >= 21) {
                         draggingNumber = number;
                         dragNumber(event.x());
@@ -318,6 +353,21 @@ public class ModuleScreen extends Screen {
         else scroll -= vertical * 30;
         draggingNumber = null;
         clampScroll();
+        return true;
+    }
+
+    @Override public boolean keyPressed(KeyEvent event) {
+        if (bindingKey == null) return super.keyPressed(event);
+        if (event.isEscape()) {
+            bindingKey = null;
+            return true;
+        }
+        if (event.key() == GLFW.GLFW_KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE) {
+            bindingKey.bind(InputConstants.UNKNOWN);
+        } else if (event.key() != GLFW.GLFW_KEY_UNKNOWN) {
+            bindingKey.bind(InputConstants.Type.KEYSYM.getOrCreate(event.key()));
+        }
+        bindingKey = null;
         return true;
     }
 }

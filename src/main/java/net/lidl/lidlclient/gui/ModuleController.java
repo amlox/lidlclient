@@ -1,10 +1,10 @@
 package net.lidl.lidlclient.gui;
 
 import net.lidl.lidlclient.slots.Slots;
+import net.lidl.lidlclient.PartyCMDS.PartyCommands;
 
 public class ModuleController {
 
-    private static boolean partyCommandsEnabled = false;
 
     private ModuleController() {
     }
@@ -17,9 +17,7 @@ public class ModuleController {
     }
 
     public static void setPartyCommandsEnabled(boolean enabled) {
-        partyCommandsEnabled = enabled;
-
-        // Connect this to your existing PartyCMDs class
+        PartyCommands.setEnabled(enabled);
     }
 
     // --- Accessors (Getters) ---
@@ -29,7 +27,7 @@ public class ModuleController {
     }
 
     public static boolean isPartyCommandsEnabled() {
-        return partyCommandsEnabled;
+        return PartyCommands.isEnabled();
     }
 
 }

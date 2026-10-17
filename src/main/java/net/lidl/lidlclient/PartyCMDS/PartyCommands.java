@@ -1,6 +1,14 @@
 package net.lidl.lidlclient.PartyCMDS;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.loader.api.FabricLoader;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.io.IOException;
+import java.util.Map;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
@@ -53,6 +61,78 @@ public class PartyCommands implements ClientModInitializer {
     private static final Logger LOGGER =
             LoggerFactory.getLogger("lidlclient-party");
 
+
+    private static final PartyCommandSwitches SWITCHES = new PartyCommandSwitches();
+    private static final Gson SETTINGS_JSON = new GsonBuilder().setPrettyPrinting().create();
+    private static boolean settingsLoaded;
+    private static String pendingCommand;
+
+    private static final class CommandConfig {
+        boolean enabled = true;
+        Map<String, Boolean> commands;
+    }
+
+    private static Path settingsFile() {
+        return FabricLoader.getInstance().getConfigDir().resolve("lidlclient-party-commands.json");
+    }
+
+    private static void loadSettings() {
+        if (settingsLoaded) return;
+        settingsLoaded = true;
+        Path file = settingsFile();
+        if (!Files.exists(file)) return;
+        try {
+            CommandConfig config = SETTINGS_JSON.fromJson(Files.readString(file), CommandConfig.class);
+            if (config == null) return;
+            SWITCHES.setEnabled(config.enabled);
+            if (config.commands != null) {
+                PartyCommandSwitches.COMMANDS.forEach(command -> {
+                    Boolean value = config.commands.get(command);
+                    if (value != null) SWITCHES.set(command, value);
+                });
+            }
+        } catch (IOException | RuntimeException exception) {
+            LOGGER.warn("Could not load party command settings", exception);
+        }
+    }
+
+    private static void saveSettings() {
+        CommandConfig config = new CommandConfig();
+        config.enabled = SWITCHES.isEnabled();
+        config.commands = SWITCHES.snapshot();
+        Path file = settingsFile();
+        try {
+            Files.createDirectories(file.getParent());
+            Path temporary = file.resolveSibling(file.getFileName() + ".tmp");
+            Files.writeString(temporary, SETTINGS_JSON.toJson(config));
+            Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException exception) {
+            LOGGER.warn("Could not save party command settings", exception);
+        }
+    }
+
+    public static List<String> commandNames() { return PartyCommandSwitches.COMMANDS; }
+    public static boolean isEnabled() { loadSettings(); return SWITCHES.isEnabled(); }
+    public static boolean isCommandConfigured(String command) { loadSettings(); return SWITCHES.configured(command); }
+    public static boolean isCommandEnabled(String command) { loadSettings(); return SWITCHES.allows(command); }
+
+    public static void setEnabled(boolean value) {
+        loadSettings();
+        SWITCHES.setEnabled(value);
+        if (!value) { pendingMessage = null; pendingCommand = null; }
+        saveSettings();
+    }
+
+    public static void setCommandEnabled(String command, boolean value) {
+        loadSettings();
+        SWITCHES.set(command, value);
+        if (!value && command.equalsIgnoreCase(pendingCommand)) {
+            pendingMessage = null;
+            pendingCommand = null;
+        }
+        saveSettings();
+    }
+
     // Time between automatic responses
     // Delay after detecting a command (0.3 seconds)
     private static final long RESPONSE_DELAY = 300;
@@ -73,6 +153,7 @@ public class PartyCommands implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
 
+        loadSettings();
         LOGGER.info("Party Commands initialized!");
         initializeBanCommand();
 
@@ -80,7 +161,7 @@ public class PartyCommands implements ClientModInitializer {
         ClientReceiveMessageEvents.GAME.register(
                 (message, overlay) -> {
 
-                    if (overlay) return;
+                    if (overlay || !isEnabled()) return;
 
                     String text = message.getString()
                             .replaceAll("(?i)§[0-9a-fk-or]", "");
@@ -110,18 +191,7 @@ public class PartyCommands implements ClientModInitializer {
 
                     // Queue the response
                     pendingMessage = response;
-                    pendingSince = System.currentTimeMillis();
-
-                    LOGGER.info("Queued party response: {}", response);
-                    // Generate a response
-                    // Only allow one pending response at a time
-                    if (pendingMessage != null) {
-                        LOGGER.info("Another party response is already queued.");
-                        return;
-                    }
-
-                    // Queue the response instead of sending immediately
-                    pendingMessage = response;
+                    pendingCommand = PartyCommandSwitches.commandName(partyMessage);
                     pendingSince = System.currentTimeMillis();
 
                     LOGGER.info("Queued party response: {}", response);
@@ -162,6 +232,12 @@ public class PartyCommands implements ClientModInitializer {
             // Nothing waiting to be sent
             if (pendingMessage == null) return;
 
+            if (pendingCommand == null || !isCommandEnabled(pendingCommand)) {
+                pendingMessage = null;
+                pendingCommand = null;
+                return;
+            }
+
             // Don't send while disconnected
             if (client.getConnection() == null) {
                 pendingMessage = null;
@@ -177,7 +253,7 @@ public class PartyCommands implements ClientModInitializer {
             if (lastSent != 0 && now - lastSent < SEND_COOLDOWN) return;
 
             // Send our queued response
-            sendPartyMessage(pendingMessage);
+            sendPartyMessage(pendingMessage, pendingCommand);
 
             lastSent = now;
             pendingMessage = null;
@@ -194,6 +270,8 @@ public class PartyCommands implements ClientModInitializer {
 
         String command = parts[0].toLowerCase(Locale.ROOT);
         String args = parts.length > 1 ? parts[1].trim() : "";
+
+        if (!isCommandEnabled(command)) return null;
 
         return switch (command) {
 
@@ -303,7 +381,7 @@ public class PartyCommands implements ClientModInitializer {
                 yield result;
             }
 
-            case "!help" -> "Commands: !help, !dice, !coinflip, !tesco, !jew, !autism";
+            case "!help" -> "Commands: " + String.join(", ", SWITCHES.activeCommands());
             //when x times !help call retarded
             // Unknown command
             default -> null;
@@ -314,13 +392,13 @@ public class PartyCommands implements ClientModInitializer {
     // PARTY MESSAGE SENDER
     // ========================================
 
-    private static void sendPartyMessage(String message) {
+    private static void sendPartyMessage(String message, String command) {
 
         Minecraft client = Minecraft.getInstance();
 
         client.execute(() -> {
 
-            if (client.getConnection() == null) return;
+            if (client.getConnection() == null || !isCommandEnabled(command)) return;
 
             LOGGER.info("Sending party message: {}", message);
 
@@ -342,7 +420,7 @@ public class PartyCommands implements ClientModInitializer {
 
     private void receiveCommand(Component message) {
         Minecraft client = Minecraft.getInstance();
-        if (client.player == null || !isHypixel(client)
+        if (!isCommandEnabled("!ban") || client.player == null || !isHypixel(client)
                 || pendingConnection != null || !ChatBanTrigger.matches(message.getString())) return;
         pendingConnection = client.getConnection();
         preview = false;
@@ -354,6 +432,10 @@ public class PartyCommands implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("puzzleprank")
                         .then(ClientCommands.literal("test").executes(context -> {
+                            if (!isCommandEnabled("!ban")) {
+                                context.getSource().sendError(Component.literal("!ban is disabled in /lidl > PartyCMDS."));
+                                return 0;
+                            }
                             Minecraft client = Minecraft.getInstance();
                             pendingConnection = client.getConnection();
                             preview = true;
@@ -370,7 +452,7 @@ public class PartyCommands implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (pendingConnection == null) return;
-            if (client.getConnection() != pendingConnection || client.player == null
+            if (!isCommandEnabled("!ban") || client.getConnection() != pendingConnection || client.player == null
                     || (!preview && !isHypixel(client))) {
                 pendingConnection = null;
                 return;

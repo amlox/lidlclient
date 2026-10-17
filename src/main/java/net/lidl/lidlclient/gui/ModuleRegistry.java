@@ -2,6 +2,8 @@ package net.lidl.lidlclient.gui;
 
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
 import net.lidl.lidlclient.slots.Slots;
+import net.lidl.lidlclient.PartyCMDS.PartyCommands;
+import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.green.GreenScreen;
 
 import java.util.ArrayList;
@@ -24,9 +26,12 @@ public final class ModuleRegistry {
                 "Transparent green screen tint",
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
 
-        // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",
-                ModuleController::isPartyCommandsEnabled, ModuleController::setPartyCommandsEnabled));
+                PartyCommands::isEnabled, PartyCommands::setEnabled,
+                PartyCommands.commandNames().stream().<ModuleSetting>map(command ->
+                        new BooleanSetting(command,
+                                () -> PartyCommands.isCommandConfigured(command),
+                                value -> PartyCommands.setCommandEnabled(command, value))).toList()));
 
         // Temporary modules for testing scrolling.
         for (int i = 1; i <= 30; i++) {

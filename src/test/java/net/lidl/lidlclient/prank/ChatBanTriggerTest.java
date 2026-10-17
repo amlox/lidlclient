@@ -11,13 +11,14 @@ class ChatBanTriggerTest {
         assertTrue(ChatBanTrigger.matches("Coop > Alex: !ban"));
         assertTrue(ChatBanTrigger.matches("From [MVP+] Alex: !ban"));
         assertTrue(ChatBanTrigger.matches("From Alex: !ban"));
+        assertTrue(ChatBanTrigger.matches("To Alex: !ban"));
+        assertTrue(ChatBanTrigger.matches("To [MVP+] Alex: !ban"));
         assertTrue(ChatBanTrigger.matches("§dParty > §b[MVP+] Alex§f: §r!BAN "));
     }
 
     @Test void rejectsPublicChatQuotesArgumentsAndPuzzleFails() {
         assertFalse(ChatBanTrigger.matches("[MVP+] Alex: !ban"));
         assertFalse(ChatBanTrigger.matches("Guild > Alex: !ban"));
-        assertFalse(ChatBanTrigger.matches("To Alex: !ban"));
         assertFalse(ChatBanTrigger.matches("Party > Alex: please type !ban"));
         assertFalse(ChatBanTrigger.matches("Party > Alex: !ban Bob"));
         assertFalse(ChatBanTrigger.matches("Party > Alex: !banned"));

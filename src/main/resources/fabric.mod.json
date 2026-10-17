@@ -25,7 +25,8 @@
       "net.lidl.lidlclient.PartyCMDS.PartyCommands",
       "net.lidl.lidlclient.slots.Slots",
       "net.lidl.lidlclient.gui.ModuleFramework",
-      "net.lidl.lidlclient.commands.WarpCommands"
+      "net.lidl.lidlclient.commands.WarpCommands",
+      "net.lidl.lidlclient.hotbar.DungeonbreakerSwap"
     ]
   },
   "mixins": [

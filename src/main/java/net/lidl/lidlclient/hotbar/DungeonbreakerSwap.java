@@ -31,8 +31,8 @@ public final class DungeonbreakerSwap implements ClientModInitializer {
                 }
                 int slot = DungeonbreakerSlots.find(names, inventory.getSelectedSlot());
                 if (slot < 0) {
-                    client.player.displayClientMessage(Component.literal(
-                            "Dungeonbreaker is not in your hotbar."), true);
+                    client.gui.setOverlayMessage(Component.literal(
+                            "Dungeonbreaker is not in your hotbar."), false);
                     continue;
                 }
                 inventory.setSelectedSlot(slot);

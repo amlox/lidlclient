@@ -1,6 +1,8 @@
 package net.lidl.lidlclient.gui;
 
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
+import net.lidl.lidlclient.gui.settings.KeybindSetting;
+import net.lidl.lidlclient.hotbar.DungeonbreakerSwap;
 import net.lidl.lidlclient.gui.settings.ActionSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
 import net.lidl.lidlclient.size.PlayerSize;
@@ -28,6 +30,10 @@ public final class ModuleRegistry {
                 "Transparent green screen tint",
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
 
+        modules.add(new GuiModule("dungeonbreaker_swap", "Dungeonbreaker swap", "General",
+                "Select Dungeonbreaker from your hotbar",
+                DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,
+                new KeybindSetting("Keybind", DungeonbreakerSwap::keyName, DungeonbreakerSwap::bindKey)));
         modules.add(new GuiModule("instant_pets", "Instant Pets close", "SkyBlock",
                 "Close after pet selection and suppress automatic reopen",
                 ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));

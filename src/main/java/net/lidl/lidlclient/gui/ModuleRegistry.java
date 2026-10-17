@@ -3,7 +3,11 @@ package net.lidl.lidlclient.gui;
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
 import net.lidl.lidlclient.gui.settings.KeybindSetting;
 import net.lidl.lidlclient.hotbar.DungeonbreakerSwap;
+import net.lidl.lidlclient.gui.settings.ActionSetting;
+import net.lidl.lidlclient.gui.settings.NumberSetting;
+import net.lidl.lidlclient.size.PlayerSize;
 import net.lidl.lidlclient.slots.Slots;
+import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
 
 import java.util.ArrayList;
@@ -30,6 +34,19 @@ public final class ModuleRegistry {
                 "Select Dungeonbreaker from your hotbar",
                 DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,
                 new KeybindSetting("Keybind", DungeonbreakerSwap::keyName, DungeonbreakerSwap::bindKey)));
+        modules.add(new GuiModule("instant_pets", "Instant Pets close", "SkyBlock",
+                "Close after pet selection and suppress automatic reopen",
+                ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));
+        modules.add(new GuiModule("player_size", "Player size", "General",
+                "Built-in sizes with your own X/Y/Z sliders",
+                PlayerSize::isEnabled, PlayerSize::setEnabled,
+                new NumberSetting("X (width)", 0.25, 3.0, 0.05,
+                        PlayerSize::getScaleX, PlayerSize::setScaleX),
+                new NumberSetting("Y (height)", 0.25, 3.0, 0.05,
+                        PlayerSize::getScaleY, PlayerSize::setScaleY),
+                new NumberSetting("Z (depth)", 0.25, 3.0, 0.05,
+                        PlayerSize::getScaleZ, PlayerSize::setScaleZ),
+                new ActionSetting("Reset to default", PlayerSize::resetSize)));
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",

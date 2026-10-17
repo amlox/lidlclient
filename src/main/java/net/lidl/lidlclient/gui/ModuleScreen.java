@@ -8,6 +8,7 @@ import net.lidl.lidlclient.gui.settings.KeybindSetting;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.KeyEvent;
 import org.lwjgl.glfw.GLFW;
+import net.lidl.lidlclient.gui.settings.ActionSetting;
 import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -192,6 +193,17 @@ public class ModuleScreen extends Screen {
 
     private void renderSetting(GuiGraphicsExtractor graphics, ModuleSetting setting, float y,
                                int mouseX, int mouseY, ScreenRectangle clip) {
+        if (setting instanceof ActionSetting action) {
+            boolean hovered = contains(mouseX, mouseY, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6);
+            SmoothRenderer.panel(graphics, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
+                    hovered ? 0xB4425573 : 0xA02B374B, hovered ? WHITE : 0x907F90AB,
+                    .9f, hovered ? 3 : 1, .24f, clip);
+            int available = cardWidth() - 24;
+            int labelWidth = Math.min(available, UiText.width(font, action.label()));
+            text(graphics, action.label(), cardX() + (cardWidth() - labelWidth) / 2,
+                    Math.round(y + (SETTING - UiText.HEIGHT) / 2f), available, WHITE);
+            return;
+        }
         boolean on = setting instanceof BooleanSetting bool && bool.value();
         boolean hovered = contains(mouseX, mouseY, cardX(), y, cardWidth(), SETTING);
         SmoothRenderer.panel(graphics, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
@@ -283,6 +295,13 @@ public class ModuleScreen extends Screen {
                     draggingNumber = null;
                     if (event.button() == 0) bindingKey = keybind;
                     else if (event.button() == 1) keybind.bind(InputConstants.UNKNOWN);
+                if (setting instanceof ActionSetting action) {
+                    if (event.button() == 0 && contains(event.x(), event.y(),
+                            cardX() + 6, y + HEADER + index * SETTING + 3,
+                            cardWidth() - 12, SETTING - 6)) {
+                        draggingNumber = null;
+                        action.activate();
+                    }
                 } else if (setting instanceof NumberSetting number && event.button() == 0) {
                     if (event.y() - y - HEADER - index * SETTING >= 21) {
                         draggingNumber = number;

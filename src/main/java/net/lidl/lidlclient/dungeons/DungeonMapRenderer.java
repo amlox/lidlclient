@@ -101,10 +101,10 @@ public final class DungeonMapRenderer {
             g.pose().pushMatrix();g.pose().translate((float)mx,(float)mz);
             g.pose().rotate((float)Math.toRadians(player.getYRot()+180));
             g.pose().scale((float)DungeonMap.headScale(),(float)DungeonMap.headScale());
-            fill(g,-4,-4,8,8,player==client.player?0xFF55FF55:0xFF141414);
+            fill(g,-7,-7,14,14,player==client.player?0xFF55FF55:0xFF141414);
             var skin=avatar.getSkin().body().texturePath();
-            g.blit(RenderPipelines.GUI_TEXTURED,skin,-3,-3,8f,8f,6,6,8,8,64,64,-1);
-            g.blit(RenderPipelines.GUI_TEXTURED,skin,-3,-3,40f,8f,6,6,8,8,64,64,-1);
+            g.blit(RenderPipelines.GUI_TEXTURED,skin,-6,-6,8f,8f,12,12,8,8,64,64,-1);
+            g.blit(RenderPipelines.GUI_TEXTURED,skin,-6,-6,40f,8f,12,12,8,8,64,64,-1);
             g.pose().popMatrix();
         }
         if(DungeonMap.stats()) {

@@ -17,11 +17,12 @@ class PlayerSizeRulesTest {
         assertEquals(2f, PlayerSizeRules.scaleFor("SyntocxLeftFoot", true, 2.0, true));
     }
 
-    @Test void resetUsesBuiltInDefaultAndDisabledAlwaysUsesNormalSize() {
+    @Test void disabledOnlyRemovesLocalOverridesAndKeepsBuiltInDefaults() {
         assertEquals(0.5f, PlayerSizeRules.scaleFor("SyntocxLeftFoot", true, null, true));
         assertEquals(2f, PlayerSizeRules.scaleFor("SyntocxRightFoot", true, null, true));
-        assertEquals(1f, PlayerSizeRules.scaleFor("SyntocxRightFoot", false, null, false));
+        assertEquals(2f, PlayerSizeRules.scaleFor("SyntocxRightFoot", false, null, false));
         assertEquals(1f, PlayerSizeRules.scaleFor("AnotherPlayer", true, 2.0, false));
+        assertEquals(0.5f, PlayerSizeRules.scaleFor("SyntocxLeftFoot", true, 2.0, false));
     }
 
     @Test void invalidOverridesFallBackToDefaults() {

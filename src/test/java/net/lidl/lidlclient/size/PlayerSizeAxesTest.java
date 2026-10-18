@@ -20,8 +20,8 @@ class PlayerSizeAxesTest {
                 PlayerSizeRules.axesFor("SyntocxRightFoot", true, null, 1.5, null, true));
     }
 
-    @Test void disablingResetsAllVisualAxes() {
-        assertEquals(new PlayerSizeRules.Axes(1, 1, 1),
+    @Test void disablingRestoresBuiltInAxes() {
+        assertEquals(new PlayerSizeRules.Axes(2, 2, 2),
                 PlayerSizeRules.axesFor("SyntocxRightFoot", true, 0.5, 2.0, 3.0, false));
     }
 

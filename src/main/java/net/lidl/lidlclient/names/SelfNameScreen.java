@@ -27,7 +27,7 @@ public final class SelfNameScreen extends Screen {
         top = Math.max(12, height / 2 - 55);
         input = new EditBox(font, (width - boxWidth) / 2, top + 30, boxWidth, 20,
                 Component.literal("Custom display name"));
-        input.setMaxLength(512);
+        input.setMaxLength(4096);
         input.setValue(draft);
         addRenderableWidget(input);
         setInitialFocus(input);
@@ -61,7 +61,7 @@ public final class SelfNameScreen extends Screen {
     @Override public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         graphics.fill(0, 0, width, height, 0xEA080D17);
         graphics.text(font, title, (width - font.width(title)) / 2, top, 0xFFFFFFFF, true);
-        String hint = "32 letters. Colors: &c or &#FF75ED. &r resets.";
+        String hint = "200 letters. Colors: &c or &#FF75ED. &r resets.";
         graphics.text(font, Component.literal(hint), (width - font.width(hint)) / 2, top + 16, 0xFFAAAAAA, false);
         super.extractRenderState(graphics, mouseX, mouseY, delta);
     }

@@ -33,13 +33,13 @@ public final class NameAliasRules {
         String clean = input.replaceAll("[\\p{Cc}\\p{Cf}]", "").strip();
         StringBuilder result = new StringBuilder();
         int glyphs = 0;
-        for (int offset = 0; offset < clean.length() && result.length() < 512;) {
+        for (int offset = 0; offset < clean.length() && result.length() < 4096;) {
             Matcher code = COLOR_CODE.matcher(clean).region(offset, clean.length());
             if (code.lookingAt()) {
                 result.append(code.group());
                 offset = code.end();
             } else {
-                if (glyphs++ == 32) break;
+                if (glyphs++ == 200) break;
                 int cp = clean.codePointAt(offset);
                 result.appendCodePoint(cp);
                 offset += Character.charCount(cp);

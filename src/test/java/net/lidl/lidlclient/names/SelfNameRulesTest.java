@@ -35,17 +35,17 @@ class SelfNameRulesTest {
         assertTrue(new NameAliasRules.Resolver("OtherPlayer", "&c").find("OtherPlayer").isEmpty());
         assertEquals("&zHi", new NameAliasRules.Resolver("OtherPlayer", "&zHi")
                 .find("OtherPlayer").getFirst().alias().display());
-        String colored = "&aA".repeat(40);
-        assertEquals(32, new NameAliasRules.Resolver("OtherPlayer", colored)
+        String colored = "&#FF75EDA".repeat(240);
+        assertEquals(200, new NameAliasRules.Resolver("OtherPlayer", colored)
                 .find("OtherPlayer").getFirst().alias().display().length());
     }
 
     @Test void validatesInputWithoutSplittingUnicodeCharacters() {
         assertEquals("§cHello", NameAliasRules.cleanCustomName("  §cHello\n  "));
         assertEquals("", NameAliasRules.cleanCustomName(null));
-        String longName = "😀".repeat(40);
+        String longName = "😀".repeat(240);
         String cleaned = NameAliasRules.cleanCustomName(longName);
-        assertEquals(32, cleaned.codePointCount(0, cleaned.length()));
+        assertEquals(200, cleaned.codePointCount(0, cleaned.length()));
         assertFalse(Character.isHighSurrogate(cleaned.charAt(cleaned.length() - 1)));
     }
 }

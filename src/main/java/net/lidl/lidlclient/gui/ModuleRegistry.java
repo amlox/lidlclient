@@ -15,6 +15,7 @@ import net.lidl.lidlclient.green.GreenScreen;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
 import net.lidl.lidlclient.names.NameChanger;
+import net.lidl.lidlclient.dungeons.DungeonMap;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +31,16 @@ public final class ModuleRegistry {
     private static List<GuiModule> createModules() {
         NameChanger.initializeSettings();
         List<GuiModule> modules = new ArrayList<>();
+        modules.add(new GuiModule("dungeon_map", "Dungeon map", "QoL features",
+                "Scanned rooms, names and clear states (Noamm based)",
+                DungeonMap::isEnabled, DungeonMap::setEnabled,
+                new BooleanSetting("Room names", DungeonMap::names, DungeonMap::setNames),
+                new BooleanSetting("Player markers", DungeonMap::players, DungeonMap::setPlayers),
+                new NumberSetting("Map size", 100, 360, 5, DungeonMap::size, DungeonMap::setSize),
+                new NumberSetting("Map X (%)", 0, 100, 1, DungeonMap::x, DungeonMap::setX),
+                new NumberSetting("Map Y (%)", 0, 100, 1, DungeonMap::y, DungeonMap::setY),
+                new NumberSetting("Background opacity", 0, 100, 5, DungeonMap::opacity, DungeonMap::setOpacity),
+                new ActionSetting("Open dungeon map", DungeonMap::open)));
         modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,
                 new BooleanSetting("Mute chat", Slots::isMuteMessages, Slots::setMuteMessages),

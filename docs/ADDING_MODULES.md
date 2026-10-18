@@ -4,7 +4,7 @@ Open `src/main/java/net/lidl/lidlclient/gui/ModuleRegistry.java` and add one dec
 inside `createModules()`, before `return validate(modules)`:
 
 ```java
-modules.add(new GuiModule("my_feature", "My Feature", "General", "What the feature does",
+modules.add(new GuiModule("my_feature", "My Feature", "General settings", "What the feature does",
         MyFeature::isEnabled, MyFeature::setEnabled));
 ```
 
@@ -21,14 +21,16 @@ its behavior in the setter. Registering a menu entry does not create feature beh
 If your feature already has a boolean field, lambdas work too:
 
 ```java
-modules.add(new GuiModule("my_feature", "My Feature", "Visual", "Example",
+modules.add(new GuiModule("my_feature", "My Feature", "Fun features", "Example",
         () -> MyFeature.enabled, value -> MyFeature.enabled = value));
 ```
 
-Use a unique stable id for every module. Category names are arbitrary strings. A new
-category automatically gets a sidebar button. Order in the registry is display order
-within a category; the first occurrence determines category order. No coordinates,
-screen branches, category arrays, or state-restoration switches are needed.
+Use a unique stable id for every module. The default menu always shows the five categories in `ModuleRegistry.CATEGORIES`,
+even when empty: General settings, Gambling, QoL features, Fun features, and Cheats.
+Use one of these exact names. Their vector icons are a gear, coins, wrench, sparkles,
+and lightning bolt. Order in the registry is display order within a category.
+Custom registries passed to `ModuleScreen(List<GuiModule>)` still derive their categories
+from their modules and use a neutral icon for unrecognized names.
 
 ## Settings
 
@@ -36,7 +38,7 @@ Settings follow the enable getter/setter in the declaration. Import the setting 
 from `net.lidl.lidlclient.gui.settings`.
 
 ```java
-modules.add(new GuiModule("my_feature", "My Feature", "Visual", "Example",
+modules.add(new GuiModule("my_feature", "My Feature", "Fun features", "Example",
         MyFeature::isEnabled, MyFeature::setEnabled,
         new BooleanSetting("Show labels", MyFeature::isShowLabels, MyFeature::setShowLabels),
         new NumberSetting("Radius", 2, 20, 0.5, MyFeature::getRadius, MyFeature::setRadius),
@@ -87,7 +89,12 @@ to Minecraft. The font definition is `assets/lidlclient/font/ui.json` and its li
 is included under `assets/lidlclient/licenses`.
 
 `ConstellationRenderer` owns the white stars, dark outlines and slim connections.
-The background moves at 14% of the module scroll distance with a short easing delay.
+The background enters 35 ms behind the panel and drifts down at 2.5 GUI units per
+second, while retaining 14% scroll parallax with easing. Each star twinkles with its
+own stable phase and speed. Cards slide from the left over 480 ms, staggered by
+15 ms (the previous card is about 9% into its movement). Switching categories
+restarts this entrance; expanding settings does not. Hit areas and slider dragging
+follow the animated card positions.
 The four-point star on the outer edge is the draggable scroll indicator. It is dimmed
 and stationary when the category fits without scrolling.
 

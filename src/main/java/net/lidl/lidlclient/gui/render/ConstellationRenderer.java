@@ -39,7 +39,7 @@ public final class ConstellationRenderer {
     private ConstellationRenderer() { }
 
     public static void background(GuiGraphicsExtractor graphics, float x, float width,
-                                   int height, double offset, ScreenRectangle clip) {
+                                   int height, double offset, double seconds, ScreenRectangle clip) {
         int first = (int) Math.floor(offset / TILE) - 1;
         int last = (int) Math.ceil((offset + height) / TILE);
         for (int tile = first; tile <= last; tile++) {
@@ -53,24 +53,35 @@ public final class ConstellationRenderer {
             for (int i = 0; i < POINTS.length; i++) {
                 float sx = x + px(POINTS[i][0], width, mirror), sy = originY + POINTS[i][1];
                 if (sy < -12 || sy > height + 12) continue;
-                if (i == 1 || i == 4 || i == 8) star(graphics, sx, sy, i == 8 ? 7 : 4.5f, .64f, clip);
+                float shine = twinkle(seconds, tile, i);
+                if (i == 1 || i == 4 || i == 8) star(graphics, sx, sy, i == 8 ? 7 : 4.5f, .85f * shine, clip);
                 else SmoothRenderer.panel(graphics, sx - .8f, sy - .8f, 1.6f, 1.6f, .8f,
-                        0xA0FFFFFF, 0x70FFFFFF, 0, 2.5f, clip);
+                        color(0xFFFFFF, .85f * shine), color(0xFFFFFF, .6f * shine), 0, 2.5f, clip);
             }
-            for (float[] point : SPARKLES) {
+            for (int i = 0; i < SPARKLES.length; i++) {
+                float[] point = SPARKLES[i];
                 float sy = originY + point[1];
                 if (sy < -16 || sy > height + 16) continue;
-                star(graphics, x + px(point[0], width, mirror), sy, point[2], .72f, clip);
+                star(graphics, x + px(point[0], width, mirror), sy, point[2], .95f * twinkle(seconds, tile, 13 + i), clip);
             }
-            for (float[] point : DUST) {
+            for (int i = 0; i < DUST.length; i++) {
+                float[] point = DUST[i];
                 float sy = originY + point[1];
                 if (sy < 0 || sy > height) continue;
                 float sx = x + px(point[0], width, mirror);
                 float size = point[2];
                 SmoothRenderer.panel(graphics, sx, sy, size, size, size / 2,
-                        color(0xFFFFFF, point[3]), 0, 0, 0, clip);
+                        color(0xFFFFFF, point[3] * twinkle(seconds, tile, 18 + i)), 0, 0, 0, clip);
             }
         }
+    }
+
+    private static float twinkle(double seconds, int tile, int star) {
+        // Stable identity per tile/star; no per-frame randomness or synchronized pulsing.
+        long seed = (tile * 73856093L) ^ (star * 19349663L);
+        double phase = Math.floorMod(seed, 6283) / 1000.0;
+        double speed = .65 + Math.floorMod(seed * 31, 1100) / 1000.0;
+        return (float) (.55 + .45 * Math.pow(.5 + .5 * Math.sin(seconds * speed + phase), 2));
     }
 
     private static float px(float fraction, float width, boolean mirror) {

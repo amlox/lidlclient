@@ -1,6 +1,7 @@
 package net.lidl.lidlclient.gui;
 
 import net.lidl.lidlclient.gui.render.SmoothRenderer;
+import net.lidl.lidlclient.gui.render.CategoryIcons;
 import net.lidl.lidlclient.gui.render.ConstellationRenderer;
 import net.lidl.lidlclient.gui.render.UiText;
 import net.lidl.lidlclient.gui.settings.BooleanSetting;
@@ -36,6 +37,9 @@ public class ModuleScreen extends Screen {
     private final List<GuiModule> modules;
     private final List<String> categories;
     private final long openedAt = System.nanoTime();
+    private long categoryOpenedAt = openedAt;
+    private float backgroundX;
+    private double ambientOffset;
     private String selectedCategory;
     private String expandedId;
     private float panelX;
@@ -52,13 +56,17 @@ public class ModuleScreen extends Screen {
     private String layoutExpandedId;
     private List<ModuleLayout.Row> layoutRows = List.of();
 
-    public ModuleScreen() { this(ModuleRegistry.modules()); }
+    public ModuleScreen() { this(ModuleRegistry.modules(), ModuleRegistry.CATEGORIES); }
 
     /** Also useful for custom registries and stress-testing large menus. */
     public ModuleScreen(List<GuiModule> modules) {
+        this(modules, ModuleLayout.categories(modules));
+    }
+
+    private ModuleScreen(List<GuiModule> modules, List<String> categories) {
         super(Component.literal("LidlClient"));
         this.modules = ModuleRegistry.validate(modules);
-        this.categories = ModuleLayout.categories(this.modules);
+        this.categories = List.copyOf(categories);
         this.selectedCategory = categories.isEmpty() ? "" : categories.getFirst();
     }
 
@@ -74,6 +82,9 @@ public class ModuleScreen extends Screen {
     private void updateSlide() {
         double t = Math.clamp((System.nanoTime() - openedAt) / (double) SLIDE_DURATION_NS, 0, 1);
         panelX = (float) (-(panelWidth + 12) * Math.pow(1 - t, 3));
+        double backgroundT = Math.clamp((System.nanoTime() - openedAt - 35_000_000L)
+                / (double) SLIDE_DURATION_NS, 0, 1);
+        backgroundX = (float) (-(panelWidth + 12) * Math.pow(1 - backgroundT, 3));
     }
 
     private List<ModuleLayout.Row> rows() {
@@ -88,6 +99,13 @@ public class ModuleScreen extends Screen {
 
     private int viewportHeight() { return Math.max(0, height - TOP - BOTTOM); }
     private int cardX() { return Math.round(panelX) + RAIL + 10; }
+    private int animatedCardX(int index) {
+        // Cubic ease-out is about 9% complete when the next card starts (15 / 480 ms).
+        double t = Math.clamp((System.nanoTime() - categoryOpenedAt - index * 15_000_000L)
+                / 480_000_000.0, 0, 1);
+        return cardX() - (int) Math.round((cardWidth() + 16) * Math.pow(1 - t, 3));
+    }
+
     private int cardWidth() { return Math.max(1, panelWidth - RAIL - 28); }
     private int categoryHeight() { return Math.max(0, categories.size() * CATEGORY_PITCH - 10); }
 
@@ -128,10 +146,12 @@ public class ModuleScreen extends Screen {
         double elapsed = Math.min(.1, (now - lastFrame) / 1_000_000_000.0);
         lastFrame = now;
         starOffset += (scroll * .14 - starOffset) * (1 - Math.exp(-elapsed * 12));
-        graphics.fill(Math.round(panelX), 0, Math.round(panelX) + panelWidth, height, PANEL);
-        int backgroundLeft = Math.max(0, Math.round(panelX));
-        int backgroundRight = Math.max(backgroundLeft, Math.min(width, Math.round(panelX) + panelWidth - 9));
-        ConstellationRenderer.background(graphics, panelX, panelWidth - 9, height, starOffset,
+        ambientOffset += elapsed * 2.5; // Gentle downward drift, independent of scroll parallax.
+        graphics.fill(Math.round(backgroundX), 0, Math.round(backgroundX) + panelWidth, height, PANEL);
+        int backgroundLeft = Math.max(0, Math.round(backgroundX));
+        int backgroundRight = Math.max(backgroundLeft, Math.min(width, Math.round(backgroundX) + panelWidth - 9));
+        ConstellationRenderer.background(graphics, backgroundX, panelWidth - 9, height,
+                starOffset - ambientOffset, (now - openedAt) / 1_000_000_000.0,
                 new ScreenRectangle(backgroundLeft, 0, backgroundRight - backgroundLeft, height));
         graphics.fill(Math.round(panelX), 0, Math.round(panelX) + RAIL, height, 0x30000000);
         SmoothRenderer.line(graphics, panelX + RAIL, 0, height, 0.65f, 0x66FFFFFF, 0, null);
@@ -152,36 +172,37 @@ public class ModuleScreen extends Screen {
                     active ? 0xBC344055 : (hovered ? 0xA0283243 : 0x8A10151F),
                     active || hovered ? WHITE : 0xA5798598, 1,
                     active ? 7 : (hovered ? 5 : 1), active ? .42f : .24f, glowClip(rail, y));
-            String letter = category.substring(0, category.offsetByCodePoints(0, 1));
-            text(graphics, letter, Math.round(panelX + 24 - UiText.width(font, letter) / 2f),
-                    Math.round(y + (36 - UiText.HEIGHT) / 2f), 24, active ? WHITE : MUTED);
+            CategoryIcons.draw(graphics, category, panelX + 24, y + 18,
+                    active ? WHITE : MUTED, rail);
         }
         graphics.disableScissor();
 
         ScreenRectangle clip = contentClip();
         graphics.enableScissor(clip.left(), TOP, clip.right(), TOP + viewportHeight());
-        for (ModuleLayout.Row row : rows()) {
+        for (int rowIndex = 0; rowIndex < rows().size(); rowIndex++) {
+            ModuleLayout.Row row = rows().get(rowIndex);
+            int x = animatedCardX(rowIndex);
             float y = TOP + row.top() - (float) scroll;
             if (y + row.height() < TOP || y > height - BOTTOM) continue;
             GuiModule module = row.module();
             boolean enabled = module.isEnabled();
-            boolean hovered = contains(mouseX, mouseY, cardX(), y, cardWidth(), HEADER);
-            SmoothRenderer.panel(graphics, cardX(), y, cardWidth(), row.height(), 8,
+            boolean hovered = contains(mouseX, mouseY, x, y, cardWidth(), HEADER);
+            SmoothRenderer.panel(graphics, x, y, cardWidth(), row.height(), 8,
                     enabled ? 0xC0364258 : (hovered ? 0xB4263042 : 0x94101520),
                     enabled ? WHITE : (hovered ? 0xFFE0E8F7 : 0xA5798598),
                     enabled ? 1.3f : .9f, enabled ? 10 : (hovered ? 6 : 1.5f),
                     enabled ? .55f : (hovered ? .32f : .14f), glowClip(clip, y));
             if (enabled) {
-                SmoothRenderer.panel(graphics, cardX() + 3, y + 10, 2, HEADER - 20, 1,
+                SmoothRenderer.panel(graphics, x + 3, y + 10, 2, HEADER - 20, 1,
                         WHITE, WHITE, 0, 3, .38f, clip);
             }
-            text(graphics, module.name(), cardX() + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f + 1),
+            text(graphics, module.name(), x + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f + 1),
                     cardWidth() - 24, enabled ? WHITE : 0xFFD6DAE4);
             if (!row.expanded()) continue;
             for (int index = 0; index < module.settings().size(); index++) {
                 float sy = y + HEADER + index * SETTING;
                 if (sy + SETTING < TOP || sy > height - BOTTOM) continue;
-                renderSetting(graphics, module.settings().get(index), sy, mouseX, mouseY, clip);
+                renderSetting(graphics, module.settings().get(index), sy, mouseX, mouseY, clip, x);
             }
         }
         graphics.disableScissor();
@@ -192,36 +213,36 @@ public class ModuleScreen extends Screen {
     }
 
     private void renderSetting(GuiGraphicsExtractor graphics, ModuleSetting setting, float y,
-                               int mouseX, int mouseY, ScreenRectangle clip) {
+                               int mouseX, int mouseY, ScreenRectangle clip, int x) {
         if (setting instanceof ActionSetting action) {
-            boolean hovered = contains(mouseX, mouseY, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6);
-            SmoothRenderer.panel(graphics, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
+            boolean hovered = contains(mouseX, mouseY, x + 6, y + 3, cardWidth() - 12, SETTING - 6);
+            SmoothRenderer.panel(graphics, x + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
                     hovered ? 0xB4425573 : 0xA02B374B, hovered ? WHITE : 0x907F90AB,
                     .9f, hovered ? 3 : 1, .24f, clip);
             int available = cardWidth() - 24;
             int labelWidth = Math.min(available, UiText.width(font, action.label()));
-            text(graphics, action.label(), cardX() + (cardWidth() - labelWidth) / 2,
+            text(graphics, action.label(), x + (cardWidth() - labelWidth) / 2,
                     Math.round(y + (SETTING - UiText.HEIGHT) / 2f), available, WHITE);
             return;
         }
         boolean on = setting instanceof BooleanSetting bool && bool.value();
-        boolean hovered = contains(mouseX, mouseY, cardX(), y, cardWidth(), SETTING);
-        SmoothRenderer.panel(graphics, cardX() + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
+        boolean hovered = contains(mouseX, mouseY, x, y, cardWidth(), SETTING);
+        SmoothRenderer.panel(graphics, x + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
                 on ? 0x883E4D67 : (hovered ? 0x782B374B : 0x50080D17),
                 on ? 0xAACFDDF5 : (hovered ? 0x907F90AB : 0x303F4D66),
                 .7f, on ? 3 : (hovered ? 2 : 0), on ? .3f : .18f, clip);
         String value = setting == bindingKey ? "Press key..." : setting.valueText();
         int valueWidth = Math.min(UiText.width(font, value), Math.max(24, cardWidth() / 3));
-        int right = cardX() + cardWidth() - 12;
-        text(graphics, setting.label(), cardX() + 12, Math.round(y + 9),
+        int right = x + cardWidth() - 12;
+        text(graphics, setting.label(), x + 12, Math.round(y + 9),
                 cardWidth() - valueWidth - 32, WHITE);
         text(graphics, value, right - valueWidth, Math.round(y + 9), valueWidth,
                 on ? WHITE : MUTED);
         if (setting instanceof NumberSetting number) {
             int trackWidth = cardWidth() - 24;
-            SmoothRenderer.panel(graphics, cardX() + 12, y + 26, trackWidth, 2, 1,
+            SmoothRenderer.panel(graphics, x + 12, y + 26, trackWidth, 2, 1,
                     0x407F7F8C, 0, 0, 0, clip);
-            SmoothRenderer.panel(graphics, cardX() + 12, y + 26,
+            SmoothRenderer.panel(graphics, x + 12, y + 26,
                     Math.max(1, trackWidth * (float) number.fraction()), 2, 1,
                     WHITE, 0, 0, 0, clip);
         }
@@ -268,7 +289,10 @@ public class ModuleScreen extends Screen {
             for (int i = 0; i < categories.size(); i++) {
                 if (contains(event.x(), event.y(), panelX + 7,
                         TOP + i * CATEGORY_PITCH - categoryScroll, 34, 36)) {
+                    if (selectedCategory.equals(categories.get(i))) return true;
                     selectedCategory = categories.get(i);
+                    categoryOpenedAt = System.nanoTime();
+                    draggingScrollbar = false;
                     expandedId = null;
                     scroll = 0;
                     draggingNumber = null;
@@ -277,9 +301,12 @@ public class ModuleScreen extends Screen {
             }
             return true;
         }
-        for (ModuleLayout.Row row : rows()) {
+        if (event.x() < contentClip().left() || event.x() >= contentClip().right()) return true;
+        for (int rowIndex = 0; rowIndex < rows().size(); rowIndex++) {
+            ModuleLayout.Row row = rows().get(rowIndex);
+            int x = animatedCardX(rowIndex);
             double y = TOP + row.top() - scroll;
-            if (contains(event.x(), event.y(), cardX(), y, cardWidth(), HEADER)) {
+            if (contains(event.x(), event.y(), x, y, cardWidth(), HEADER)) {
                 if (event.button() == 0) row.module().toggle();
                 else if (event.button() == 1 && !row.module().settings().isEmpty()) {
                     expandedId = row.module().id().equals(expandedId) ? null : row.module().id();
@@ -287,7 +314,7 @@ public class ModuleScreen extends Screen {
                 }
                 return true;
             }
-            if (row.expanded() && contains(event.x(), event.y(), cardX(), y + HEADER,
+            if (row.expanded() && contains(event.x(), event.y(), x, y + HEADER,
                     cardWidth(), row.height() - HEADER)) {
                 int index = (int) ((event.y() - y - HEADER) / SETTING);
                 ModuleSetting setting = row.module().settings().get(index);
@@ -298,7 +325,7 @@ public class ModuleScreen extends Screen {
                 }
                 if (setting instanceof ActionSetting action) {
                     if (event.button() == 0 && contains(event.x(), event.y(),
-                            cardX() + 6, y + HEADER + index * SETTING + 3,
+                            x + 6, y + HEADER + index * SETTING + 3,
                             cardWidth() - 12, SETTING - 6)) {
                         draggingNumber = null;
                         action.activate();
@@ -318,7 +345,12 @@ public class ModuleScreen extends Screen {
     }
 
     private void dragNumber(double mouseX) {
-        draggingNumber.setFraction((mouseX - cardX() - 12) / Math.max(1, cardWidth() - 24));
+        for (int i = 0; i < rows().size(); i++) {
+            if (rows().get(i).expanded()) {
+                draggingNumber.setFraction((mouseX - animatedCardX(i) - 12) / Math.max(1, cardWidth() - 24));
+                return;
+            }
+        }
     }
 
     private double indicatorTop() { return TOP + Math.min(10, viewportHeight() / 2.0); }

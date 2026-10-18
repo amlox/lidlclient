@@ -21,27 +21,30 @@ import java.util.List;
 public final class ModuleRegistry {
     private ModuleRegistry() { }
 
+    public static final List<String> CATEGORIES = List.of(
+            "General settings", "Gambling", "QoL features", "Fun features", "Cheats");
+
     private static final List<GuiModule> MODULES = createModules();
 
     private static List<GuiModule> createModules() {
         List<GuiModule> modules = new ArrayList<>();
-        modules.add(new GuiModule("slots", "Slots", "General", "Virtual slot machine",
+        modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,
                 new BooleanSetting("Mute chat", Slots::isMuteMessages, Slots::setMuteMessages),
                 new BooleanSetting("Bet / balance", Slots::isShowUi, Slots::setShowUi)));
 
-        modules.add(new GuiModule("green_screen", "im so fucking green", "General",
+        modules.add(new GuiModule("green_screen", "im so fucking green", "Fun features",
                 "Transparent green screen tint",
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
 
-        modules.add(new GuiModule("dungeonbreaker_swap", "Dungeonbreaker swap", "General",
+        modules.add(new GuiModule("dungeonbreaker_swap", "Dungeonbreaker swap", "QoL features",
                 "Select Dungeonbreaker from your hotbar",
                 DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,
                 new KeybindSetting("Keybind", DungeonbreakerSwap::keyName, DungeonbreakerSwap::bindKey)));
-        modules.add(new GuiModule("instant_pets", "Instant Pets close", "SkyBlock",
+        modules.add(new GuiModule("instant_pets", "Instant Pets close", "Cheats",
                 "Close after pet selection and suppress automatic reopen",
                 ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));
-        modules.add(new GuiModule("player_size", "Player size", "General",
+        modules.add(new GuiModule("player_size", "Player size", "Fun features",
                 "Built-in sizes with your own X/Y/Z sliders",
                 PlayerSize::isEnabled, PlayerSize::setEnabled,
                 new NumberSetting("X (width)", 0.25, 3.0, 0.05,
@@ -53,7 +56,7 @@ public final class ModuleRegistry {
                 new ActionSetting("Reset to default", PlayerSize::resetSize)));
 
         // Party commands retain the existing controller placeholder until connected.
-        modules.add(new GuiModule("party_commands", "PartyCMDS", "Social", "Party commands",
+        modules.add(new GuiModule("party_commands", "PartyCMDS", "QoL features", "Party commands",
                 PartyCommands::isEnabled, PartyCommands::setEnabled,
                 PartyCommands.commandNames().stream().<ModuleSetting>map(command ->
                         new BooleanSetting(command,
@@ -68,7 +71,7 @@ public final class ModuleRegistry {
             modules.add(new GuiModule(
                     "scroll_test_" + i,
                     "Test Module " + i,
-                    "General",
+                    "General settings",
                     "Temporary scrolling test",
                     () -> enabled[0],
                     value -> enabled[0] = value,

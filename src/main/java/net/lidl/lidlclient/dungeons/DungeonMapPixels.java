@@ -52,14 +52,17 @@ public final class DungeonMapPixels {
                     case 85, 119 -> State.UNOPENED;
                     default -> State.DISCOVERED;
                 };
+                t.discovered |= t.state != State.UNOPENED;
             } else if (side != 0 && type != Type.UNKNOWN) {
                 t.kind = Kind.CONNECTION; t.type = type; t.state = State.DISCOVERED;
+                t.discovered |= middle != 85 && middle != 119;
             } else if ((x % 2) != (z % 2)) {
                 Type doorType = roomColor(middle);
                 if (middle == 119 || middle == 85 || doorType != Type.UNKNOWN) {
                     t.kind = Kind.DOOR;
                     t.type = middle == 119 ? Type.UNKNOWN : doorType;
                     t.state = middle == 119 || middle == 85 ? State.UNOPENED : State.DISCOVERED;
+                    t.discovered |= t.state != State.UNOPENED;
                 }
             }
         }

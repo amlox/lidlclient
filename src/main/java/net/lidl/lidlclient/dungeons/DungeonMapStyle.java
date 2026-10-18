@@ -35,7 +35,8 @@ public final class DungeonMapStyle {
         return new Rect(INSET+bestX/2*PITCH,INSET+bestZ/2*PITCH,(bestLength-1)*PITCH+ROOM,ROOM);
     }
     public static int color(Tile tile) {
-        if(tile.state==State.UNOPENED) return tile.kind==Kind.DOOR && tile.type==Type.UNKNOWN?0xFF101010:0xFF414141;
+        if(tile.state==State.UNOPENED && (!tile.identified || tile.kind==Kind.DOOR))
+            return tile.kind==Kind.DOOR && tile.type==Type.UNKNOWN?0xFF101010:0xFF414141;
         return switch(tile.type) {
             case BLOOD -> 0xFFB20000; case FAIRY -> 0xFFE39BE2; case RARE -> 0xFFB2B2B2;
             case CHAMPION -> 0xFFFFC800; case PUZZLE -> 0xFF7B007B; case TRAP -> 0xFFFF8200;

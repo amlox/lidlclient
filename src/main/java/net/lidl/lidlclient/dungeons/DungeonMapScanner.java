@@ -21,11 +21,13 @@ public final class DungeonMapScanner {
     private boolean active;
     private String floor = "";
     private final DungeonMapModel model = new DungeonMapModel();
+    private final DungeonParty party = new DungeonParty();
 
     public DungeonMapModel model() { return model; }
     public boolean active() { return active; }
     public String floor() { return floor; }
-    public void reset() { model.reset(); cursor = 0; calibration = null; active = false; floor = ""; }
+    public DungeonParty party() { return party; }
+    public void reset() { model.reset(); party.reset(); cursor = 0; calibration = null; active = false; floor = ""; }
 
     public void tick(Minecraft client) {
         if (client.level != level) { reset(); level = client.level; }
@@ -44,6 +46,8 @@ public final class DungeonMapScanner {
         if (detected.isEmpty()) { reset(); return; }
         if (!floor.equals(detected)) { reset(); floor = detected; }
         active = true;
+        if(client.getConnection()!=null) party.update(client.getConnection().getOnlinePlayers().stream()
+                .map(info->info.getTabListDisplayName()).filter(Objects::nonNull).map(text->text.getString()).toList());
         int floorNumber = floor.equals("E") ? 0 : Character.digit(floor.charAt(1), 10);
         // Prefer the dungeon's usual slot, but allow moving the map elsewhere.
         for (int offset = 0; offset < 36; offset++) {

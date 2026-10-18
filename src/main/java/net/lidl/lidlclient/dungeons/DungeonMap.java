@@ -11,9 +11,9 @@ import net.minecraft.client.Minecraft;
 
 /** Settings are persisted by ModulePersistence through the standard Lidl GUI. */
 public final class DungeonMap implements ClientModInitializer {
-    private static boolean enabled = true, names = true, players = true, stats;
-    private static String overlay = "Checkmarks";
-    private static double size = 190, x = 2, y = 15, opacity = 20, textScale = 0.8, headScale = 1;
+    private static boolean enabled = true, names = true, players = true, stats, darkenUndiscovered = true;
+    private static String overlay = "Checkmarks", view = "Full scanned";
+    private static double size = 190, x = 2, y = 15, textScale = 0.8, headScale = 1;
     private static DungeonMapScanner scanner;
     private static int ticks;
     public static boolean isEnabled() { return enabled; }
@@ -36,8 +36,11 @@ public final class DungeonMap implements ClientModInitializer {
     public static void setX(double value) { x = value; }
     public static double y() { return y; }
     public static void setY(double value) { y = value; }
-    public static double opacity() { return opacity; }
-    public static void setOpacity(double value) { opacity = value; }
+    public static String view() { return view; }
+    public static void setView(String value) { view = value; }
+    public static boolean fullMap() { return view.equals("Full scanned"); }
+    public static boolean darkenUndiscovered() { return darkenUndiscovered; }
+    public static void setDarkenUndiscovered(boolean value) { darkenUndiscovered = value; }
     public static DungeonMapScanner scanner() { return scanner; }
     public static void open() {
         Minecraft client = Minecraft.getInstance();
@@ -60,7 +63,7 @@ public final class DungeonMap implements ClientModInitializer {
             int left = (int) ((graphics.guiWidth() - extent) * x / 100);
             int panelHeight = (int) Math.ceil(extent * (stats ? 140.0 : 128.0) / 128.0);
             int top = (int) (Math.max(0, graphics.guiHeight() - panelHeight) * y / 100);
-            DungeonMapRenderer.draw(graphics, scanner.model(), left, top, extent, names, players, opacity, scanner.floor());
+            DungeonMapRenderer.draw(graphics, scanner.model(), left, top, extent, names, players, scanner.floor());
         });
     }
 }

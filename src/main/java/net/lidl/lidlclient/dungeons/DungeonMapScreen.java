@@ -19,18 +19,17 @@ public final class DungeonMapScreen extends Screen {
                 .bounds(width/2-100,height-25,96,20).build());
     }
     @Override public void extractRenderState(GuiGraphicsExtractor graphics,int mouseX,int mouseY,float delta) {
-        graphics.fill(0,0,width,height,0xF0090E18);
         graphics.text(font,title,(width-font.width(title))/2,8,0xFFFFFFFF,true);
         var scanner=DungeonMap.scanner();
         if (scanner.active()) {
-            DungeonMapRenderer.draw(graphics,scanner.model(),left,top,extent,true,DungeonMap.players(),DungeonMap.opacity(),scanner.floor());
+            DungeonMapRenderer.draw(graphics,scanner.model(),left,top,extent,true,DungeonMap.players(),scanner.floor());
             int gx=(int)((mouseX-left)*128.0/extent), gz=(int)((mouseY-top)*128.0/extent);
             int x=(int)Math.round((gx-14)/10.0),z=(int)Math.round((gz-14)/10.0);
             String detail="Hover a room for its name and total secrets";
             if(mouseX>=left&&mouseY>=top&&gx<128&&gz<128&&x>=0&&z>=0&&x<GRID&&z<GRID&&center(x,z)) {
                 int id=z*GRID+x;
                 var group=scanner.model().groups().stream().filter(g->g.contains(id)).findFirst();
-                if(group.isPresent()) {
+                if(group.isPresent() && new DungeonMapVisibility(scanner.model(),DungeonMap.fullMap()).visible(x,z)) {
                     Tile t=scanner.model().representative(group.get());
                     detail=t.identified?t.name+" | "+t.secrets+" secrets | "+t.crypts+" crypts":t.type+" | Not identified yet";
                 }

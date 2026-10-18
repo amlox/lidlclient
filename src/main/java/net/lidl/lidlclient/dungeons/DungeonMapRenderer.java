@@ -29,8 +29,13 @@ public final class DungeonMapRenderer {
         double left=x-pattern[0].length()/2.0,top=y-pattern.length/2.0;
         pixels(g,pattern,left+1,top+1,0xC0000000);pixels(g,pattern,left,top,color);
     }
-    private static void roomText(GuiGraphicsExtractor g,Tile room,State state,Rect bounds,boolean secrets) {
-        if(room.type==Type.ENTRANCE || room.type==Type.FAIRY || state==State.UNOPENED) return;
+    private static int roomColor(Tile tile,boolean discovered) {
+        int result=color(tile);
+        return DungeonMap.fullMap() && DungeonMap.darkenUndiscovered() && !discovered
+                ? DungeonMapVisibility.darken(result) : result;
+    }
+    private static void roomText(GuiGraphicsExtractor g,Tile room,State state,Rect bounds,boolean secrets,boolean dim) {
+        if(room.type==Type.ENTRANCE || room.type==Type.FAIRY || (state==State.UNOPENED && !room.identified)) return;
         String name=room.identified?room.name:room.type.name();
         List<String> lines=new ArrayList<>();
         var font=Minecraft.getInstance().font;
@@ -46,6 +51,7 @@ public final class DungeonMapRenderer {
         float scale=(float)Math.min(DungeonMap.textScale(),Math.min((bounds.width()-2)/Math.max(1,maxWidth),(bounds.height()-2)/(lines.size()*9.0)));
         if(scale<=0) return;
         int color=state==State.GREEN?0xFF55FF55:state==State.CLEARED?0xFFFFFFFF:state==State.FAILED?0xFFFF3333:0xFFDDDDDD;
+        if(dim) color=DungeonMapVisibility.darken(color);
         g.pose().pushMatrix();
         g.pose().translate((float)(bounds.x()+bounds.width()/2),(float)(bounds.y()+bounds.height()/2));
         g.pose().scale(scale,scale);
@@ -56,26 +62,24 @@ public final class DungeonMapRenderer {
         g.pose().popMatrix();
     }
     public static void draw(GuiGraphicsExtractor g,DungeonMapModel model,int left,int top,
-                            int extent,boolean overlays,boolean players,double opacity,String floor) {
+                            int extent,boolean overlays,boolean players,String floor) {
         var client=Minecraft.getInstance();
         g.pose().pushMatrix();g.pose().translate((float)left,(float)top);
         float scale=extent/(float)SIZE;g.pose().scale(scale,scale);
-        int height=DungeonMap.stats()?140:128;
-        int alpha=(int)(Math.clamp(opacity,0,100)*255/100);
-        fill(g,0,0,SIZE,height,(alpha<<24)|0xFFFFFF);
-        fill(g,0,0,SIZE,1,0xD9FFFFFF);fill(g,0,height-1,SIZE,1,0xD9FFFFFF);
-        fill(g,0,0,1,height,0xD9FFFFFF);fill(g,SIZE-1,0,1,height,0xD9FFFFFF);
+        // No map-wide fill or border: only rooms, overlays and real party heads.
+        var visibility=new DungeonMapVisibility(model,DungeonMap.fullMap());
         var groups=model.groups();
         Map<Integer,Tile> owners=new HashMap<>();
         for(var group:groups) for(int id:group) owners.put(id,model.representative(group));
         for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
             Tile t=model.at(x,z);
+            if(!visibility.visible(x,z)) continue;
             if(x%2==1 && z%2==1) {
                 Tile owner=owners.get((z-1)*GRID+x-1);
                 if(owner!=null && owner==owners.get((z-1)*GRID+x+1)
                         && owner==owners.get((z+1)*GRID+x-1) && owner==owners.get((z+1)*GRID+x+1)) {
                     var junction=tile(x,z,Kind.CONNECTION);
-                    fill(g,junction.x(),junction.y(),junction.width(),junction.height(),color(owner));
+                    fill(g,junction.x(),junction.y(),junction.width(),junction.height(),roomColor(owner,visibility.discovered(x,z)));
                     continue;
                 }
             }
@@ -86,16 +90,22 @@ public final class DungeonMapRenderer {
                 else if(z>0) source=owners.getOrDefault((z-1)*GRID+x,t);
             }
             var rect=tile(x,z,t.kind);
-            fill(g,rect.x(),rect.y(),rect.width(),rect.height(),color(source));
+            fill(g,rect.x(),rect.y(),rect.width(),rect.height(),roomColor(source,visibility.discovered(x,z)));
         }
         if(overlays) for(var group:groups) {
+            int first=group.getFirst();
+            if(!visibility.visible(first%GRID,first/GRID)) continue;
             Tile room=model.representative(group);
             Rect bounds=label(group);State state=state(model,group);
+            boolean undiscovered=!visibility.discovered(first%GRID,first/GRID);
             if(DungeonMap.overlay().equals("Checkmarks")) mark(g,state,bounds.x()+bounds.width()/2,bounds.y()+bounds.height()/2);
-            else roomText(g,room,state,bounds,DungeonMap.overlay().equals("Names + secrets"));
+            else roomText(g,room,state,bounds,DungeonMap.overlay().equals("Names + secrets"),
+                    undiscovered && DungeonMap.darkenUndiscovered() && DungeonMap.fullMap());
         }
         if(players && client.level!=null) for(var player:client.level.players()) {
             if(!player.isAlive() || !((Object)player instanceof AbstractClientPlayer avatar)) continue;
+            if(!DungeonMap.scanner().party().show(player.getName().getString(),player==client.player)) continue;
+            if(!DungeonMap.fullMap() && !DungeonMapVisibility.marker(model,visibility,player.getX(),player.getZ())) continue;
             double mx=world(player.getX()),mz=world(player.getZ());
             if(mx<INSET || mz<INSET || mx>SIZE-INSET || mz>SIZE-INSET) continue;
             g.pose().pushMatrix();g.pose().translate((float)mx,(float)mz);
@@ -108,7 +118,8 @@ public final class DungeonMapRenderer {
             g.pose().popMatrix();
         }
         if(DungeonMap.stats()) {
-            String text=floor+"  |  "+groups.size()+" rooms";
+            long count=groups.stream().filter(group->{int id=group.getFirst();return visibility.visible(id%GRID,id/GRID);}).count();
+            String text=floor+"  |  "+count+" rooms";
             g.pose().pushMatrix();g.pose().translate(64f,131f);g.pose().scale(0.65f,0.65f);
             g.text(client.font,Component.literal(text),-client.font.width(text)/2,0,0xFFFFFFFF,true);g.pose().popMatrix();
         }

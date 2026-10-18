@@ -35,6 +35,8 @@ public final class ModuleRegistry {
         modules.add(new GuiModule("dungeon_map", "Dungeon map", "QoL features",
                 "Scanned rooms, names and clear states (Noamm based)",
                 DungeonMap::isEnabled, DungeonMap::setEnabled,
+                new ChoiceSetting("Map view", List.of("Full scanned", "Entered rooms"), DungeonMap::view, DungeonMap::setView),
+                new BooleanSetting("Darken undiscovered rooms", DungeonMap::darkenUndiscovered, DungeonMap::setDarkenUndiscovered),
                 new BooleanSetting("Room overlays", DungeonMap::names, DungeonMap::setNames),
                 new ChoiceSetting("Room style", List.of("Checkmarks", "Room names", "Names + secrets"), DungeonMap::overlay, DungeonMap::setOverlay),
                 new BooleanSetting("Player markers", DungeonMap::players, DungeonMap::setPlayers),
@@ -44,7 +46,6 @@ public final class ModuleRegistry {
                 new NumberSetting("Map size", 100, 360, 5, DungeonMap::size, DungeonMap::setSize),
                 new NumberSetting("Map X (%)", 0, 100, 1, DungeonMap::x, DungeonMap::setX),
                 new NumberSetting("Map Y (%)", 0, 100, 1, DungeonMap::y, DungeonMap::setY),
-                new NumberSetting("Background opacity", 0, 100, 5, DungeonMap::opacity, DungeonMap::setOpacity),
                 new ActionSetting("Open dungeon map", DungeonMap::open)));
         modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,

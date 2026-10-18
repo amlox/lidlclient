@@ -20,6 +20,8 @@ public final class DungeonMapModel {
         public String name = "Unknown";
         public int secrets, crypts;
         public boolean identified;
+        // Only the server's dungeon map can mark a room discovered.
+        public boolean discovered;
     }
     private final Tile[] tiles = new Tile[GRID * GRID];
     public DungeonMapModel() { reset(); }
@@ -36,7 +38,6 @@ public final class DungeonMapModel {
         Tile t = at(x, z);
         t.kind = Kind.ROOM; t.type = room.type(); t.name = room.name();
         t.secrets = room.secrets(); t.crypts = room.crypts(); t.identified = true;
-        if (t.state == State.UNKNOWN || t.state == State.UNOPENED) t.state = State.DISCOVERED;
     }
     /** Unique connected rooms, including L, 2x2 and long rooms; doors do not merge rooms. */
     public List<List<Integer>> groups() {

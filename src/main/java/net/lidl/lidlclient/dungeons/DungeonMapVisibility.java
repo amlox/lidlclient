@@ -27,8 +27,12 @@ public final class DungeonMapVisibility {
     public boolean visible(int x,int z) { return visible[z*GRID+x]; }
     public boolean discovered(int x,int z) { return discovered[z*GRID+x]; }
     public static int darken(int color) {
+        return darken(color,65);
+    }
+    public static int darken(int color,double darkness) {
+        double brightness=1-Math.clamp(darkness,0,100)/100;
         int r=(color>>16)&255,g=(color>>8)&255,b=color&255;
-        return (color&0xFF000000)|((int)(r*0.35)<<16)|((int)(g*0.35)<<8)|(int)(b*0.35);
+        return (color&0xFF000000)|((int)(r*brightness)<<16)|((int)(g*brightness)<<8)|(int)(b*brightness);
     }
     public static boolean marker(DungeonMapModel model,DungeonMapVisibility mask,double worldX,double worldZ) {
         int x=(int)Math.round((worldX-WORLD_START)/32.0)*2,z=(int)Math.round((worldZ-WORLD_START)/32.0)*2;

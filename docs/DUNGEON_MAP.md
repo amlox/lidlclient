@@ -4,7 +4,7 @@ Open `/lidl` > QoL features > Dungeon map. Right-click its card for room overlay
 player heads, size, horizontal/vertical position and discovery display. These
 settings save in the shared config. The toggle controls the HUD. `/lidlmap` or
 **Open dungeon map** opens the larger live view; hover a room for its full name
-and its total possible secrets/crypts. These are catalogue totals, not found counts.
+and its observed secret progress plus total crypts. Secret progress starts at 0/X.
 
 The feature activates on Hypixel when the scoreboard identifies a Catacombs floor
 (Entrance, normal F1–F7 or master M1–M7). It samples the server's dungeon map for
@@ -24,7 +24,7 @@ blood (red), fairy (pink), puzzle (purple), trap (orange), champion (gold), rare
 rooms; names wrap and scale to fit rather than being shortened to a few letters.
 
 **Room style** selects Checkmarks (default), Room names or Names + secrets.
-Secret labels show catalogue totals only. **Room text scale**, **Player head scale**
+Secret labels use found/total (for example 0/7, then 3/7). **Room text scale**, **Player head scale**
 and **Map stats** control text size, marker size and the optional compact footer.
 Player heads use actual skins, include their hat layers and rotate with player yaw.
 Your head has a green outline; other nearby loaded party members have dark outlines.
@@ -51,7 +51,26 @@ is received, Entered rooms stays empty. Hidden rooms are also hidden from overla
 hover details, markers and the optional room count.
 
 **Darken undiscovered rooms** (default on) only affects Full scanned. Undiscovered
-room tiles, joins and names are dimmed to 35% brightness while explored rooms stay
-at their normal color. Exploration persists until the run/world is reset. All
+room tiles, joins and names are dimmed by **Undiscovered darkness (%)** while explored
+rooms stay at their normal color. 0% keeps full brightness; 100% makes them black.
+The default is 65% darkness (35% brightness). Exploration persists until the run/world is reset. All
 these options save in the shared config. The old background opacity setting is
 ignored; the map always remains transparent.
+
+## Colours and secret progress
+
+Click **Room / door colours** in the Dungeon map settings to edit puzzle, base,
+trap, Mini Boss and Blood rooms, plus Normal, Wither and Blood doors. Each has
+its own input and live colour swatch. Inputs accept #RRGGBB, &#RRGGBB, bare six
+hex digits, 0xRRGGBB or a Minecraft colour code (&0 through &f). Save applies all
+valid colours and stores them in the shared config; invalid input disables Save.
+Defaults restores the default input values, then Save applies them. Cancel/Esc
+keeps the previous palette. Room colours and door colours are independent, and a
+Wither door keeps its category after opening.
+
+Names + secrets and the hover details display observed found/total secret counts.
+They begin at 0/X, update from Hypixel's room-specific action-bar count when you
+are in an identified room, and become X/X when the base map marks the room fully
+complete. Unknown/mismatched action-bar totals are ignored. Incomplete rooms you
+have not observed may stay at 0/X; this is not party-wide secret synchronization.
+All counts reset with the dungeon/world. Crypts remain catalogue totals.

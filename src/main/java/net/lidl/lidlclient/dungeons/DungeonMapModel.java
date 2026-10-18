@@ -13,12 +13,14 @@ public final class DungeonMapModel {
     }
     public enum State { UNKNOWN, UNOPENED, DISCOVERED, CLEARED, GREEN, FAILED }
     public enum Kind { EMPTY, ROOM, CONNECTION, DOOR }
+    public enum Door { NORMAL, WITHER, BLOOD, ENTRANCE }
     public static final class Tile {
         public Kind kind = Kind.EMPTY;
+        public Door door = Door.NORMAL;
         public Type type = Type.UNKNOWN;
         public State state = State.UNKNOWN;
         public String name = "Unknown";
-        public int secrets, crypts;
+        public int secrets, crypts, foundSecrets;
         public boolean identified;
         // Only the server's dungeon map can mark a room discovered.
         public boolean discovered;
@@ -66,6 +68,27 @@ public final class DungeonMapModel {
     }
     public Tile representative(List<Integer> group) {
         return group.stream().map(i -> tiles[i]).filter(t -> t.identified).findFirst().orElse(tiles[group.getFirst()]);
+    }
+    public void updateSecrets(int x,int z,int found,int total) {
+        if(x<0||z<0||x>=GRID||z>=GRID||found<0||total<0||found>total) return;
+        int id=z*GRID+x;
+        for(var group:groups()) if(group.contains(id)) {
+            Tile room=representative(group);
+            if(!room.identified || room.secrets!=total) return;
+            for(int member:group) {
+                Tile tile=tiles[member];tile.foundSecrets=Math.max(tile.foundSecrets,found);
+            }
+            return;
+        }
+    }
+    public int foundSecrets(List<Integer> group) {
+        int total=representative(group).secrets,found=0;
+        for(int id:group) {
+            Tile tile=tiles[id];
+            if(tile.state==State.GREEN) return total;
+            found=Math.max(found,tile.foundSecrets);
+        }
+        return Math.min(total,found);
     }
     public static Type roomColor(int color) {
         return switch (color) {

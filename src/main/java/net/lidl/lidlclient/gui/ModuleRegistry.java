@@ -16,6 +16,7 @@ import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
 import net.lidl.lidlclient.names.NameChanger;
 import net.lidl.lidlclient.dungeons.DungeonMap;
+import net.lidl.lidlclient.dungeons.DungeonMapColors;
 import net.lidl.lidlclient.gui.settings.ChoiceSetting;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,12 +32,15 @@ public final class ModuleRegistry {
 
     private static List<GuiModule> createModules() {
         NameChanger.initializeSettings();
+        DungeonMapColors.initialize();
         List<GuiModule> modules = new ArrayList<>();
         modules.add(new GuiModule("dungeon_map", "Dungeon map", "QoL features",
                 "Scanned rooms, names and clear states (Noamm based)",
                 DungeonMap::isEnabled, DungeonMap::setEnabled,
                 new ChoiceSetting("Map view", List.of("Full scanned", "Entered rooms"), DungeonMap::view, DungeonMap::setView),
                 new BooleanSetting("Darken undiscovered rooms", DungeonMap::darkenUndiscovered, DungeonMap::setDarkenUndiscovered),
+                new NumberSetting("Undiscovered darkness (%)", 0, 100, 5, DungeonMap::darkness, DungeonMap::setDarkness),
+                new ActionSetting("Room / door colours", DungeonMapColors::open),
                 new BooleanSetting("Room overlays", DungeonMap::names, DungeonMap::setNames),
                 new ChoiceSetting("Room style", List.of("Checkmarks", "Room names", "Names + secrets"), DungeonMap::overlay, DungeonMap::setOverlay),
                 new BooleanSetting("Player markers", DungeonMap::players, DungeonMap::setPlayers),

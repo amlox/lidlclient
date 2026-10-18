@@ -8,12 +8,13 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.lidl.lidlclient.LidlClient;
 import net.minecraft.client.Minecraft;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 
 /** Settings are persisted by ModulePersistence through the standard Lidl GUI. */
 public final class DungeonMap implements ClientModInitializer {
     private static boolean enabled = true, names = true, players = true, stats, darkenUndiscovered = true;
     private static String overlay = "Checkmarks", view = "Full scanned";
-    private static double size = 190, x = 2, y = 15, textScale = 0.8, headScale = 1;
+    private static double size = 190, x = 2, y = 15, textScale = 0.8, headScale = 1, darkness = 65;
     private static DungeonMapScanner scanner;
     private static int ticks;
     public static boolean isEnabled() { return enabled; }
@@ -41,6 +42,17 @@ public final class DungeonMap implements ClientModInitializer {
     public static boolean fullMap() { return view.equals("Full scanned"); }
     public static boolean darkenUndiscovered() { return darkenUndiscovered; }
     public static void setDarkenUndiscovered(boolean value) { darkenUndiscovered = value; }
+    public static double darkness() { return darkness; }
+    public static void setDarkness(double value) { darkness = value; }
+    public static void recordSecrets(String actionBar) {
+        var client=Minecraft.getInstance();
+        if(scanner==null || !scanner.active() || client.player==null) return;
+        var count=DungeonSecretProgress.parse(actionBar);
+        if(count==null) return;
+        int x=(int)Math.round((client.player.getX()-DungeonMapModel.WORLD_START)/32.0)*2;
+        int z=(int)Math.round((client.player.getZ()-DungeonMapModel.WORLD_START)/32.0)*2;
+        scanner.model().updateSecrets(x,z,count.found(),count.total());
+    }
     public static DungeonMapScanner scanner() { return scanner; }
     public static void open() {
         Minecraft client = Minecraft.getInstance();
@@ -49,6 +61,9 @@ public final class DungeonMap implements ClientModInitializer {
 
     @Override public void onInitializeClient() {
         scanner = new DungeonMapScanner();
+        ClientReceiveMessageEvents.GAME.register((message,overlay)->{
+            if(overlay) recordSecrets(message.getString());
+        });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (++ticks % 5 == 0) scanner.tick(client);
         });

@@ -60,6 +60,9 @@ public final class DungeonMapPixels {
                 Type doorType = roomColor(middle);
                 if (middle == 119 || middle == 85 || doorType != Type.UNKNOWN) {
                     t.kind = Kind.DOOR;
+                    if(middle==119) t.door=Door.WITHER;
+                    else if(middle==18) t.door=Door.BLOOD;
+                    else if(middle==30) t.door=Door.ENTRANCE;
                     t.type = middle == 119 ? Type.UNKNOWN : doorType;
                     t.state = middle == 119 || middle == 85 ? State.UNOPENED : State.DISCOVERED;
                     t.discovered |= t.state != State.UNOPENED;

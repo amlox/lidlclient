@@ -90,6 +90,9 @@ public final class DungeonMapScanner {
                 boolean doorway = roof == 73 || roof == 74 || roof == 81 || roof == 82;
                 tile.kind = doorway ? Kind.DOOR : Kind.CONNECTION;
                 var block = client.level.getBlockState(pos.setY(69)).getBlock();
+                if(block==Blocks.COAL_BLOCK) tile.door=Door.WITHER;
+                else if(block==Blocks.RED_TERRACOTTA) tile.door=Door.BLOOD;
+                else if(block==Blocks.INFESTED_CHISELED_STONE_BRICKS) tile.door=Door.ENTRANCE;
                 tile.type = block == Blocks.COAL_BLOCK ? Type.UNKNOWN
                         : block == Blocks.RED_TERRACOTTA ? Type.BLOOD
                         : block == Blocks.INFESTED_CHISELED_STONE_BRICKS ? Type.ENTRANCE : Type.NORMAL;

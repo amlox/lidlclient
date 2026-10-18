@@ -32,9 +32,9 @@ public final class DungeonMapRenderer {
     private static int roomColor(Tile tile,boolean discovered) {
         int result=color(tile);
         return DungeonMap.fullMap() && DungeonMap.darkenUndiscovered() && !discovered
-                ? DungeonMapVisibility.darken(result) : result;
+                ? DungeonMapVisibility.darken(result,DungeonMap.darkness()) : result;
     }
-    private static void roomText(GuiGraphicsExtractor g,Tile room,State state,Rect bounds,boolean secrets,boolean dim) {
+    private static void roomText(GuiGraphicsExtractor g,Tile room,State state,Rect bounds,boolean secrets,boolean dim,int found) {
         if(room.type==Type.ENTRANCE || room.type==Type.FAIRY || (state==State.UNOPENED && !room.identified)) return;
         String name=room.identified?room.name:room.type.name();
         List<String> lines=new ArrayList<>();
@@ -46,12 +46,12 @@ public final class DungeonMapRenderer {
             else current=candidate;
         }
         if(!current.isEmpty()) lines.add(current);
-        if(secrets && room.identified && room.secrets>0) lines.add(room.secrets+" secrets");
+        if(secrets && room.identified) lines.add(DungeonSecretProgress.label(found,room.secrets));
         int maxWidth=lines.stream().mapToInt(font::width).max().orElse(1);
         float scale=(float)Math.min(DungeonMap.textScale(),Math.min((bounds.width()-2)/Math.max(1,maxWidth),(bounds.height()-2)/(lines.size()*9.0)));
         if(scale<=0) return;
         int color=state==State.GREEN?0xFF55FF55:state==State.CLEARED?0xFFFFFFFF:state==State.FAILED?0xFFFF3333:0xFFDDDDDD;
-        if(dim) color=DungeonMapVisibility.darken(color);
+        if(dim) color=DungeonMapVisibility.darken(color,DungeonMap.darkness());
         g.pose().pushMatrix();
         g.pose().translate((float)(bounds.x()+bounds.width()/2),(float)(bounds.y()+bounds.height()/2));
         g.pose().scale(scale,scale);
@@ -100,7 +100,7 @@ public final class DungeonMapRenderer {
             boolean undiscovered=!visibility.discovered(first%GRID,first/GRID);
             if(DungeonMap.overlay().equals("Checkmarks")) mark(g,state,bounds.x()+bounds.width()/2,bounds.y()+bounds.height()/2);
             else roomText(g,room,state,bounds,DungeonMap.overlay().equals("Names + secrets"),
-                    undiscovered && DungeonMap.darkenUndiscovered() && DungeonMap.fullMap());
+                    undiscovered && DungeonMap.darkenUndiscovered() && DungeonMap.fullMap(),model.foundSecrets(group));
         }
         if(players && client.level!=null) for(var player:client.level.players()) {
             if(!player.isAlive() || !((Object)player instanceof AbstractClientPlayer avatar)) continue;

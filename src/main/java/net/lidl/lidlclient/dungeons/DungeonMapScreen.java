@@ -31,7 +31,7 @@ public final class DungeonMapScreen extends Screen {
                 var group=scanner.model().groups().stream().filter(g->g.contains(id)).findFirst();
                 if(group.isPresent() && new DungeonMapVisibility(scanner.model(),DungeonMap.fullMap()).visible(x,z)) {
                     Tile t=scanner.model().representative(group.get());
-                    detail=t.identified?t.name+" | "+t.secrets+" secrets | "+t.crypts+" crypts":t.type+" | Not identified yet";
+                    detail=t.identified?t.name+" | "+DungeonSecretProgress.label(scanner.model().foundSecrets(group.get()),t.secrets)+" secrets | "+t.crypts+" crypts":t.type+" | Not identified yet";
                 }
             }
             graphics.text(font,Component.literal(detail),(width-font.width(detail))/2,height-53,0xFFDAE5FA,true);

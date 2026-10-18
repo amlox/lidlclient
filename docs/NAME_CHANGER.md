@@ -37,3 +37,12 @@ your own client and saves in config/lidlclient.json as name_changer.self_name.
 It retains your built-in alias color/gradient if one exists; otherwise it uses white.
 Other players keep their built-in aliases, and other clients do not receive your
 custom override. The text editor displays literal input without applying aliases.
+
+### Custom colors
+
+Use Minecraft colors `&0` through `&f`, or hex colors such as `&#FF75ED`.
+For example, `&cRed &9Blue` or `&#FF75EDpetal`. Codes apply until another
+color code; `&r` restores your default alias color/gradient (white for unlisted
+accounts). The section-sign equivalents also work. Codes do not count toward the
+32 visible-character limit. A code-only name resets to the default. Unsupported
+codes remain literal. Your entered codes are saved with the name.

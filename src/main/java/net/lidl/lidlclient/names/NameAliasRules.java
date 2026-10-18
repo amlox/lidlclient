@@ -23,12 +23,51 @@ public final class NameAliasRules {
 
     private NameAliasRules() { }
 
+    private static final Pattern COLOR_CODE = Pattern.compile("(?i)[&§](?:#[0-9a-f]{6}|[0-9a-fr])");
+    private static final int[] LEGACY_COLORS = {
+            0x000000, 0x0000AA, 0x00AA00, 0x00AAAA, 0xAA0000, 0xAA00AA, 0xFFAA00, 0xAAAAAA,
+            0x555555, 0x5555FF, 0x55FF55, 0x55FFFF, 0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF };
+
     public static String cleanCustomName(String input) {
         if (input == null) return "";
-        String clean = input.replaceAll("(?i)§[0-9A-FK-ORX]", "")
-                .replaceAll("[\\p{Cc}\\p{Cf}]", "").strip();
-        int count = clean.codePointCount(0, clean.length());
-        return count <= 32 ? clean : clean.substring(0, clean.offsetByCodePoints(0, 32));
+        String clean = input.replaceAll("[\\p{Cc}\\p{Cf}]", "").strip();
+        StringBuilder result = new StringBuilder();
+        int glyphs = 0;
+        for (int offset = 0; offset < clean.length() && result.length() < 512;) {
+            Matcher code = COLOR_CODE.matcher(clean).region(offset, clean.length());
+            if (code.lookingAt()) {
+                result.append(code.group());
+                offset = code.end();
+            } else {
+                if (glyphs++ == 32) break;
+                int cp = clean.codePointAt(offset);
+                result.appendCodePoint(cp);
+                offset += Character.charCount(cp);
+            }
+        }
+        return result.toString();
+    }
+
+    private static Alias customAlias(String username, String input, List<Integer> defaults) {
+        StringBuilder display = new StringBuilder();
+        List<Integer> colors = new ArrayList<>();
+        Integer selected = null;
+        for (int offset = 0; offset < input.length();) {
+            Matcher code = COLOR_CODE.matcher(input).region(offset, input.length());
+            if (code.lookingAt()) {
+                String value = code.group().substring(1).toLowerCase(Locale.ROOT);
+                selected = value.equals("r") ? null : value.startsWith("#")
+                        ? Integer.parseInt(value.substring(1), 16)
+                        : LEGACY_COLORS[Character.digit(value.charAt(0), 16)];
+                offset = code.end();
+            } else {
+                int cp = input.codePointAt(offset);
+                display.appendCodePoint(cp);
+                colors.add(selected == null ? defaults.get(Math.min(colors.size(), defaults.size() - 1)) : selected);
+                offset += Character.charCount(cp);
+            }
+        }
+        return new Alias(username, display.toString(), colors);
     }
 
     public static final class Resolver {
@@ -41,8 +80,9 @@ public final class NameAliasRules {
             if (selfUsername != null && selfUsername.matches("[A-Za-z0-9_]{1,16}") && !custom.isEmpty()) {
                 String real = selfUsername.toLowerCase(Locale.ROOT);
                 Alias builtIn = aliases.get(real);
-                aliases.put(real, new Alias(real, custom,
-                        builtIn == null ? List.of(0xFFFFFF) : builtIn.colors()));
+                Alias alias = customAlias(real, custom,
+                        builtIn == null ? List.of(0xFFFFFF) : builtIn.colors());
+                if (!alias.display().isBlank()) aliases.put(real, alias);
             }
             String alternatives = String.join("|", aliases.keySet().stream().map(Pattern::quote).toList());
             names = Pattern.compile("(?<![A-Za-z0-9_])(?:" + alternatives + ")(?![A-Za-z0-9_])",

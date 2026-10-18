@@ -21,8 +21,27 @@ class SelfNameRulesTest {
         assertTrue(custom.find("OtherPlayer2").isEmpty());
     }
 
+    @Test void parsesLegacyHexAndResetPerGlyph() {
+        var alias = new NameAliasRules.Resolver("OtherPlayer", "&cRed &#FF75ED😀&rX")
+                .find("OtherPlayer").getFirst().alias();
+        assertEquals("Red 😀X", alias.display());
+        assertEquals(0xFF5555, alias.color(0));
+        assertEquals(0xFF75ED, alias.color(4));
+        assertEquals(0xFFFFFF, alias.color(5));
+        var black = new NameAliasRules.Resolver("SyntocxLeftFoot", "&aA&rB")
+                .find("SyntocxLeftFoot").getFirst().alias();
+        assertEquals(0x55FF55, black.color(0));
+        assertEquals(0, black.color(1));
+        assertTrue(new NameAliasRules.Resolver("OtherPlayer", "&c").find("OtherPlayer").isEmpty());
+        assertEquals("&zHi", new NameAliasRules.Resolver("OtherPlayer", "&zHi")
+                .find("OtherPlayer").getFirst().alias().display());
+        String colored = "&aA".repeat(40);
+        assertEquals(32, new NameAliasRules.Resolver("OtherPlayer", colored)
+                .find("OtherPlayer").getFirst().alias().display().length());
+    }
+
     @Test void validatesInputWithoutSplittingUnicodeCharacters() {
-        assertEquals("Hello", NameAliasRules.cleanCustomName("  §cHello\n  "));
+        assertEquals("§cHello", NameAliasRules.cleanCustomName("  §cHello\n  "));
         assertEquals("", NameAliasRules.cleanCustomName(null));
         String longName = "😀".repeat(40);
         String cleaned = NameAliasRules.cleanCustomName(longName);

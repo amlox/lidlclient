@@ -9,7 +9,7 @@ public final class PlayerSizeRules {
     public static final double MAX = 3.0;
     private static final Map<String, Double> SIZES = Map.of(
             "syntocxleftfoot", 0.5,
-            "syntocxrightfoot", 3.0);
+            "syntocxrightfoot", 2.0);
 
     private PlayerSizeRules() { }
 

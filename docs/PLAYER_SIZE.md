@@ -1,6 +1,6 @@
 # Player size
 
-Open /lidl > General > Player size, enable it, then right-click to reveal:
+Open /lidl > Fun features > Player size, enable it, then right-click to reveal:
 - **X (width)**: side-to-side scale.
 - **Y (height)**: vertical scale.
 - **Z (depth)**: front-to-back scale.
@@ -12,7 +12,7 @@ Click **Reset to default** beneath the sliders to restore all three of your defa
 There are no player-size chat commands.
 
 Every client running this build defaults SyntocxLeftFoot to 0.5x on all axes
-and SyntocxRightFoot to 3x on all axes. Your sliders never edit those defaults
+and SyntocxRightFoot to 2x on all axes. Your sliders never edit those defaults
 for other players. If you are one of those players, your own local sliders can
 override your appearance locally; other clients still see the hardcoded size.
 Player size is enabled by default for new installs; existing settings are respected.

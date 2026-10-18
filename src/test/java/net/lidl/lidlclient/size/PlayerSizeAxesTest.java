@@ -14,10 +14,10 @@ class PlayerSizeAxesTest {
     @Test void builtInPlayersRemainUniformAndResetAxesUseTheirDefaults() {
         assertEquals(new PlayerSizeRules.Axes(0.5f, 0.5f, 0.5f),
                 PlayerSizeRules.axesFor("SyntocxLeftFoot", false, 1.0, 2.0, 3.0, true));
-        assertEquals(new PlayerSizeRules.Axes(3, 3, 3),
+        assertEquals(new PlayerSizeRules.Axes(2, 2, 2),
                 PlayerSizeRules.axesFor("SyntocxRightFoot", true, null, null, null, true));
-        assertEquals(new PlayerSizeRules.Axes(3, 2, 3),
-                PlayerSizeRules.axesFor("SyntocxRightFoot", true, null, 2.0, null, true));
+        assertEquals(new PlayerSizeRules.Axes(2, 1.5f, 2),
+                PlayerSizeRules.axesFor("SyntocxRightFoot", true, null, 1.5, null, true));
     }
 
     @Test void disablingResetsAllVisualAxes() {

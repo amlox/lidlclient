@@ -24,3 +24,16 @@ changed. Click/hover actions retain their original targets.
 Only clients running this build see the aliases. Text baked into images and custom
 renderers that bypass Minecraft's text pipeline cannot be replaced. A nicked or
 hidden username cannot be matched when the actual username is absent.
+
+## Your own custom name
+
+Right-click Name changer and click **Edit your name**. Enter up to 32 characters,
+then click Save or press Enter. Cancel/Esc keeps the previous value. Reset or
+saving a blank name restores your built-in alias, or your real username if you
+are not in the built-in list.
+
+The override applies only to the currently logged-in player's real username on
+your own client and saves in config/lidlclient.json as name_changer.self_name.
+It retains your built-in alias color/gradient if one exists; otherwise it uses white.
+Other players keep their built-in aliases, and other clients do not receive your
+custom override. The text editor displays literal input without applying aliases.

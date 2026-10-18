@@ -33,7 +33,7 @@ public abstract class NameFontMixin {
 
     @Inject(method = "width(Ljava/lang/String;)I", at = @At("HEAD"), cancellable = true)
     private void lidlclient$stringWidth(String text, CallbackInfoReturnable<Integer> cir) {
-        if (NameChanger.isEnabled() && !NameAliasRules.find(text).isEmpty()) {
+        if (NameChanger.isRenderingEnabled() && !NameChanger.findMatches(text).isEmpty()) {
             cir.setReturnValue(((Font) (Object) this).width(DisplayNames.fromString(text)));
         }
     }
@@ -42,7 +42,7 @@ public abstract class NameFontMixin {
             at = @At("HEAD"), cancellable = true)
     private void lidlclient$stringRender(String text, float x, float y, int color, boolean shadow,
                                         int background, CallbackInfoReturnable<Font.PreparedText> cir) {
-        if (NameChanger.isEnabled() && !NameAliasRules.find(text).isEmpty()) {
+        if (NameChanger.isRenderingEnabled() && !NameChanger.findMatches(text).isEmpty()) {
             cir.setReturnValue(((Font) (Object) this).prepareText(
                     DisplayNames.fromString(text), x, y, color, shadow, false, background));
         }
@@ -52,7 +52,7 @@ public abstract class NameFontMixin {
             at = @At("HEAD"), cancellable = true)
     private void lidlclient$rawWorldText(String text, float x, float y, int color, boolean shadow,
             Matrix4fc pose, MultiBufferSource buffers, Font.DisplayMode mode, int background, int light, CallbackInfo ci) {
-        if (NameChanger.isEnabled() && !NameAliasRules.find(text).isEmpty()) {
+        if (NameChanger.isRenderingEnabled() && !NameChanger.findMatches(text).isEmpty()) {
             ((Font) (Object) this).drawInBatch(DisplayNames.fromString(text), x, y, color,
                     shadow, pose, buffers, mode, background, light);
             ci.cancel();

@@ -28,6 +28,7 @@ public final class ModuleRegistry {
     private static final List<GuiModule> MODULES = createModules();
 
     private static List<GuiModule> createModules() {
+        NameChanger.initializeSettings();
         List<GuiModule> modules = new ArrayList<>();
         modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,
@@ -58,7 +59,8 @@ public final class ModuleRegistry {
 
         modules.add(new GuiModule("name_changer", "Name changer", "Fun features",
                 "Built-in colored display names across rendered text",
-                NameChanger::isEnabled, NameChanger::setEnabled));
+                NameChanger::isEnabled, NameChanger::setEnabled,
+                new ActionSetting("Edit your name", NameChanger::openEditor)));
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "QoL features", "Party commands",

@@ -24,10 +24,10 @@ public final class DisplayNames {
     }
 
     public static FormattedCharSequence replace(FormattedCharSequence source) {
-        if (!NameChanger.isEnabled() || source instanceof AliasSequence) return source;
+        if (!NameChanger.isRenderingEnabled() || source instanceof AliasSequence) return source;
         StringBuilder text = new StringBuilder();
         source.accept((index, style, codepoint) -> { text.appendCodePoint(codepoint); return true; });
-        List<NameAliasRules.Match> matches = NameAliasRules.find(text.toString());
+        List<NameAliasRules.Match> matches = NameChanger.findMatches(text.toString());
         if (matches.isEmpty()) return source;
         List<Style> styles = new ArrayList<>();
         source.accept((index, style, codepoint) -> {
@@ -38,8 +38,8 @@ public final class DisplayNames {
     }
 
     public static FormattedText replace(FormattedText source) {
-        if (!NameChanger.isEnabled()) return source;
-        if (NameAliasRules.find(source.getString().replaceAll("(?i)§[0-9A-FK-ORX]", "")).isEmpty()) return source;
+        if (!NameChanger.isRenderingEnabled()) return source;
+        if (NameChanger.findMatches(source.getString().replaceAll("(?i)§[0-9A-FK-ORX]", "")).isEmpty()) return source;
         // Visit only render inputs, never Component.getString() or chat-event payloads.
         StringBuilder text = new StringBuilder();
         List<Style> styles = new ArrayList<>();
@@ -51,7 +51,7 @@ public final class DisplayNames {
             });
             return Optional.empty();
         }, Style.EMPTY);
-        List<NameAliasRules.Match> matches = NameAliasRules.find(text.toString());
+        List<NameAliasRules.Match> matches = NameChanger.findMatches(text.toString());
         if (matches.isEmpty()) return source;
         MutableComponent result = Component.empty();
         for (Glyph glyph : replaceGlyphs(text.toString(), styles, matches)) {

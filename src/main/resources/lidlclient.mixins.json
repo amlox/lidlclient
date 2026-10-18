@@ -15,6 +15,9 @@
     "PetsContainerClickMixin",
     "PetsScreenMixin",
     "PlayerSizeMixin",
-    "PlayerSizeStateMixin"
+    "PlayerSizeStateMixin",
+    "NameComponentMixin",
+    "NameFontMixin",
+    "NameSplitterMixin"
   ]
 }

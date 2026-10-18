@@ -14,6 +14,7 @@ import net.lidl.lidlclient.green.GreenScreen;
 
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
+import net.lidl.lidlclient.names.NameChanger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +28,7 @@ public final class ModuleRegistry {
     private static final List<GuiModule> MODULES = createModules();
 
     private static List<GuiModule> createModules() {
+        NameChanger.initializeSettings();
         List<GuiModule> modules = new ArrayList<>();
         modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,
@@ -54,6 +56,11 @@ public final class ModuleRegistry {
                 new NumberSetting("Z (depth)", 0.25, 3.0, 0.05,
                         PlayerSize::getScaleZ, PlayerSize::setScaleZ),
                 new ActionSetting("Reset to default", PlayerSize::resetSize)));
+
+        modules.add(new GuiModule("name_changer", "Name changer", "Fun features",
+                "Custom self name (built-in aliases always active)",
+                NameChanger::isEnabled, NameChanger::setEnabled,
+                new ActionSetting("Edit your name", NameChanger::openEditor)));
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "QoL features", "Party commands",

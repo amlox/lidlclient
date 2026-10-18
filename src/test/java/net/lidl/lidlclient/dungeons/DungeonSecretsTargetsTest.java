@@ -51,7 +51,7 @@ class DungeonSecretsTargetsTest {
     @Test void dedicatedActionBarPacketHookExists() throws Exception {
         Map<String, List<String>> expected = Map.of(
                 "net/minecraft/client/multiplayer/ClientPacketListener", List.of(
-                        "handleSetActionBarText(Lnet/minecraft/network/protocol/game/ClientboundSetActionBarTextPacket;)V"));
+                        "setActionBarText(Lnet/minecraft/network/protocol/game/ClientboundSetActionBarTextPacket;)V"));
         for (var entry : expected.entrySet()) {
             Set<String> actual = methods(entry.getKey());
             for (String method : entry.getValue()) {

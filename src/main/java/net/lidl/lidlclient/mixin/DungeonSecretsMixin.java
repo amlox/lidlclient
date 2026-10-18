@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Also handle the dedicated action-bar packet, not just overlay system chat. */
 @Mixin(ClientPacketListener.class)
 public abstract class DungeonSecretsMixin {
-    @Inject(method="handleSetActionBarText",at=@At("TAIL"))
+    @Inject(method="setActionBarText",at=@At("TAIL"))
     private void lidlclient$roomSecrets(ClientboundSetActionBarTextPacket packet,CallbackInfo ci) {
         DungeonMap.recordSecrets(packet.text().getString());
     }

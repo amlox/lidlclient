@@ -15,6 +15,9 @@ import net.lidl.lidlclient.green.GreenScreen;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
 import net.lidl.lidlclient.names.NameChanger;
+import net.lidl.lidlclient.dungeons.DungeonMap;
+import net.lidl.lidlclient.dungeons.DungeonMapColors;
+import net.lidl.lidlclient.gui.settings.ChoiceSetting;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,7 +32,25 @@ public final class ModuleRegistry {
 
     private static List<GuiModule> createModules() {
         NameChanger.initializeSettings();
+        DungeonMapColors.initialize();
         List<GuiModule> modules = new ArrayList<>();
+        modules.add(new GuiModule("dungeon_map", "Dungeon map", "QoL features",
+                "Scanned rooms, names and clear states (Noamm based)",
+                DungeonMap::isEnabled, DungeonMap::setEnabled,
+                new ChoiceSetting("Map view", List.of("Full scanned", "Entered rooms"), DungeonMap::view, DungeonMap::setView),
+                new BooleanSetting("Darken undiscovered rooms", DungeonMap::darkenUndiscovered, DungeonMap::setDarkenUndiscovered),
+                new NumberSetting("Undiscovered darkness (%)", 0, 100, 5, DungeonMap::darkness, DungeonMap::setDarkness),
+                new ActionSetting("Room / door colours", DungeonMapColors::open),
+                new BooleanSetting("Room overlays", DungeonMap::names, DungeonMap::setNames),
+                new ChoiceSetting("Room style", List.of("Checkmarks", "Room names", "Names + secrets"), DungeonMap::overlay, DungeonMap::setOverlay),
+                new BooleanSetting("Player markers", DungeonMap::players, DungeonMap::setPlayers),
+                new BooleanSetting("Map stats", DungeonMap::stats, DungeonMap::setStats),
+                new NumberSetting("Room text scale", 0.4, 1.2, 0.1, DungeonMap::textScale, DungeonMap::setTextScale),
+                new NumberSetting("Player head scale", 0.5, 1.5, 0.1, DungeonMap::headScale, DungeonMap::setHeadScale),
+                new NumberSetting("Map size", 100, 360, 5, DungeonMap::size, DungeonMap::setSize),
+                new NumberSetting("Map X (%)", 0, 100, 1, DungeonMap::x, DungeonMap::setX),
+                new NumberSetting("Map Y (%)", 0, 100, 1, DungeonMap::y, DungeonMap::setY),
+                new ActionSetting("Open dungeon map", DungeonMap::open)));
         modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,
                 new BooleanSetting("Mute chat", Slots::isMuteMessages, Slots::setMuteMessages),

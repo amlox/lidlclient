@@ -47,7 +47,7 @@ public final class ModuleRegistry {
                 "Close after pet selection and suppress automatic reopen",
                 ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));
         modules.add(new GuiModule("player_size", "Player size", "Fun features",
-                "Built-in sizes with your own X/Y/Z sliders",
+                "Custom self X/Y/Z size (built-in sizes always active)",
                 PlayerSize::isEnabled, PlayerSize::setEnabled,
                 new NumberSetting("X (width)", 0.25, 3.0, 0.05,
                         PlayerSize::getScaleX, PlayerSize::setScaleX),

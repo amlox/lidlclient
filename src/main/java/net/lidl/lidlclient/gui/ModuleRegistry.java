@@ -14,6 +14,7 @@ import net.lidl.lidlclient.green.GreenScreen;
 
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
+import net.lidl.lidlclient.names.NameChanger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,6 +55,10 @@ public final class ModuleRegistry {
                 new NumberSetting("Z (depth)", 0.25, 3.0, 0.05,
                         PlayerSize::getScaleZ, PlayerSize::setScaleZ),
                 new ActionSetting("Reset to default", PlayerSize::resetSize)));
+
+        modules.add(new GuiModule("name_changer", "Name changer", "Fun features",
+                "Built-in colored display names across rendered text",
+                NameChanger::isEnabled, NameChanger::setEnabled));
 
         // Party commands retain the existing controller placeholder until connected.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "QoL features", "Party commands",

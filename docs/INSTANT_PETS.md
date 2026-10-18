@@ -16,3 +16,7 @@ clears the guard.
 The pet switch itself still waits for Hypixel. This removes the local GUI delay;
 it cannot eliminate network latency or make server actions instant.
 Live Hypixel testing is needed to verify the current pet lore and reopen timing.
+
+The physical mouse click is intercepted before vanilla starts pickup or quick-craft,
+not only at slot dispatch. This prevents the press/release path from putting the
+pet on the cursor before the instant-close handler runs.

@@ -11,8 +11,9 @@ import net.minecraft.client.Minecraft;
 
 /** Settings are persisted by ModulePersistence through the standard Lidl GUI. */
 public final class DungeonMap implements ClientModInitializer {
-    private static boolean enabled = true, names = true, players = true;
-    private static double size = 190, x = 2, y = 15, opacity = 80;
+    private static boolean enabled = true, names = true, players = true, stats;
+    private static String overlay = "Checkmarks";
+    private static double size = 190, x = 2, y = 15, opacity = 20, textScale = 0.8, headScale = 1;
     private static DungeonMapScanner scanner;
     private static int ticks;
     public static boolean isEnabled() { return enabled; }
@@ -21,6 +22,14 @@ public final class DungeonMap implements ClientModInitializer {
     public static void setNames(boolean value) { names = value; }
     public static boolean players() { return players; }
     public static void setPlayers(boolean value) { players = value; }
+    public static String overlay() { return overlay; }
+    public static void setOverlay(String value) { overlay = value; }
+    public static boolean stats() { return stats; }
+    public static void setStats(boolean value) { stats = value; }
+    public static double textScale() { return textScale; }
+    public static void setTextScale(double value) { textScale = value; }
+    public static double headScale() { return headScale; }
+    public static void setHeadScale(double value) { headScale = value; }
     public static double size() { return size; }
     public static void setSize(double value) { size = value; }
     public static double x() { return x; }
@@ -48,8 +57,9 @@ public final class DungeonMap implements ClientModInitializer {
             Minecraft client = Minecraft.getInstance();
             if (!enabled || !scanner.active() || client.options.hideGui || client.screen instanceof DungeonMapScreen) return;
             int extent = Math.max(80, Math.min((int) size, Math.min(graphics.guiWidth() - 16, graphics.guiHeight() - 45)));
-            int left = (int) ((graphics.guiWidth() - extent - 12) * x / 100);
-            int top = (int) ((graphics.guiHeight() - extent - 36) * y / 100);
+            int left = (int) ((graphics.guiWidth() - extent) * x / 100);
+            int panelHeight = (int) Math.ceil(extent * (stats ? 140.0 : 128.0) / 128.0);
+            int top = (int) (Math.max(0, graphics.guiHeight() - panelHeight) * y / 100);
             DungeonMapRenderer.draw(graphics, scanner.model(), left, top, extent, names, players, opacity, scanner.floor());
         });
     }

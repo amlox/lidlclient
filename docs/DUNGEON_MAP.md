@@ -1,7 +1,7 @@
 # Dungeon map
 
-Open `/lidl` > QoL features > Dungeon map. Right-click its card for room names,
-player markers, size, horizontal/vertical position and background opacity. These
+Open `/lidl` > QoL features > Dungeon map. Right-click its card for room overlays,
+player heads, size, horizontal/vertical position and background opacity. These
 settings save in the shared config. The toggle controls the HUD. `/lidlmap` or
 **Open dungeon map** opens the larger live view; hover a room for its full name
 and its total possible secrets/crypts. These are catalogue totals, not found counts.
@@ -15,10 +15,19 @@ their connections. Missing/unreceived rooms remain unknown; no chunks are reques
 and the map does not predict rooms the server has not sent. The boss arena lies
 outside the normal room grid and is not mapped.
 
-White `v` means cleared, green `+` means fully complete, red `X` means failed and
-`?` means unopened. Room colors distinguish entrance (green), blood (red), fairy
-(pink), puzzle (purple), trap (orange), champion/rare (gold) and normal (brown).
-Cyan marks you; white marks other nearby loaded players. Unloaded teammates do
+White checkmarks mean cleared, green checkmarks mean fully complete, red crosses
+mean failed and `?` means unopened. The compact Noamm-style square uses 16px rooms,
+4px joins, slim doors, a translucent background and a thin white border, without
+the old title bar or placeholder grid. Room colors distinguish entrance (green),
+blood (red), fairy (pink), puzzle (purple), trap (orange), champion (gold), rare
+(light gray) and normal (brown). Large-room overlays are centered across connected
+rooms; names wrap and scale to fit rather than being shortened to a few letters.
+
+**Room style** selects Checkmarks (default), Room names or Names + secrets.
+Secret labels show catalogue totals only. **Room text scale**, **Player head scale**
+and **Map stats** control text size, marker size and the optional compact footer.
+Player heads use actual skins, include their hat layers and rotate with player yaw.
+Your head has a green outline; other nearby loaded players have dark outlines. Unloaded teammates do
 not have markers. Press **Rescan** if the room layout needs rebuilding. Changing
 worlds, leaving a dungeon or disconnecting resets the map automatically.
 

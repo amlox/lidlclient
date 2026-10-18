@@ -16,6 +16,7 @@ import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
 import net.lidl.lidlclient.names.NameChanger;
 import net.lidl.lidlclient.dungeons.DungeonMap;
+import net.lidl.lidlclient.gui.settings.ChoiceSetting;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,8 +35,12 @@ public final class ModuleRegistry {
         modules.add(new GuiModule("dungeon_map", "Dungeon map", "QoL features",
                 "Scanned rooms, names and clear states (Noamm based)",
                 DungeonMap::isEnabled, DungeonMap::setEnabled,
-                new BooleanSetting("Room names", DungeonMap::names, DungeonMap::setNames),
+                new BooleanSetting("Room overlays", DungeonMap::names, DungeonMap::setNames),
+                new ChoiceSetting("Room style", List.of("Checkmarks", "Room names", "Names + secrets"), DungeonMap::overlay, DungeonMap::setOverlay),
                 new BooleanSetting("Player markers", DungeonMap::players, DungeonMap::setPlayers),
+                new BooleanSetting("Map stats", DungeonMap::stats, DungeonMap::setStats),
+                new NumberSetting("Room text scale", 0.4, 1.2, 0.1, DungeonMap::textScale, DungeonMap::setTextScale),
+                new NumberSetting("Player head scale", 0.5, 1.5, 0.1, DungeonMap::headScale, DungeonMap::setHeadScale),
                 new NumberSetting("Map size", 100, 360, 5, DungeonMap::size, DungeonMap::setSize),
                 new NumberSetting("Map X (%)", 0, 100, 1, DungeonMap::x, DungeonMap::setX),
                 new NumberSetting("Map Y (%)", 0, 100, 1, DungeonMap::y, DungeonMap::setY),

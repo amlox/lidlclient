@@ -2,77 +2,116 @@ package net.lidl.lidlclient.dungeons;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import java.util.List;
+import java.util.*;
 import static net.lidl.lidlclient.dungeons.DungeonMapModel.*;
+import static net.lidl.lidlclient.dungeons.DungeonMapStyle.*;
 
+/** Compact map styling based on Noamm's modern MapRenderer/MapConfig (CC0). */
 public final class DungeonMapRenderer {
+    private static final String[] CHECK={"         ##","        ## ","       ##  ","##    ##   "," ##  ##    ","  ####     ","   ##      "};
+    private static final String[] CROSS={"##      ##"," ##    ## ","  ##  ##  ","   ####   ","    ##    ","   ####   ","  ##  ##  "," ##    ## ","##      ##"};
+    private static final String[] QUESTION={" ###### ","##    ##","      ##","    ### ","   ##   ","   ##   ","        ","   ##   ","   ##   "};
     private DungeonMapRenderer() { }
-    private static void box(GuiGraphicsExtractor g, int left, int top, double scale,
-                            double x, double z, double width, double height, int color) {
-        g.fill(left + (int)Math.round(x * scale), top + (int)Math.round(z * scale),
-                left + (int)Math.round((x + width) * scale), top + (int)Math.round((z + height) * scale), color);
+    private static void fill(GuiGraphicsExtractor g,double x,double y,double w,double h,int color) {
+        g.fill((int)Math.round(x),(int)Math.round(y),(int)Math.round(x+w),(int)Math.round(y+h),color);
     }
-    private static String fit(String text, int width) {
-        var font = Minecraft.getInstance().font;
-        if (font.width(text) <= width) return text;
-        while (!text.isEmpty() && font.width(text + ".") > width)
-            text = text.substring(0, text.offsetByCodePoints(text.length(), -1));
-        return text.isEmpty() ? "" : text + ".";
+    private static void pixels(GuiGraphicsExtractor g,String[] pattern,double x,double y,int color) {
+        for(int z=0;z<pattern.length;z++) for(int col=0;col<pattern[z].length();col++)
+            if(pattern[z].charAt(col)=='#') fill(g,x+col,y+z,1,1,color);
     }
-    public static void draw(GuiGraphicsExtractor g, DungeonMapModel model, int left, int top,
-                            int extent, boolean names, boolean players, double opacity, String floor) {
-        var client = Minecraft.getInstance();
-        int alpha = (int)(Math.clamp(opacity,0,100) * 255 / 100);
-        g.fill(left,top,left+extent+12,top+extent+36,(alpha<<24)|0x0C1220);
-        g.text(client.font, Component.literal("DUNGEON " + floor),left+6,top+6,0xFFE1E9FA,true);
-        left += 6; top += 20;
-        double scale = extent / 144.0;
-        for (int z=0;z<GRID;z++) for (int x=0;x<GRID;x++) {
-            Tile tile = model.at(x,z);
-            double px = 12 + 12*x, pz = 12 + 12*z;
-            if (tile.kind == Kind.EMPTY) {
-                if (center(x,z)) box(g,left,top,scale,px-9,pz-9,18,18,0xFF1C2433);
-                continue;
-            }
-            int color = tile.state == State.UNOPENED ? 0xFF424959 : tile.type.color;
-            switch (tile.kind) {
-                case ROOM -> box(g,left,top,scale,px-10,pz-10,20,20,color);
-                case CONNECTION -> {
-                    // Color separators from their connected room, including world-only scans.
-                    if (x>0 && model.at(x-1,z).kind==Kind.ROOM) color=model.at(x-1,z).type.color;
-                    else if (z>0 && model.at(x,z-1).kind==Kind.ROOM) color=model.at(x,z-1).type.color;
-                    box(g,left,top,scale,px-(x%2==1?2:10),pz-(z%2==1?2:10),x%2==1?4:20,z%2==1?4:20,color);
+    private static void mark(GuiGraphicsExtractor g,State state,double x,double y) {
+        String[] pattern=switch(state) {case GREEN,CLEARED->CHECK;case FAILED->CROSS;case UNOPENED->QUESTION;default->null;};
+        if(pattern==null) return;
+        int color=state==State.GREEN?0xFF55FF55:state==State.FAILED?0xFFFF3333:0xFFFFFFFF;
+        double left=x-pattern[0].length()/2.0,top=y-pattern.length/2.0;
+        pixels(g,pattern,left+1,top+1,0xC0000000);pixels(g,pattern,left,top,color);
+    }
+    private static void roomText(GuiGraphicsExtractor g,Tile room,State state,Rect bounds,boolean secrets) {
+        if(room.type==Type.ENTRANCE || room.type==Type.FAIRY || state==State.UNOPENED) return;
+        String name=room.identified?room.name:room.type.name();
+        List<String> lines=new ArrayList<>();
+        var font=Minecraft.getInstance().font;
+        String current="";
+        for(String word:name.split(" ")) {
+            String candidate=current.isEmpty()?word:current+" "+word;
+            if(!current.isEmpty() && font.width(candidate)>Math.max(24,bounds.width()*1.5)) {lines.add(current);current=word;}
+            else current=candidate;
+        }
+        if(!current.isEmpty()) lines.add(current);
+        if(secrets && room.identified && room.secrets>0) lines.add(room.secrets+" secrets");
+        int maxWidth=lines.stream().mapToInt(font::width).max().orElse(1);
+        float scale=(float)Math.min(DungeonMap.textScale(),Math.min((bounds.width()-2)/Math.max(1,maxWidth),(bounds.height()-2)/(lines.size()*9.0)));
+        if(scale<=0) return;
+        int color=state==State.GREEN?0xFF55FF55:state==State.CLEARED?0xFFFFFFFF:state==State.FAILED?0xFFFF3333:0xFFDDDDDD;
+        g.pose().pushMatrix();
+        g.pose().translate((float)(bounds.x()+bounds.width()/2),(float)(bounds.y()+bounds.height()/2));
+        g.pose().scale(scale,scale);
+        for(int i=0;i<lines.size();i++) {
+            String text=lines.get(i);
+            g.text(font,Component.literal(text),-font.width(text)/2,-lines.size()*9/2+i*9,color,true);
+        }
+        g.pose().popMatrix();
+    }
+    public static void draw(GuiGraphicsExtractor g,DungeonMapModel model,int left,int top,
+                            int extent,boolean overlays,boolean players,double opacity,String floor) {
+        var client=Minecraft.getInstance();
+        g.pose().pushMatrix();g.pose().translate((float)left,(float)top);
+        float scale=extent/(float)SIZE;g.pose().scale(scale,scale);
+        int height=DungeonMap.stats()?140:128;
+        int alpha=(int)(Math.clamp(opacity,0,100)*255/100);
+        fill(g,0,0,SIZE,height,(alpha<<24)|0xFFFFFF);
+        fill(g,0,0,SIZE,1,0xD9FFFFFF);fill(g,0,height-1,SIZE,1,0xD9FFFFFF);
+        fill(g,0,0,1,height,0xD9FFFFFF);fill(g,SIZE-1,0,1,height,0xD9FFFFFF);
+        var groups=model.groups();
+        Map<Integer,Tile> owners=new HashMap<>();
+        for(var group:groups) for(int id:group) owners.put(id,model.representative(group));
+        for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
+            Tile t=model.at(x,z);
+            if(x%2==1 && z%2==1) {
+                Tile owner=owners.get((z-1)*GRID+x-1);
+                if(owner!=null && owner==owners.get((z-1)*GRID+x+1)
+                        && owner==owners.get((z+1)*GRID+x-1) && owner==owners.get((z+1)*GRID+x+1)) {
+                    var junction=tile(x,z,Kind.CONNECTION);
+                    fill(g,junction.x(),junction.y(),junction.width(),junction.height(),color(owner));
+                    continue;
                 }
-                case DOOR -> box(g,left,top,scale,px-(x%2==1?2:3),pz-(z%2==1?2:3),x%2==1?4:6,z%2==1?4:6,color);
-                default -> { }
             }
-        }
-        var groups = model.groups();
-        for (List<Integer> group : groups) {
-            Tile room = model.representative(group);
-            // Anchor inside an actual component, so L-shaped labels never float in empty space.
-            int index = group.getFirst();
-            int px = left + (int)((12+12*(index%GRID))*scale);
-            int pz = top + (int)((12+12*(index/GRID))*scale);
-            State state = group.stream().map(i->model.at(i%GRID,i/GRID).state)
-                    .filter(s->s==State.FAILED || s==State.GREEN || s==State.CLEARED).findFirst().orElse(room.state);
-            String mark = switch(state) { case GREEN -> "+"; case CLEARED -> "v"; case FAILED -> "X"; case UNOPENED -> "?"; default -> ""; };
-            int markColor = state==State.FAILED?0xFFFF5555:state==State.GREEN?0xFF55FF80:0xFFFFFFFF;
-            if (!mark.isEmpty()) g.text(client.font,Component.literal(mark),px-client.font.width(mark)/2,pz-8,markColor,true);
-            if (names) {
-                String label = room.identified ? room.name : room.type==Type.UNKNOWN?"?":room.type.name();
-                label = fit(label,Math.max(10,(int)(22*scale)));
-                g.text(client.font,Component.literal(label),px-client.font.width(label)/2,pz+2,0xFFFFFFFF,true);
+            if(t.kind==Kind.EMPTY) continue;
+            Tile source=t;
+            if(t.kind==Kind.CONNECTION) {
+                if(x%2==1) source=owners.getOrDefault(z*GRID+x-1,t);
+                else if(z>0) source=owners.getOrDefault((z-1)*GRID+x,t);
             }
+            var rect=tile(x,z,t.kind);
+            fill(g,rect.x(),rect.y(),rect.width(),rect.height(),color(source));
         }
-        if (players && client.level!=null) for (var player:client.level.players()) {
-            double mx=12+(player.getX()-WORLD_START)/32.0*24, mz=12+(player.getZ()-WORLD_START)/32.0*24;
-            if (mx<0 || mz<0 || mx>=144 || mz>=144) continue;
-            boolean self=player==client.player;
-            box(g,left,top,scale,mx-2,mz-2,4,4,0xFF10141E);
-            box(g,left,top,scale,mx-1.4,mz-1.4,2.8,2.8,self?0xFF58ECFF:0xFFFFFFFF);
+        if(overlays) for(var group:groups) {
+            Tile room=model.representative(group);
+            Rect bounds=label(group);State state=state(model,group);
+            if(DungeonMap.overlay().equals("Checkmarks")) mark(g,state,bounds.x()+bounds.width()/2,bounds.y()+bounds.height()/2);
+            else roomText(g,room,state,bounds,DungeonMap.overlay().equals("Names + secrets"));
         }
-        g.text(client.font,Component.literal(groups.size()+" rooms | "+model.roomTiles()+" tiles"),left,top+extent+3,0xFFADBBD0,false);
+        if(players && client.level!=null) for(var player:client.level.players()) {
+            if(!player.isAlive() || !((Object)player instanceof AbstractClientPlayer avatar)) continue;
+            double mx=world(player.getX()),mz=world(player.getZ());
+            if(mx<INSET || mz<INSET || mx>SIZE-INSET || mz>SIZE-INSET) continue;
+            g.pose().pushMatrix();g.pose().translate((float)mx,(float)mz);
+            g.pose().rotate((float)Math.toRadians(player.getYRot()+180));
+            g.pose().scale((float)DungeonMap.headScale(),(float)DungeonMap.headScale());
+            fill(g,-4,-4,8,8,player==client.player?0xFF55FF55:0xFF141414);
+            var skin=avatar.getSkin().body().texturePath();
+            g.blit(RenderPipelines.GUI_TEXTURED,skin,-3,-3,8f,8f,6,6,8,8,64,64,-1);
+            g.blit(RenderPipelines.GUI_TEXTURED,skin,-3,-3,40f,8f,6,6,8,8,64,64,-1);
+            g.pose().popMatrix();
+        }
+        if(DungeonMap.stats()) {
+            String text=floor+"  |  "+groups.size()+" rooms";
+            g.pose().pushMatrix();g.pose().translate(64f,131f);g.pose().scale(0.65f,0.65f);
+            g.text(client.font,Component.literal(text),-client.font.width(text)/2,0,0xFFFFFFFF,true);g.pose().popMatrix();
+        }
+        g.pose().popMatrix();
     }
 }

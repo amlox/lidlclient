@@ -11,13 +11,7 @@ public final class NameAliasRules {
     }
     public record Match(int start, int end, Alias alias) { }
 
-    public static final List<Alias> ALIASES = List.of(
-            new Alias("syntocxleftfoot", "Tesco", List.of(0x000000)),
-            new Alias("syntocxrightfoot", "Lidl", List.of(0xFF5555)),
-            new Alias("syntocxfeetpics", "petal", List.of(0xFF75ED, 0xFC83EB, 0xFC90EB, 0xFFA1ED, 0xFFADEE)),
-            new Alias("__beacon", "Syntocx", List.of(0xFF55FF)),
-            new Alias("fawnelle", "Konstsus", List.of(0x5555FF)),
-            new Alias("quak07", "quak", List.of(0xFFFF55)));
+    public static final List<Alias> ALIASES = BuiltInAliases.PLAYERS;
 
     private static final Resolver BUILT_IN = new Resolver(null, "");
 

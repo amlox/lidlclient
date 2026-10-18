@@ -1,7 +1,8 @@
 # Name changer
 
-Enabled by default. Toggle **Name changer** in /lidl > Fun features.
-The choice is saved in the shared config.
+Built-in aliases are always active. The **Name changer** toggle in /lidl > Fun features
+only enables/disables your custom self name. Disabling it restores your built-in
+alias, or your real username if unlisted. Your custom input stays saved.
 
 | Real username | Visual alias | RGB color |
 | --- | --- | --- |
@@ -46,3 +47,11 @@ color code; `&r` restores your default alias color/gradient (white for unlisted
 accounts). The section-sign equivalents also work. Codes do not count toward the
 200 visible-character limit. A code-only name resets to the default. Unsupported
 codes remain literal. Your entered codes are saved with the name.
+
+## Editing built-in aliases in code
+
+Edit `src/main/java/net/lidl/lidlclient/names/BuiltInAliases.java`.
+Each entry is `alias("RealUsername", "Display name", 0xRRGGBB)`.
+For example, add `alias("AnotherPlayer", "Nickname", 0x55FF55)` to the PLAYERS list.
+Use commas between entries. Supply several colors for a per-letter gradient.
+Usernames are matched case-insensitively. Rebuild the mod after editing.

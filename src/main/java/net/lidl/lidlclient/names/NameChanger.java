@@ -6,7 +6,7 @@ import net.lidl.lidlclient.config.ClientConfig;
 import net.minecraft.client.Minecraft;
 import java.util.*;
 
-/** Saved display-only module switch and local player's custom alias. */
+/** Saved custom-name switch. Built-in aliases always remain active. */
 public final class NameChanger {
     private static boolean enabled = true;
     private static boolean initialized;
@@ -17,7 +17,7 @@ public final class NameChanger {
 
     private NameChanger() { }
     public static boolean isEnabled() { return enabled; }
-    public static boolean isRenderingEnabled() { return enabled && !editing; }
+    public static boolean isRenderingEnabled() { return !editing; }
     public static String customName() { return customName; }
     public static void setEditing(boolean value) { editing = value; }
 
@@ -38,7 +38,7 @@ public final class NameChanger {
         }
     }
 
-    public static List<NameAliasRules.Match> findMatches(String text) { return resolver.find(text); }
+    public static List<NameAliasRules.Match> findMatches(String text) { return enabled ? resolver.find(text) : NameAliasRules.find(text); }
 
     public static void setCustomName(String value) {
         customName = NameAliasRules.cleanCustomName(value);

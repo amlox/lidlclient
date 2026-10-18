@@ -58,7 +58,7 @@ public final class ModuleRegistry {
                 new ActionSetting("Reset to default", PlayerSize::resetSize)));
 
         modules.add(new GuiModule("name_changer", "Name changer", "Fun features",
-                "Built-in colored display names across rendered text",
+                "Custom self name (built-in aliases always active)",
                 NameChanger::isEnabled, NameChanger::setEnabled,
                 new ActionSetting("Edit your name", NameChanger::openEditor)));
 

@@ -37,6 +37,7 @@ public final class DungeonMapScanner {
         for (var team : client.level.getScoreboard().getPlayerTeams()) {
             String text = (team.getPlayerPrefix().getString() + team.getPlayerSuffix().getString())
                     .replaceAll("(?i)§[0-9a-fk-or]", "");
+            if (text.contains("Queue")) continue;
             var match = FLOOR.matcher(text);
             if (match.find()) { detected = match.group(1); break; }
         }

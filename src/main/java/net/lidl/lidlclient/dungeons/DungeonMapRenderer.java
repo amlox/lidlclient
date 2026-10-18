@@ -67,7 +67,7 @@ public final class DungeonMapRenderer {
             }
         }
         if (players && client.level!=null) for (var player:client.level.players()) {
-            double mx=(player.getX()+200)/32.0*24, mz=(player.getZ()+200)/32.0*24;
+            double mx=12+(player.getX()-WORLD_START)/32.0*24, mz=12+(player.getZ()-WORLD_START)/32.0*24;
             if (mx<0 || mz<0 || mx>=144 || mz>=144) continue;
             boolean self=player==client.player;
             box(g,left,top,scale,mx-2,mz-2,4,4,0xFF10141E);

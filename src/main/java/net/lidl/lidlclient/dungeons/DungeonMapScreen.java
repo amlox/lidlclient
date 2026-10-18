@@ -12,7 +12,7 @@ public final class DungeonMapScreen extends Screen {
     private int extent,left,top;
     public DungeonMapScreen(Screen parent) { super(Component.literal("Lidl Dungeon Map")); this.parent=parent; }
     @Override protected void init() {
-        extent=Math.max(72,Math.min(width-32,height-105)); left=(width-extent-12)/2; top=25;
+        extent=Math.max(72,Math.min(width-32,height-130)); left=(width-extent-12)/2; top=25;
         addRenderableWidget(Button.builder(Component.literal("Close"),b->onClose())
                 .bounds(width/2+4,height-25,96,20).build());
         addRenderableWidget(Button.builder(Component.literal("Rescan"),b->DungeonMap.scanner().reset())

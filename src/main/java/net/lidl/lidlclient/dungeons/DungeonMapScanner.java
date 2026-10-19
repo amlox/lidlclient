@@ -57,7 +57,7 @@ public final class DungeonMapScanner {
         active = true;
         if(client.getConnection()!=null) party.update(client.getConnection().getOnlinePlayers().stream()
                 .sorted(Comparator.comparing((PlayerInfo info)->info.getTeam()==null?"":info.getTeam().getName())
-                        .thenComparing(info->info.getTabListDisplayName()==null?"":info.getTabListDisplayName().getString()))
+                        .thenComparing(info->info.getProfile().name()))
                 .map(info->info.getTabListDisplayName()).filter(Objects::nonNull).map(text->text.getString()).toList());
         int floorNumber = floor.equals("E") ? 0 : Character.digit(floor.charAt(1), 10);
         // Prefer the dungeon's usual slot, but allow moving the map elsewhere.

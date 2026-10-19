@@ -45,10 +45,28 @@ public final class DungeonMapStyle {
             State next=model.at(id%GRID,id/GRID).state;
             if(priority(next)>priority(result)) result=next;
         }
-        return result;
+        if(result==State.FAILED || result==State.GREEN) return result;
+        Tile room=model.representative(group);
+        if(room.identified && room.secrets>0 && model.foundSecrets(group)>=room.secrets) return State.GREEN;
+        if(result==State.CLEARED) return result;
+        return group.stream().anyMatch(i->model.at(i%GRID,i/GRID).discovered)?State.DISCOVERED:State.UNOPENED;
+    }
+    public static int stateColor(int base,State state,boolean discovered,boolean darken,double darkness) {
+        if(!discovered) return darken?DungeonMapVisibility.darken(base,darkness):base;
+        if(state==State.GREEN) return blend(base,0xFF55FF55,0.7);
+        if(state==State.CLEARED) return blend(base,0xFFFFFFFF,0.3);
+        if(state==State.FAILED) return blend(base,0xFFFF3333,0.3);
+        return base;
+    }
+    private static int blend(int base,int overlay,double amount) {
+        int r=(int)(((base>>16)&255)*(1-amount)+((overlay>>16)&255)*amount);
+        int g=(int)(((base>>8)&255)*(1-amount)+((overlay>>8)&255)*amount);
+        int b=(int)((base&255)*(1-amount)+(overlay&255)*amount);
+        return 0xFF000000|(r<<16)|(g<<8)|b;
     }
     private static int priority(State state) {
         return switch(state) { case FAILED->6;case GREEN->5;case CLEARED->4;case DISCOVERED->3;case UNOPENED->2;case UNKNOWN->1; };
     }
     public static double world(double coordinate) { return INSET+ROOM/2.0+(coordinate-WORLD_START)/32.0*PITCH; }
 }
+

@@ -1,6 +1,7 @@
 package net.lidl.lidlclient.dungeons;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -15,19 +16,25 @@ public final class DungeonMapScanner {
     private static final Pattern FLOOR = Pattern.compile("The Catacombs \\((E|[FM][1-7])\\)");
     private final RoomCatalog catalog = RoomCatalog.bundled();
     private final Map<Block, Integer> tokens = new IdentityHashMap<>();
+    private static final Pattern INSTANCE=Pattern.compile("\\b\\d{2}/\\d{2}/\\d{2}\\s+(\\w{1,24})\\b");
     private int cursor;
     private Object level;
     private DungeonMapPixels.Calibration calibration;
     private boolean active;
-    private String floor = "";
+    private String floor = "", instance = "";
     private final DungeonMapModel model = new DungeonMapModel();
     private final DungeonParty party = new DungeonParty();
 
     public DungeonMapModel model() { return model; }
     public boolean active() { return active; }
     public String floor() { return floor; }
+    private final DungeonPlayerMarkers markers=new DungeonPlayerMarkers();
+    private final DungeonSecretSync sync=new DungeonSecretSync();
+    public DungeonPlayerMarkers markers() {return markers;}
+    public DungeonSecretSync sync() {return sync;}
+    public String instance() {return instance;}
     public DungeonParty party() { return party; }
-    public void reset() { model.reset(); party.reset(); cursor = 0; calibration = null; active = false; floor = ""; }
+    public void reset() { model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; cursor = 0; calibration = null; active = false; floor = ""; }
 
     public void tick(Minecraft client) {
         if (client.level != level) { reset(); level = client.level; }
@@ -35,18 +42,22 @@ public final class DungeonMapScanner {
         var server = client.getCurrentServer();
         String host = server == null ? "" : server.ip.toLowerCase(Locale.ROOT).split(":", 2)[0];
         if (!host.equals("hypixel.net") && !host.endsWith(".hypixel.net")) { reset(); return; }
-        String detected = "";
+        String detected = "", detectedInstance="";
         for (var team : client.level.getScoreboard().getPlayerTeams()) {
             String text = (team.getPlayerPrefix().getString() + team.getPlayerSuffix().getString())
                     .replaceAll("(?i)§[0-9a-fk-or]", "");
+            var serverId=INSTANCE.matcher(text);if(serverId.find()) detectedInstance=serverId.group(1);
             if (text.contains("Queue")) continue;
             var match = FLOOR.matcher(text);
-            if (match.find()) { detected = match.group(1); break; }
+            if (match.find()) detected = match.group(1);
         }
         if (detected.isEmpty()) { reset(); return; }
-        if (!floor.equals(detected)) { reset(); floor = detected; }
+        if (!floor.equals(detected)||(!instance.isEmpty()&&!detectedInstance.isEmpty()&&!instance.equals(detectedInstance))) reset();
+        floor=detected;if(!detectedInstance.isEmpty()) instance=detectedInstance;
         active = true;
         if(client.getConnection()!=null) party.update(client.getConnection().getOnlinePlayers().stream()
+                .sorted(Comparator.comparing((PlayerInfo info)->info.getTeam()==null?"":info.getTeam().getName())
+                        .thenComparing(info->info.getTabListDisplayName()==null?"":info.getTabListDisplayName().getString()))
                 .map(info->info.getTabListDisplayName()).filter(Objects::nonNull).map(text->text.getString()).toList());
         int floorNumber = floor.equals("E") ? 0 : Character.digit(floor.charAt(1), 10);
         // Prefer the dungeon's usual slot, but allow moving the map elsewhere.
@@ -61,8 +72,11 @@ public final class DungeonMapScanner {
             if (candidate == null) continue;
             calibration = candidate;
             DungeonMapPixels.update(model, data.colors, calibration);
+            markers.map(client,party,data,calibration);
             break;
         }
+        markers.update(client,party);
+        sync.tick(client,this,catalog);
         // Six column probes per update; no background world access or chunk requests.
         for (int i = 0; i < 6; i++) {
             int index = cursor++ % (GRID * GRID), x = index % GRID, z = index / GRID;
@@ -101,3 +115,4 @@ public final class DungeonMapScanner {
         }
     }
 }
+

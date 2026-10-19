@@ -21,7 +21,7 @@ public final class DungeonMapVisibility {
             boolean entered=neighbors.stream().allMatch(i->discovered[i]);
             int id=z*GRID+x;
             discovered[id]=entered;
-            visible[id]=full || (tile.kind==Kind.DOOR ? tile.discovered && neighbors.stream().anyMatch(i->visible[i]) : entered);
+            visible[id]=full || (tile.kind==Kind.DOOR ? tile.mapKnown && neighbors.stream().anyMatch(i->visible[i]) : entered);
         }
     }
     public boolean visible(int x,int z) { return visible[z*GRID+x]; }
@@ -39,3 +39,4 @@ public final class DungeonMapVisibility {
         return x>=0 && z>=0 && x<GRID && z<GRID && mask.visible(x,z) && model.at(x,z).kind==Kind.ROOM;
     }
 }
+

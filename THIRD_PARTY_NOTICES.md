@@ -21,3 +21,8 @@ https://github.com/Noamm9/NoammAddons/blob/data/rooms-modern.json
 The room-secret action-bar count pattern and total-matching rule also follow
 NoammAddons' modern ActionBarParser.kt (main, revision
 b2566e40173292f2b408a8ce85b0d255c825cb1a). No WebSocket or profile API is used.
+
+
+Party map-marker indexing and map-decoration access follow modern NoammAddons'
+MapUpdater.kt, TabListUtils.kt and IMapState.java (CC0-1.0). The party-chat secret
+report transport is implemented within LidlClient and does not use Noamm services.

@@ -21,7 +21,7 @@ public final class DungeonMapModel {
         public State state = State.UNKNOWN;
         public String name = "Unknown";
         public int secrets, crypts, foundSecrets;
-        public boolean identified;
+        public boolean identified, mapKnown;
         // Only the server's dungeon map can mark a room discovered.
         public boolean discovered;
     }
@@ -98,3 +98,4 @@ public final class DungeonMapModel {
         };
     }
 }
+

@@ -41,6 +41,7 @@ public final class ModuleRegistry {
                 new BooleanSetting("Darken undiscovered rooms", DungeonMap::darkenUndiscovered, DungeonMap::setDarkenUndiscovered),
                 new NumberSetting("Undiscovered darkness (%)", 0, 100, 5, DungeonMap::darkness, DungeonMap::setDarkness),
                 new ActionSetting("Room / door colours", DungeonMapColors::open),
+                new BooleanSetting("Party secret sync (chat)", DungeonMap::partySync, DungeonMap::setPartySync),
                 new BooleanSetting("Room overlays", DungeonMap::names, DungeonMap::setNames),
                 new ChoiceSetting("Room style", List.of("Checkmarks", "Room names", "Names + secrets"), DungeonMap::overlay, DungeonMap::setOverlay),
                 new BooleanSetting("Player markers", DungeonMap::players, DungeonMap::setPlayers),
@@ -123,3 +124,4 @@ public final class ModuleRegistry {
         return List.copyOf(modules);
     }
 }
+

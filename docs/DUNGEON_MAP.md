@@ -29,9 +29,12 @@ and **Map stats** control text size, marker size and the optional compact footer
 Player heads use actual skins, include their hat layers and rotate with player yaw.
 Your head has a green outline; other nearby loaded party members have dark outlines.
 Other heads must match a dungeon roster row in the tab list (class and level, or
-DEAD). Mort, player-skinned mobs, NPCs and unrelated players are not drawn. Dead
-party members are hidden. Unloaded teammates do
-not have markers. Press **Rescan** if the room layout needs rebuilding. Changing
+DEAD). Mort, player-skinned mobs, NPCs and unrelated players are not drawn. Party
+members remain rendered even when unloaded, dead or in an undiscovered room.
+The marker uses a loaded entity first, otherwise the base Hypixel map's decoration,
+otherwise its retained last position. Dead members have a gray outline; out-of-grid
+positions are pinned to the edge. Until the server has provided any position, the
+member appears in a `?` row above the map instead of inventing a room position. Press **Rescan** if the room layout needs rebuilding. Changing
 worlds, leaving a dungeon or disconnecting resets the map automatically.
 
 Scanning runs on the client thread every five ticks with at most six column probes
@@ -48,7 +51,9 @@ discovered, plus their visible connections. Identifying a room from blocks never
 marks it entered. The server map is the reference for exploration; it is not a
 record of which individual party member entered a room. Until a valid dungeon map
 is received, Entered rooms stays empty. Hidden rooms are also hidden from overlays,
-hover details, markers and the optional room count.
+hover details and the optional room count. Party markers remain visible in either
+view. Base-map door connections bordering entered rooms render in gray, including
+unopened doors; world-scan-only doors do not leak into the Entered rooms view.
 
 **Darken undiscovered rooms** (default on) only affects Full scanned. Undiscovered
 room tiles, joins and names are dimmed by **Undiscovered darkness (%)** while explored
@@ -71,6 +76,32 @@ Wither door keeps its category after opening.
 Names + secrets and the hover details display observed found/total secret counts.
 They begin at 0/X, update from Hypixel's room-specific action-bar count when you
 are in an identified room, and become X/X when the base map marks the room fully
-complete. Unknown/mismatched action-bar totals are ignored. Incomplete rooms you
-have not observed may stay at 0/X; this is not party-wide secret synchronization.
+complete. Unknown/mismatched action-bar totals are ignored. Without optional party sync, incomplete rooms you have not observed may stay at
+0/X. Rooms with zero catalogue secrets (including zero-secret Mini Boss and puzzle
+rooms) omit the secret counter completely.
 All counts reset with the dungeon/world. Crypts remain catalogue totals.
+
+
+## Shared progress and room states
+
+Room bodies, joins and overlays distinguish four states: undiscovered (question
+mark and optional darkness), discovered (normal room color), cleared (lighter tint
+and white checkmark), and all secrets found (green tint and green checkmark).
+Failed puzzles keep their red failure marker. The server map supplies shared room
+clears and full completion regardless of which teammate was there. Observed or
+synced full secret counts can also promote a positive-secret room to green.
+
+**Party secret sync (chat)** is optional and defaults off. Enable it on every
+participating LidlClient to exchange partial room-secret counts while in different
+rooms. It sends compact `[LidlMap]` reports through visible Hypixel party chat,
+coalescing updates and sending at most one report every five seconds per client.
+Players without the feature can see those chat messages. No third-party server,
+account token or API key is used. Clients without this build cannot report partial
+counts; their room clears/full completion still arrive through Hypixel's map.
+
+Reports must come from the current dungeon roster and match the floor, instance,
+room position, catalogue identity and secret total. Unknown rooms wait up to 60
+seconds for server map data before a report can apply. Reports never mark a room
+entered, are not automatically relayed and cannot decrease progress. World/run
+changes clear queued reports and last marker positions. Sync pauses when the
+scoreboard's instance identifier is unavailable.

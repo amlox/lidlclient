@@ -9,6 +9,8 @@ import java.util.*;
 public final class RoomCatalog {
     public record Room(String name, DungeonMapModel.Type type, int secrets, int crypts) { }
     private final Map<Integer, Room> byCore = new HashMap<>();
+    private final Map<Integer, Room> byNameHash = new HashMap<>();
+    private final java.util.Set<Integer> collisions=new java.util.HashSet<>();
 
     public RoomCatalog(Reader reader) {
         for (var element : JsonParser.parseReader(reader).getAsJsonArray()) {
@@ -18,6 +20,9 @@ public final class RoomCatalog {
                     json.has("secrets") ? json.get("secrets").getAsInt() : 0,
                     json.has("crypts") ? json.get("crypts").getAsInt() : 0);
             for (var core : json.getAsJsonArray("cores")) byCore.put(core.getAsInt(), room);
+            int hash=room.name().hashCode();
+            if(byNameHash.containsKey(hash)&&!byNameHash.get(hash).name().equals(room.name())) collisions.add(hash);
+            byNameHash.put(hash,room);
         }
     }
 
@@ -30,6 +35,7 @@ public final class RoomCatalog {
     }
 
     public Room find(int core) { return byCore.get(core); }
+    public Room findNameHash(int hash) {return collisions.contains(hash)?null:byNameHash.get(hash);}
 
     /** Matches Noamm's 140..12 descending block-name hash, including ignored dynamic blocks. */
     public static int token(String name) {
@@ -41,3 +47,4 @@ public final class RoomCatalog {
         }).hashCode();
     }
 }
+

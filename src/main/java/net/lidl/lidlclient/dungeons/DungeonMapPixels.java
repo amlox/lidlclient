@@ -44,6 +44,7 @@ public final class DungeonMapPixels {
             if (center(x,z)) {
                 if (type == Type.UNKNOWN) continue;
                 t.kind = Kind.ROOM;
+                t.mapKnown=true;
                 if (!t.identified) t.type = type;
                 t.state = switch (middle) {
                     case 18 -> type == Type.PUZZLE ? State.FAILED : State.DISCOVERED;
@@ -55,11 +56,13 @@ public final class DungeonMapPixels {
                 t.discovered |= t.state != State.UNOPENED;
             } else if (side != 0 && type != Type.UNKNOWN) {
                 t.kind = Kind.CONNECTION; t.type = type; t.state = State.DISCOVERED;
+                t.mapKnown=true;
                 t.discovered |= middle != 85 && middle != 119;
             } else if ((x % 2) != (z % 2)) {
                 Type doorType = roomColor(middle);
                 if (middle == 119 || middle == 85 || doorType != Type.UNKNOWN) {
                     t.kind = Kind.DOOR;
+                    t.mapKnown=true;
                     if(middle==119) t.door=Door.WITHER;
                     else if(middle==18) t.door=Door.BLOOD;
                     else if(middle==30) t.door=Door.ENTRANCE;
@@ -71,3 +74,4 @@ public final class DungeonMapPixels {
         }
     }
 }
+

@@ -18,6 +18,7 @@ public final class DungeonSecretSync {
     private long nextSend;
     public String status() {
         if(!DungeonMap.isEnabled()) return "Map disabled";
+        if(DungeonMap.scanner()!=null&&DungeonMap.scanner().inBoss()) return "Paused in boss room";
         if(!DungeonMap.secretSync()) return "Disabled";
         if(scope.isEmpty()) return "Waiting for dungeon instance";
         return connection.status();

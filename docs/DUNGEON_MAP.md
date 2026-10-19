@@ -14,7 +14,11 @@ hashes vertical block columns in already-loaded chunks against a bundled catalog
 of 140 modern rooms to identify names. Long, L-shaped and 2x2 rooms are grouped by
 their connections. Missing/unreceived rooms remain unknown; no chunks are requested
 and the map does not predict rooms the server has not sent. The boss arena lies
-outside the normal room grid and is not mapped.
+outside the normal room grid and is not mapped. Entering the boss area hides the
+HUD and closes the large map screen. Map scanning, marker/secret updates and relay
+sync pause there; the GUI cannot reopen the map until you leave the boss area.
+Detection uses floor-specific F1–F7/M1–M7 coordinate boundaries and is checked
+every five ticks. The setting stays enabled for the next dungeon.
 
 White checkmarks mean cleared, green checkmarks mean fully complete, red crosses
 mean failed and `?` means unopened. The compact Noamm-style square uses 16px rooms,

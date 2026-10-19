@@ -63,7 +63,7 @@ public final class DungeonMap implements ClientModInitializer {
     public static void openSyncStatus() {var client=Minecraft.getInstance();client.setScreen(new DungeonRelayStatusScreen(client.screen));}
     public static DungeonMapScanner scanner() { return scanner; }
     public static void open() {
-        if(!enabled) return;
+        if(!enabled||scanner!=null&&scanner.inBoss()) return;
         Minecraft client = Minecraft.getInstance();
         client.setScreen(new DungeonMapScreen(client.screen));
     }

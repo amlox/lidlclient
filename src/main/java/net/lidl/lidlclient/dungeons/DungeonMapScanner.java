@@ -20,13 +20,14 @@ public final class DungeonMapScanner {
     private int cursor;
     private Object level;
     private DungeonMapPixels.Calibration calibration;
-    private boolean active;
+    private boolean active, inBoss;
     private String floor = "", instance = "";
     private final DungeonMapModel model = new DungeonMapModel();
     private final DungeonParty party = new DungeonParty();
 
     public DungeonMapModel model() { return model; }
-    public boolean active() { return active&&DungeonMap.isEnabled(); }
+    public boolean active() { return active&&!inBoss&&DungeonMap.isEnabled(); }
+    public boolean inBoss() {return inBoss;}
     public String floor() { return floor; }
     private final DungeonPlayerMarkers markers=new DungeonPlayerMarkers();
     private final DungeonSecretSync sync=new DungeonSecretSync();
@@ -35,7 +36,7 @@ public final class DungeonMapScanner {
     // Match Odin's scoreboard lobby identifier (up to six characters).
     public String instance() {return instance.substring(0,Math.min(6,instance.length()));}
     public DungeonParty party() { return party; }
-    public void reset() { model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; cursor = 0; calibration = null; active = false; floor = ""; }
+    public void reset() { model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; cursor = 0; calibration = null; active = false; inBoss=false; floor = ""; }
 
     public void tick(Minecraft client) {
         if(!DungeonMap.isEnabled()) return;
@@ -57,6 +58,14 @@ public final class DungeonMapScanner {
         if (!floor.equals(detected)||(!instance.isEmpty()&&!detectedInstance.isEmpty()&&!instance.equals(detectedInstance))) reset();
         floor=detected;if(!detectedInstance.isEmpty()) instance=detectedInstance;
         active = true;
+        boolean boss=DungeonBossRoom.contains(floor,client.player.getX(),client.player.getZ());
+        if(boss) {
+            if(!inBoss) sync.reset();
+            inBoss=true;
+            if(client.screen instanceof DungeonMapScreen screen) screen.onClose();
+            return;
+        }
+        inBoss=false;
         if(client.getConnection()!=null) party.update(client.getConnection().getOnlinePlayers().stream()
                 .sorted(Comparator.comparing((PlayerInfo info)->info.getTeam()==null?"":info.getTeam().getName())
                         .thenComparing(info->info.getProfile().name()))

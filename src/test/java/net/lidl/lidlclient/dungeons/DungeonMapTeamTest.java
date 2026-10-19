@@ -37,22 +37,4 @@ class DungeonMapTeamTest {
         model.at(0,0).state=State.CLEARED;assertEquals(State.CLEARED,DungeonMapStyle.state(model,List.of(0)));
         model.updateSecrets(0,0,3,3);assertEquals(State.GREEN,DungeonMapStyle.state(model,List.of(0)));
     }
-    @Test void reportsRequirePartyChatAndMatchingRunAndApplyOtherRoomCountsWithoutEnteringIt() {
-        var catalog=RoomCatalog.bundled();var room=catalog.find(-908785306);
-        // Find a bundled positive-secret room for a real catalogue-backed report.
-        var json=com.google.gson.JsonParser.parseReader(new java.io.InputStreamReader(getClass().getResourceAsStream("/assets/lidlclient/dungeons/rooms.json")));
-        for(var e:json.getAsJsonArray()) if(e.getAsJsonObject().has("secrets")&&e.getAsJsonObject().get("secrets").getAsInt()>0) {
-            room=catalog.find(e.getAsJsonObject().getAsJsonArray("cores").get(0).getAsInt());break;
-        }
-        assertTrue(room.secrets()>0);
-        var report=new DungeonSecretReport("mini123A","F7",2,0,1,room.secrets(),room.name().hashCode());
-        var parsed=DungeonSecretReport.parseParty("Party > [MVP+] Friend: "+report.encode());
-        assertNotNull(parsed);assertEquals("Friend",parsed.sender());assertTrue(parsed.report().sameRun("mini123A","F7"));
-        assertFalse(parsed.report().sameRun("miniOther","F7"));assertNull(DungeonSecretReport.parseParty("Friend: "+report.encode()));
-        var model=new DungeonMapModel();assertEquals(DungeonSecretReport.Applied.WAITING,report.apply(model,catalog));
-        model.at(2,0).kind=Kind.ROOM;model.at(2,0).mapKnown=true;
-        assertEquals(DungeonSecretReport.Applied.APPLIED,report.apply(model,catalog));
-        assertEquals(1,model.foundSecrets(List.of(2)));assertFalse(model.at(2,0).discovered);
-        assertEquals(DungeonSecretReport.Applied.INVALID,new DungeonSecretReport("mini123A","F7",2,0,1,99,room.name().hashCode()).apply(model,catalog));
-    }
 }

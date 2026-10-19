@@ -12,6 +12,7 @@
     "requireAnnotations": true
   },
   "client": [
+    "DungeonProfileKeysAccessor",
     "DungeonMapDataAccessor",
     "DungeonSecretsMixin",
     "PetsContainerClickMixin",
@@ -23,4 +24,5 @@
     "NameSplitterMixin"
   ]
 }
+
 

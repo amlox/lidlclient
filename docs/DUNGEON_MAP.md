@@ -76,7 +76,7 @@ Wither door keeps its category after opening.
 Names + secrets and the hover details display observed found/total secret counts.
 They begin at 0/X, update from Hypixel's room-specific action-bar count when you
 are in an identified room, and become X/X when the base map marks the room fully
-complete. Unknown/mismatched action-bar totals are ignored. Without optional party sync, incomplete rooms you have not observed may stay at
+complete. Unknown/mismatched action-bar totals are ignored. Without a compatible connected sync provider, incomplete rooms you have not observed may stay at
 0/X. Rooms with zero catalogue secrets (including zero-secret Mini Boss and puzzle
 rooms) omit the secret counter completely.
 All counts reset with the dungeon/world. Crypts remain catalogue totals.
@@ -91,17 +91,41 @@ Failed puzzles keep their red failure marker. The server map supplies shared roo
 clears and full completion regardless of which teammate was there. Observed or
 synced full secret counts can also promote a positive-secret room to green.
 
-**Party secret sync (chat)** is optional and defaults off. Enable it on every
-participating LidlClient to exchange partial room-secret counts while in different
-rooms. It sends compact `[LidlMap]` reports through visible Hypixel party chat,
-coalescing updates and sending at most one report every five seconds per client.
-Players without the feature can see those chat messages. No third-party server,
-account token or API key is used. Clients without this build cannot report partial
-counts; their room clears/full completion still arrive through Hypixel's map.
+**Secret sync (WebSockets)** replaces the old party-chat transport entirely and is
+enabled by default. There are no `[LidlMap]` messages, chat listeners or chat fallback.
+Use **Secret sync status** to inspect each provider. Disable the setting to close
+all three sockets; leaving the dungeon or changing worlds also closes them.
 
-Reports must come from the current dungeon roster and match the floor, instance,
-room position, catalogue identity and secret total. Unknown rooms wait up to 60
-seconds for server map data before a report can apply. Reports never mark a room
-entered, are not automatically relayed and cannot decrease progress. World/run
-changes clear queued reports and last marker positions. Sync pauses when the
-scoreboard's instance identifier is unavailable.
+LidlClient speaks each provider's native protocol:
+
+- Odin: instance-scoped `wss://ws.odtheking.com/`, matching roster names, room names
+  and tile lists, with `foundSecrets` counts.
+- Noamm: `wss://ws.noamm.org`, authenticated with a signed Minecraft public profile
+  certificate, followed by a `dungeon_start` registration with the instance, floor,
+  party and entrance. Reads room metadata and `dungeonroomsecrets` counts.
+- Skyblocker: authenticated `wss://ws.hysky.de` subscriptions to `DUNGEON_SECRETS`,
+  using UUID-checked `room_secret_count` and `room_match` messages. A bundled table
+  maps supported Skyblocker room IDs to Lidl/Noamm names; unknown mappings are ignored.
+
+Local action-bar updates are coalesced and sent only when a room count changes,
+with at most one room-count update per second per provider. Incoming updates never
+trigger an automatic resend, cannot reduce progress and must fit the local room's
+catalogue total. Room metadata can identify a server-map-known room but never marks
+it entered. Pending counts wait up to 60 seconds for matching room metadata.
+Odin and Skyblocker provide sender identity; Noamm's room-only packets rely on the
+authenticated backend's dungeon grouping. Stale socket callbacks are discarded on
+run changes. Counts and in-memory service tokens are never written to the config.
+
+Noamm and Skyblocker authentication use a random challenge signed locally by the
+vanilla Minecraft profile private key. Only the public certificate, its Mojang
+signature, UUID and signed challenge are sent. Minecraft access tokens and private
+keys are never sent to these services. The client identifies itself as `lidlclient`,
+not as another mod. A rejected connection/authentication appears as unavailable
+and retries with bounded backoff; normal map progress continues without chat.
+
+Each other player needs their own mod's secret-sync feature enabled. The providers
+are separate services: LidlClient receives all three directly rather than assuming
+they share one network. Service authentication, room naming and tile order need
+live cross-client validation; unit tests use recorded source-compatible fixtures.
+
+Dungeon location metadata is read from `/locraw` system responses. If no other mod supplies it, LidlClient requests it once after entering the dungeon and hides only that automatic response. Odin uses its native scoreboard lobby identifier; Noamm and Skyblocker use the full server identifier.

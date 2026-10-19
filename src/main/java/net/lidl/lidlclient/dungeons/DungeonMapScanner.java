@@ -21,7 +21,8 @@ public final class DungeonMapScanner {
     private Object level;
     private DungeonMapPixels.Calibration calibration;
     private boolean active;
-    private String floor = "", instance = "";
+    private String floor = "", instance = "", relayInstance = "";
+    private long startedAt, locrawRequestedAt;
     private final DungeonMapModel model = new DungeonMapModel();
     private final DungeonParty party = new DungeonParty();
 
@@ -32,9 +33,22 @@ public final class DungeonMapScanner {
     private final DungeonSecretSync sync=new DungeonSecretSync();
     public DungeonPlayerMarkers markers() {return markers;}
     public DungeonSecretSync sync() {return sync;}
-    public String instance() {return instance;}
+    public String instance() {return relayInstance.isEmpty()?instance:relayInstance;}
+    public String odinInstance() {return instance.substring(0,Math.min(6,instance.length()));}
+    /** Only server system messages are passed here, never player chat. */
+    public boolean location(String text) {
+        if(!active||!DungeonMap.secretSync()||text.length()>2048||!text.startsWith("{")) return false;
+        try {
+            var json=com.google.gson.JsonParser.parseString(text).getAsJsonObject();
+            if(!json.has("gametype")||!json.get("gametype").getAsString().equals("SKYBLOCK")||!json.has("mode")||!json.get("mode").getAsString().equals("dungeon")) return false;
+            String id=json.get("server").getAsString();if(!id.matches("[A-Za-z0-9_-]{1,32}")) return false;
+            relayInstance=id;
+            boolean own=locrawRequestedAt>0&&System.currentTimeMillis()-locrawRequestedAt<10_000;
+            locrawRequestedAt=0;return own;
+        } catch(RuntimeException ignored) {return false;}
+    }
     public DungeonParty party() { return party; }
-    public void reset() { model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; cursor = 0; calibration = null; active = false; floor = ""; }
+    public void reset() { model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; relayInstance=""; startedAt=0; locrawRequestedAt=0; cursor = 0; calibration = null; active = false; floor = ""; }
 
     public void tick(Minecraft client) {
         if (client.level != level) { reset(); level = client.level; }
@@ -55,6 +69,11 @@ public final class DungeonMapScanner {
         if (!floor.equals(detected)||(!instance.isEmpty()&&!detectedInstance.isEmpty()&&!instance.equals(detectedInstance))) reset();
         floor=detected;if(!detectedInstance.isEmpty()) instance=detectedInstance;
         active = true;
+        long now=System.currentTimeMillis();if(startedAt==0) startedAt=now;
+        // Give other mods' location queries time to arrive, then request once per dungeon.
+        if(DungeonMap.secretSync()&&relayInstance.isEmpty()&&locrawRequestedAt==0&&now-startedAt>3_000&&client.getConnection()!=null) {
+            locrawRequestedAt=now;client.getConnection().sendCommand("locraw");
+        }
         if(client.getConnection()!=null) party.update(client.getConnection().getOnlinePlayers().stream()
                 .sorted(Comparator.comparing((PlayerInfo info)->info.getTeam()==null?"":info.getTeam().getName())
                         .thenComparing(info->info.getProfile().name()))
@@ -115,4 +134,5 @@ public final class DungeonMapScanner {
         }
     }
 }
+
 

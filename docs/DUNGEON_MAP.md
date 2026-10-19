@@ -29,9 +29,12 @@ and **Map stats** control text size, marker size and the optional compact footer
 Player heads use actual skins, include their hat layers and rotate with player yaw.
 Your head has a green outline; other nearby loaded party members have dark outlines.
 Other heads must match a dungeon roster row in the tab list (class and level, or
-DEAD). Mort, player-skinned mobs, NPCs and unrelated players are not drawn. Dead
-party members are hidden. Unloaded teammates do
-not have markers. Press **Rescan** if the room layout needs rebuilding. Changing
+DEAD). Mort, player-skinned mobs, NPCs and unrelated players are not drawn. Party
+members remain rendered even when unloaded, dead or in an undiscovered room.
+The marker uses a loaded entity first, otherwise the base Hypixel map's decoration,
+otherwise its retained last position. Dead members have a gray outline; out-of-grid
+positions are pinned to the edge. Until the server has provided any position, the
+member appears in a `?` row above the map instead of inventing a room position. Press **Rescan** if the room layout needs rebuilding. Changing
 worlds, leaving a dungeon or disconnecting resets the map automatically.
 
 Scanning runs on the client thread every five ticks with at most six column probes
@@ -41,17 +44,21 @@ Live runs are needed to validate Hypixel's current map palette and scoreboard te
 
 ## Discovery display
 
-**Map view** switches between **Full scanned** (default) and **Entered rooms**.
-Full scanned shows the layout identified from map data and loaded chunks. Entered
-rooms only shows room groups that the base Hypixel dungeon map has marked
-discovered, plus their visible connections. Identifying a room from blocks never
-marks it entered. The server map is the reference for exploration; it is not a
-record of which individual party member entered a room. Until a valid dungeon map
-is received, Entered rooms stays empty. Hidden rooms are also hidden from overlays,
-hover details, markers and the optional room count.
+**Map view** switches between **Full scanned** (default) and **Entered rooms**
+(the legit view). Full scanned shows rooms identified from map data and loaded
+chunks. Legit view only reveals geometry supplied by Hypixel's dungeon map:
+unentered rooms shown by that map use the Undiscovered rooms colour (grey by default), while rooms known only
+from block scans stay hidden. Entered rooms use the configured room/state colours.
+Unentered rooms have no name, secret overlay or hover identity in legit view.
+A normal door shown by the server map takes the colour of its entered connected room
+(first the left/top side if both are entered); when neither side is entered it is
+the undiscovered colour too. Wither and Blood doors always override this with
+their own door palette colours in both views. World-scan-only doors stay hidden. Identifying a room from blocks or
+receiving a teammate's secret count never marks it entered. Player markers remain
+visible in either view. Exploration persists until the run/world is reset.
 
-**Darken undiscovered rooms** (default on) only affects Full scanned. Undiscovered
-room tiles, joins and names are dimmed by **Undiscovered darkness (%)** while explored
+**Darken undiscovered rooms** (default on) only affects Full scanned. The configured undiscovered colour on
+room tiles and joins is dimmed by **Undiscovered darkness (%)** while explored
 rooms stay at their normal color. 0% keeps full brightness; 100% makes them black.
 The default is 65% darkness (35% brightness). Exploration persists until the run/world is reset. All
 these options save in the shared config. The old background opacity setting is
@@ -59,18 +66,80 @@ ignored; the map always remains transparent.
 
 ## Colours and secret progress
 
-Click **Room / door colours** in the Dungeon map settings to edit puzzle, base,
-trap, Mini Boss and Blood rooms, plus Normal, Wither and Blood doors. Each has
-its own input and live colour swatch. Inputs accept #RRGGBB, &#RRGGBB, bare six
-hex digits, 0xRRGGBB or a Minecraft colour code (&0 through &f). Save applies all
-valid colours and stores them in the shared config; invalid input disables Save.
-Defaults restores the default input values, then Save applies them. Cancel/Esc
-keeps the previous palette. Room colours and door colours are independent, and a
-Wither door keeps its category after opening.
+Click **Room / door colours**, then click a category to open its visual picker.
+Drag inside the saturation/brightness square and along the hue strip. Before/after
+swatches preview the choice; **Use colour** puts it in the palette draft. A hex
+field is optional and accepts #RRGGBB, &#RRGGBB, bare six hex digits, 0xRRGGBB or
+Minecraft codes (&0 through &f). Invalid input disables Use colour. **Default**
+resets that category, and Cancel/Esc abandons that picker edit.
+
+The overview has non-cleared/base, puzzle, trap, Mini Boss, Blood and Fairy colours;
+Fairy rooms default to soft pink (#F2B6CE). **Undiscovered rooms** is a separate
+colour shared by both views (default #777777); Full scanned optionally darkens it.
+There are also Normal, Wither and Blood door colours and independent **Cleared rooms** and
+**Cleared + all secrets** colours. The latter two are exact body colours rather
+than blends. Non-cleared special rooms retain their own category colours.
+Cleared + all secrets requires a server-map clear plus every secret (or the server
+map's full-completion mark). The white/green checkmarks still indicate these states.
+The configured legit-view undiscovered colour takes priority over all state colours; normal doors
+inherit connected room colours, while Full scanned uses the door categories.
+Wither and Blood doors always retain their separate categories in both modes,
+even after opening. Loaded doorway probes revisit known map doors so an initial
+normal classification can be upgraded when the chunk is available.
+**Save** applies the entire draft and persists it. **Defaults** resets the whole
+draft; Cancel/Esc closes without applying. Drafts survive window resizing and
+opening/closing individual pickers.
 
 Names + secrets and the hover details display observed found/total secret counts.
 They begin at 0/X, update from Hypixel's room-specific action-bar count when you
 are in an identified room, and become X/X when the base map marks the room fully
-complete. Unknown/mismatched action-bar totals are ignored. Incomplete rooms you
-have not observed may stay at 0/X; this is not party-wide secret synchronization.
+complete. Unknown/mismatched action-bar totals are ignored. Without a connected LidlClient teammate, rooms you have not observed may stay at
+0/X. Rooms with zero catalogue secrets (including zero-secret Mini Boss and puzzle
+rooms) omit the secret counter completely.
 All counts reset with the dungeon/world. Crypts remain catalogue totals.
+
+
+## Shared progress and room states
+
+Room bodies, joins and overlays distinguish undiscovered, discovered, cleared,
+and cleared with all secrets. Failed puzzles retain their failure marker. The
+server map supplies shared clears and full completion; synced counts can complete
+the secret requirement for an already-cleared room.
+
+**Secret sync (WebSockets)** is enabled by default. **Lidl secret sync status**
+shows the single connection. LidlClient uses Odin's instance-scoped relay at
+`wss://ws.odtheking.com/<lobbyId>` as requested; the lobby ID matches Odin's
+six-character scoreboard lookup. It uses one socket, with no Noamm or Skyblocker
+connections, room aliases, profile-key access, authentication requests, or /locraw
+commands. No secret reports are sent to Hypixel chat and there is no chat fallback.
+
+Only versioned LidlClient-tagged reports from current dungeon-roster names are
+accepted, with matching instance/floor and validated room name, connected tile
+coordinates and count bounds. Native untagged Odin reports are ignored. Reports
+retain Odin's base wire fields so the relay can carry them; this does not promise
+that other mods will ignore outgoing Lidl reports. The relay is unauthenticated:
+roster/name checks reduce accidental cross-run updates but are not proof of a
+sender's account identity. No Minecraft account tokens or profile keys are sent.
+
+On connection, a scoped Lidl request asks peers to resend their observed room
+snapshots, so clients joining or reconnecting can catch up. Repeat requests from
+the same peer are limited to one per ten seconds. Counts are coalesced to at most one changed room per second, never decrease local
+progress, and incoming messages are not relayed back. Unknown room geometry waits
+up to 60 seconds for server-map data. Unrelated, malformed and oversized reports
+are ignored. Disabling sync, leaving a dungeon or changing worlds closes the
+socket; failures retry with bounded backoff and the map continues locally.
+All LidlClient users in a party need this version and sync enabled. Two isolated test connections exchanged Lidl-tagged counts and catch-up requests
+through the live relay using LidlClient's real version header. Live two-client
+Hypixel testing is still needed to validate the full in-game path; automated tests
+cover protocol and model behaviour.
+
+## Puzzle prediction (legit)
+
+**Puzzle prediction (legit)** is enabled by default and saved with the other map
+settings. On an unentered room already revealed geometrically by Hypixel's map,
+a full-scan catalogue match adds **P** for a puzzle or **N** for a normal room.
+Unknown and other special room types get no prediction. These markers appear even
+when normal room overlays are off, and disappear when entered or when using Full
+scanned. No unseen geometry, room names or secrets are exposed by the marker, and
+it never changes exploration, clears or secret progress. If the relevant chunks
+have not loaded or the catalogue cannot identify a room, it stays unpredicted.

@@ -9,6 +9,9 @@ import java.util.*;
 public final class RoomCatalog {
     public record Room(String name, DungeonMapModel.Type type, int secrets, int crypts) { }
     private final Map<Integer, Room> byCore = new HashMap<>();
+    private final Map<Integer, Room> byNameHash = new HashMap<>();
+    private final Map<String,Room> byName=new HashMap<>();
+    private final java.util.Set<Integer> collisions=new java.util.HashSet<>();
 
     public RoomCatalog(Reader reader) {
         for (var element : JsonParser.parseReader(reader).getAsJsonArray()) {
@@ -18,6 +21,10 @@ public final class RoomCatalog {
                     json.has("secrets") ? json.get("secrets").getAsInt() : 0,
                     json.has("crypts") ? json.get("crypts").getAsInt() : 0);
             for (var core : json.getAsJsonArray("cores")) byCore.put(core.getAsInt(), room);
+            int hash=room.name().hashCode();
+            if(byNameHash.containsKey(hash)&&!byNameHash.get(hash).name().equals(room.name())) collisions.add(hash);
+            byNameHash.put(hash,room);
+            byName.put(normalize(room.name()),room);
         }
     }
 
@@ -25,12 +32,15 @@ public final class RoomCatalog {
         InputStream stream = RoomCatalog.class.getResourceAsStream("/assets/lidlclient/dungeons/rooms.json");
         if (stream == null) throw new IllegalStateException("Missing dungeon room catalog");
         try (Reader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
-            return new RoomCatalog(reader);
+            RoomCatalog catalog=new RoomCatalog(reader);
+            return catalog;
         } catch (IOException e) { throw new UncheckedIOException(e); }
     }
 
     public Room find(int core) { return byCore.get(core); }
-
+    public Room findNameHash(int hash) {return collisions.contains(hash)?null:byNameHash.get(hash);}
+    private static String normalize(String name) {return name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]","");}
+    public Room findName(String name) {return name==null?null:byName.get(normalize(name));}
     /** Matches Noamm's 140..12 descending block-name hash, including ignored dynamic blocks. */
     public static int token(String name) {
         return (switch (name) {
@@ -41,3 +51,5 @@ public final class RoomCatalog {
         }).hashCode();
     }
 }
+
+

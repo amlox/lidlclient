@@ -46,4 +46,23 @@ class DungeonMapCustomizationTest {
         pixels[13*128+23]=(byte)63;
         DungeonMapPixels.update(model,pixels,calibration);assertEquals(Door.WITHER,model.at(1,0).door);
     }
+    @Test void visualPickerRoundTripsHexAndCoversWhiteBlackAndHueEndpoints() {
+        assertEquals(0xFFFF0000,DungeonColor.rgb(0,1,1));assertEquals(0xFFFF0000,DungeonColor.rgb(1,1,1));
+        assertEquals(0xFF00FF00,DungeonColor.rgb(1.0/3,1,1));assertEquals(0xFF0000FF,DungeonColor.rgb(2.0/3,1,1));
+        assertEquals(0xFFFFFFFF,DungeonColor.rgb(.5,0,1));assertEquals(0xFF000000,DungeonColor.rgb(.5,1,0));
+        for(int rgb:new int[]{0x123ABC,0x7B007B,0x794600,0x101010,0x55FF55,0xFF8200,0xFFFFFF,0}) {
+            double[] hsv=DungeonColor.hsv(rgb);assertEquals(0xFF000000|rgb,DungeonColor.rgb(hsv[0],hsv[1],hsv[2]));
+        }
+    }
+    @Test void clearedAndFullySecretedColorsAreExactIndependentPaletteValues() {
+        var palette=DungeonMapColors.palette();int cleared=palette.get(CLEARED),secreted=palette.get(SECRETED),normal=palette.get(NORMAL);
+        try {
+            palette.set(CLEARED,0x123456);palette.set(SECRETED,0xABCDEF);palette.set(NORMAL,0x654321);
+            assertEquals(0xFF654321,DungeonMapStyle.stateColor(palette.room(Type.NORMAL),State.DISCOVERED,true,true,65));
+            assertEquals(0xFF123456,DungeonMapStyle.stateColor(palette.room(Type.NORMAL),State.CLEARED,true,true,65));
+            assertEquals(0xFFABCDEF,DungeonMapStyle.stateColor(palette.room(Type.NORMAL),State.GREEN,true,true,65));
+            assertEquals(0xFF777777,DungeonMapStyle.roomColor(new Tile(),State.GREEN,false,false,false,0));
+        } finally {palette.set(CLEARED,cleared);palette.set(SECRETED,secreted);palette.set(NORMAL,normal);}
+    }
 }
+

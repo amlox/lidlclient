@@ -10,7 +10,7 @@ alias, or your real username if unlisted. Your custom input stays saved.
 | SyntocxRightFoot | Lidl | #FF5555 |
 | SyntocxFeetPics | petal | #FF75ED, #FC83EB, #FC90EB, #FFA1ED, #FFADEE |
 | __beacon | Syntocx | #FF55FF |
-| Fawnelle | Konstsus | #5555FF |
+| Fawnelle | Kontsus | #5555FF |
 | quak07 | quak | #FFFF55 |
 
 Usernames match case-insensitively, only as whole Minecraft-name tokens. Rank

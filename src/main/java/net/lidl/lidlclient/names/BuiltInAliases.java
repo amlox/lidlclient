@@ -14,7 +14,7 @@ public final class BuiltInAliases {
             alias("SyntocxRightFoot", "Lidl", 0xFF5555),
             alias("SyntocxFeetPics", "petal", 0xFF75ED, 0xFC83EB, 0xFC90EB, 0xFFA1ED, 0xFFADEE),
             alias("__beacon", "Syntocx", 0xFF55FF),
-            alias("Fawnelle", "Konstsus", 0x5555FF),
+            alias("Fawnelle", "Kontsus", 0x5555FF),
             alias("quak07", "quak", 0xFFFF55));
 
     private static NameAliasRules.Alias alias(String username, String display, Integer... colors) {

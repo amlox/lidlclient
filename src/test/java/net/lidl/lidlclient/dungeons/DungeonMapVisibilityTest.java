@@ -20,7 +20,8 @@ class DungeonMapVisibilityTest {
         DungeonMapPixels.update(model,pixels,new DungeonMapPixels.Calibration(5,5,16));
         model.identify(0,0,new RoomCatalog.Room("Scanned",Type.NORMAL,5,1));
         assertEquals(State.UNOPENED,model.at(0,0).state);
-        assertFalse(new DungeonMapVisibility(model,false).visible(0,0));
+        assertTrue(new DungeonMapVisibility(model,false).visible(0,0));
+        assertEquals(DungeonMapStyle.UNDISCOVERED_GREY,DungeonMapStyle.roomColor(model.at(0,0),State.UNOPENED,false,false,false,0));
         square(pixels,5,5,63);
         DungeonMapPixels.update(model,pixels,new DungeonMapPixels.Calibration(5,5,16));
         assertTrue(model.at(0,0).discovered);
@@ -45,6 +46,16 @@ class DungeonMapVisibilityTest {
         assertTrue(full.visible(4,0));assertFalse(full.discovered(4,0));assertTrue(full.discovered(2,0));
         assertEquals(0xFF592C16,DungeonMapVisibility.darken(0xFFFF8040));
     }
+    @Test void legitUnenteredJoinsNeedServerMapGeometryAndNeverRevealBlockOnlyRooms() {
+        var model=new DungeonMapModel();var room=new RoomCatalog.Room("Long room",Type.NORMAL,5,0);
+        model.identify(0,0,room);model.identify(2,0,room);model.identify(4,0,new RoomCatalog.Room("Block only",Type.PUZZLE,0,0));
+        model.at(0,0).mapKnown=true;model.at(2,0).mapKnown=true;model.at(1,0).kind=Kind.CONNECTION;
+        var mask=new DungeonMapVisibility(model,false);assertTrue(mask.visible(0,0));assertTrue(mask.visible(2,0));
+        assertFalse(mask.visible(1,0));assertFalse(mask.visible(4,0));
+        model.at(1,0).mapKnown=true;mask=new DungeonMapVisibility(model,false);
+        assertTrue(mask.visible(1,0));assertFalse(mask.discovered(1,0));
+        assertEquals(DungeonMapStyle.UNDISCOVERED_GREY,DungeonMapStyle.roomColor(model.at(0,0),State.UNOPENED,false,false,false,0));
+    }
     @Test void dungeonRosterExcludesMortMobsUnrelatedPlayersAndDeadPlayers() {
         var party=new DungeonParty();
         party.update(List.of("[270] [MVP+] ActualPlayer (Mage L)","§a[98] Teammate (Tank XX)",
@@ -56,3 +67,4 @@ class DungeonMapVisibilityTest {
         party.reset();assertFalse(party.show("ActualPlayer",false));
     }
 }
+

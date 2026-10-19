@@ -21,7 +21,7 @@ public final class DungeonMapModel {
         public State state = State.UNKNOWN;
         public String name = "Unknown";
         public int secrets, crypts, foundSecrets;
-        public boolean identified;
+        public boolean identified, mapKnown;
         // Only the server's dungeon map can mark a room discovered.
         public boolean discovered;
     }
@@ -69,6 +69,12 @@ public final class DungeonMapModel {
     public Tile representative(List<Integer> group) {
         return group.stream().map(i -> tiles[i]).filter(t -> t.identified).findFirst().orElse(tiles[group.getFirst()]);
     }
+    /** Preserve observed special-door identity after opening or a generic map refresh. */
+    public void observeDoor(int x,int z,Door observed) {
+        if(x<0||z<0||x>=GRID||z>=GRID||x%2==z%2) return;
+        Tile tile=at(x,z);tile.kind=Kind.DOOR;
+        if(observed==Door.BLOOD||tile.door==Door.NORMAL||(observed==Door.WITHER&&tile.door!=Door.BLOOD)) tile.door=observed;
+    }
     public void updateSecrets(int x,int z,int found,int total) {
         if(x<0||z<0||x>=GRID||z>=GRID||found<0||total<0||found>total) return;
         int id=z*GRID+x;
@@ -98,3 +104,5 @@ public final class DungeonMapModel {
         };
     }
 }
+
+

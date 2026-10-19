@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NameAliasRulesTest {
     @Test void exactMappingsAndColors() {
-        assertEquals(List.of("Tesco", "Lidl", "petal", "Syntocx", "Konstsus", "quak"),
+        assertEquals(List.of("Tesco", "Lidl", "petal", "Syntocx", "Kontsus", "quak"),
                 NameAliasRules.ALIASES.stream().map(NameAliasRules.Alias::display).toList());
         assertEquals(List.of(0xFF75ED, 0xFC83EB, 0xFC90EB, 0xFFA1ED, 0xFFADEE),
                 NameAliasRules.find("SyntocxFeetPics").getFirst().alias().colors());
@@ -21,6 +21,6 @@ class NameAliasRulesTest {
         assertEquals(1, NameAliasRules.find("[MVP+] SYNTOCXLEFTFOOT: hello").size());
         assertEquals(2, NameAliasRules.find("quak07 invited __beacon").size());
         assertTrue(NameAliasRules.find("xquak07 quak07_ syntocxleftfoot2").isEmpty());
-        assertTrue(NameAliasRules.find("Tesco Lidl petal Konstsus").isEmpty());
+        assertTrue(NameAliasRules.find("Tesco Lidl petal Kontsus").isEmpty());
     }
 }

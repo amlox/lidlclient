@@ -29,10 +29,9 @@ public final class DungeonMapRenderer {
         double left=x-pattern[0].length()/2.0,top=y-pattern.length/2.0;
         pixels(g,pattern,left+1,top+1,0xC0000000);pixels(g,pattern,left,top,color);
     }
-    private static int roomColor(Tile tile,boolean discovered) {
-        int result=color(tile);
-        return DungeonMap.fullMap() && DungeonMap.darkenUndiscovered() && !discovered
-                ? DungeonMapVisibility.darken(result,DungeonMap.darkness()) : result;
+    private static int roomColor(Tile tile,boolean discovered,State state) {
+        if(tile.kind==Kind.DOOR) return color(tile);
+        return DungeonMapStyle.roomColor(tile,state,discovered,DungeonMap.fullMap(),DungeonMap.darkenUndiscovered(),DungeonMap.darkness());
     }
     private static void roomText(GuiGraphicsExtractor g,Tile room,State state,Rect bounds,boolean secrets,boolean dim,int found) {
         if(room.type==Type.ENTRANCE || room.type==Type.FAIRY || (state==State.UNOPENED && !room.identified)) return;
@@ -46,7 +45,7 @@ public final class DungeonMapRenderer {
             else current=candidate;
         }
         if(!current.isEmpty()) lines.add(current);
-        if(secrets && room.identified) lines.add(DungeonSecretProgress.label(found,room.secrets));
+        if(secrets && room.identified && room.secrets>0) lines.add(DungeonSecretProgress.label(found,room.secrets));
         int maxWidth=lines.stream().mapToInt(font::width).max().orElse(1);
         float scale=(float)Math.min(DungeonMap.textScale(),Math.min((bounds.width()-2)/Math.max(1,maxWidth),(bounds.height()-2)/(lines.size()*9.0)));
         if(scale<=0) return;
@@ -70,7 +69,8 @@ public final class DungeonMapRenderer {
         var visibility=new DungeonMapVisibility(model,DungeonMap.fullMap());
         var groups=model.groups();
         Map<Integer,Tile> owners=new HashMap<>();
-        for(var group:groups) for(int id:group) owners.put(id,model.representative(group));
+        Map<Integer,State> roomStates=new HashMap<>();
+        for(var group:groups) for(int id:group) {owners.put(id,model.representative(group));roomStates.put(id,state(model,group));}
         for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
             Tile t=model.at(x,z);
             if(!visibility.visible(x,z)) continue;
@@ -79,43 +79,64 @@ public final class DungeonMapRenderer {
                 if(owner!=null && owner==owners.get((z-1)*GRID+x+1)
                         && owner==owners.get((z+1)*GRID+x-1) && owner==owners.get((z+1)*GRID+x+1)) {
                     var junction=tile(x,z,Kind.CONNECTION);
-                    fill(g,junction.x(),junction.y(),junction.width(),junction.height(),roomColor(owner,visibility.discovered(x,z)));
+                    fill(g,junction.x(),junction.y(),junction.width(),junction.height(),roomColor(owner,visibility.discovered(x,z),roomStates.getOrDefault((z-1)*GRID+x-1,State.UNOPENED)));
                     continue;
                 }
             }
             if(t.kind==Kind.EMPTY) continue;
             Tile source=t;
+            int sourceId=z*GRID+x;
             if(t.kind==Kind.CONNECTION) {
-                if(x%2==1) source=owners.getOrDefault(z*GRID+x-1,t);
-                else if(z>0) source=owners.getOrDefault((z-1)*GRID+x,t);
+                if(x%2==1) sourceId=z*GRID+x-1;
+                else if(z>0) sourceId=(z-1)*GRID+x;
+                source=owners.getOrDefault(sourceId,t);
             }
             var rect=tile(x,z,t.kind);
-            fill(g,rect.x(),rect.y(),rect.width(),rect.height(),roomColor(source,visibility.discovered(x,z)));
+            int fillColor=t.kind==Kind.DOOR?doorColor(model,groups,x,z,DungeonMap.fullMap()):roomColor(source,visibility.discovered(x,z),roomStates.getOrDefault(sourceId,State.UNOPENED));
+            fill(g,rect.x(),rect.y(),rect.width(),rect.height(),fillColor);
         }
-        if(overlays) for(var group:groups) {
+        for(var group:groups) {
             int first=group.getFirst();
             if(!visibility.visible(first%GRID,first/GRID)) continue;
             Tile room=model.representative(group);
             Rect bounds=label(group);State state=state(model,group);
             boolean undiscovered=!visibility.discovered(first%GRID,first/GRID);
+            if(!DungeonMap.fullMap()&&undiscovered) {
+                String predicted=prediction(room,false,false,DungeonMap.puzzlePrediction());
+                if(predicted!=null) {
+                    int px=(int)Math.round(bounds.x()+bounds.width()/2),py=(int)Math.round(bounds.y()+bounds.height()/2);
+                    g.fill(px-5,py-6,px+5,py+5,0xB0000000);
+                    g.text(client.font,Component.literal(predicted),px-client.font.width(predicted)/2,py-4,0xFFFFFFFF,true);
+                }
+                continue;
+            }
+            if(!overlays) continue;
             if(DungeonMap.overlay().equals("Checkmarks")) mark(g,state,bounds.x()+bounds.width()/2,bounds.y()+bounds.height()/2);
             else roomText(g,room,state,bounds,DungeonMap.overlay().equals("Names + secrets"),
                     undiscovered && DungeonMap.darkenUndiscovered() && DungeonMap.fullMap(),model.foundSecrets(group));
         }
-        if(players && client.level!=null) for(var player:client.level.players()) {
-            if(!player.isAlive() || !((Object)player instanceof AbstractClientPlayer avatar)) continue;
-            if(!DungeonMap.scanner().party().show(player.getName().getString(),player==client.player)) continue;
-            if(!DungeonMap.fullMap() && !DungeonMapVisibility.marker(model,visibility,player.getX(),player.getZ())) continue;
-            double mx=world(player.getX()),mz=world(player.getZ());
-            if(mx<INSET || mz<INSET || mx>SIZE-INSET || mz>SIZE-INSET) continue;
-            g.pose().pushMatrix();g.pose().translate((float)mx,(float)mz);
-            g.pose().rotate((float)Math.toRadians(player.getYRot()+180));
-            g.pose().scale((float)DungeonMap.headScale(),(float)DungeonMap.headScale());
-            fill(g,-7,-7,14,14,player==client.player?0xFF55FF55:0xFF141414);
-            var skin=avatar.getSkin().body().texturePath();
-            g.blit(RenderPipelines.GUI_TEXTURED,skin,-6,-6,8f,8f,12,12,8,8,64,64,-1);
-            g.blit(RenderPipelines.GUI_TEXTURED,skin,-6,-6,40f,8f,12,12,8,8,64,64,-1);
-            g.pose().popMatrix();
+        if(players && DungeonMap.scanner()!=null) {
+            int unlocated=0;
+            for(var player:DungeonMap.scanner().markers().markers()) {
+                var position=player.position();
+                // Never invent a room position: unlocated members use a ? row above the map.
+                double mx=position==null?14+(unlocated++)*24:Math.clamp(position.x(),7,121);
+                double mz=position==null?-10:Math.clamp(position.z(),7,121);
+                g.pose().pushMatrix();g.pose().translate((float)mx,(float)mz);
+                if(position!=null) g.pose().rotate((float)Math.toRadians(position.yaw()+180));
+                g.pose().scale((float)DungeonMap.headScale(),(float)DungeonMap.headScale());
+                fill(g,-7,-7,14,14,player.dead()?0xFF888888:player.self()?0xFF55FF55:0xFF141414);
+                var skin=player.skin();
+                if(skin!=null) {
+                    g.blit(RenderPipelines.GUI_TEXTURED,skin,-6,-6,8f,8f,12,12,8,8,64,64,-1);
+                    g.blit(RenderPipelines.GUI_TEXTURED,skin,-6,-6,40f,8f,12,12,8,8,64,64,-1);
+                } else {
+                    fill(g,-6,-6,12,12,0xFF444A54);
+                    g.text(client.font,Component.literal(player.name().substring(0,1)),-3,-4,0xFFFFFFFF,true);
+                }
+                g.pose().popMatrix();
+                if(position==null) g.text(client.font,Component.literal("?"),(int)mx-2,(int)mz+8,0xFFFFFFFF,true);
+            }
         }
         if(DungeonMap.stats()) {
             long count=groups.stream().filter(group->{int id=group.getFirst();return visibility.visible(id%GRID,id/GRID);}).count();
@@ -126,3 +147,5 @@ public final class DungeonMapRenderer {
         g.pose().popMatrix();
     }
 }
+
+

@@ -9,7 +9,7 @@ public final class DungeonMapVisibility {
     public DungeonMapVisibility(DungeonMapModel model,boolean full) {
         for(var group:model.groups()) {
             boolean entered=group.stream().anyMatch(i->model.at(i%GRID,i/GRID).discovered);
-            for(int id:group) {visible[id]=full||entered;discovered[id]=entered;}
+            for(int id:group) {visible[id]=full||entered||model.at(id%GRID,id/GRID).mapKnown;discovered[id]=entered;}
         }
         for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
             if(center(x,z)) continue;
@@ -21,7 +21,7 @@ public final class DungeonMapVisibility {
             boolean entered=neighbors.stream().allMatch(i->discovered[i]);
             int id=z*GRID+x;
             discovered[id]=entered;
-            visible[id]=full || (tile.kind==Kind.DOOR ? tile.discovered && neighbors.stream().anyMatch(i->visible[i]) : entered);
+            visible[id]=full || (tile.kind==Kind.DOOR ? tile.mapKnown && neighbors.stream().anyMatch(i->visible[i]) : entered || tile.mapKnown && neighbors.stream().allMatch(i->visible[i]));
         }
     }
     public boolean visible(int x,int z) { return visible[z*GRID+x]; }
@@ -39,3 +39,5 @@ public final class DungeonMapVisibility {
         return x>=0 && z>=0 && x<GRID && z<GRID && mask.visible(x,z) && model.at(x,z).kind==Kind.ROOM;
     }
 }
+
+

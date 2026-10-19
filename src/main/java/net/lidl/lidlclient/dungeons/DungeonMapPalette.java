@@ -6,9 +6,11 @@ import static net.lidl.lidlclient.dungeons.DungeonMapModel.*;
 /** Editable palette and parsing, independent of Minecraft/config initialization. */
 public final class DungeonMapPalette {
     public enum Key {
-        PUZZLE("Puzzle rooms",0x7B007B), NORMAL("Base rooms",0x794600), TRAP("Trap rooms",0xFF8200),
+        PUZZLE("Puzzle rooms",0x7B007B), NORMAL("Non-cleared base rooms",0x794600), TRAP("Trap rooms",0xFF8200),
         MINIBOSS("Mini Boss rooms",0xFFC800), BLOOD("Blood rooms",0xB20000),
-        NORMAL_DOOR("Normal doors",0x794600), WITHER_DOOR("Wither doors",0x101010), BLOOD_DOOR("Blood doors",0xB20000);
+        FAIRY("Fairy rooms",0xF2B6CE), UNDISCOVERED("Undiscovered rooms",0x777777),
+        NORMAL_DOOR("Normal doors",0x794600), WITHER_DOOR("Wither doors",0x101010), BLOOD_DOOR("Blood doors",0xB20000),
+        CLEARED("Cleared rooms",0xA1814C), SECRETED("Cleared + all secrets",0x55FF55);
         public final String label;
         public final int rgb;
         Key(String label,int rgb) {this.label=label;this.rgb=rgb;}
@@ -21,7 +23,7 @@ public final class DungeonMapPalette {
         return switch(type) {
             case PUZZLE->get(Key.PUZZLE);case NORMAL->get(Key.NORMAL);case TRAP->get(Key.TRAP);
             case CHAMPION->get(Key.MINIBOSS);case BLOOD->get(Key.BLOOD);
-            case FAIRY->0xFFE39BE2;case RARE->0xFFB2B2B2;case ENTRANCE->0xFF00FF00;default->0xFF414141;
+            case FAIRY->get(Key.FAIRY);case RARE->0xFFB2B2B2;case ENTRANCE->0xFF00FF00;default->0xFF414141;
         };
     }
     public int door(Door door) {
@@ -38,3 +40,4 @@ public final class DungeonMapPalette {
         return text.matches("(?i)[0-9a-f]{6}")?0xFF000000|Integer.parseInt(text,16):null;
     }
 }
+

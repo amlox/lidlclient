@@ -6,7 +6,7 @@ alias, or your real username if unlisted. Your custom input stays saved.
 
 | Real username | Visual alias | RGB color |
 | --- | --- | --- |
-| SyntocxLeftFoot | Tesco | #000000 |
+| SyntocxLeftFoot | ✡ Tesco ✡ | White → blue letters; blue stars |
 | SyntocxRightFoot | Lidl | #FF5555 |
 | SyntocxFeetPics | petal | #FF75ED, #FC83EB, #FC90EB, #FFA1ED, #FFADEE |
 | __beacon | Syntocx | #FF55FF |
@@ -15,7 +15,9 @@ alias, or your real username if unlisted. Your custom input stays saved.
 
 Usernames match case-insensitively, only as whole Minecraft-name tokens. Rank
 prefixes and surrounding text retain their styling. The petal alias uses the exact
-five supplied colors, one per letter.
+five supplied colors, one per letter. Tesco keeps its name with a Star of David
+at either end, blue stars and a white-to-blue five-letter gradient. All standard
+rendering paths share this same alias rule, including repeated occurrences.
 
 Aliases are applied to visual component copies, font preparation, and text layout,
 covering normal name tags, chat, tab, scoreboards, menus and tooltips. Source chat,

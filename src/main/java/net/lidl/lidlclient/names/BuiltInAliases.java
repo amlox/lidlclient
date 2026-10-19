@@ -10,7 +10,7 @@ public final class BuiltInAliases {
     // Format: alias("RealUsername", "Display name", 0xRRGGBB)
     // Multiple colors apply one per letter; the last color repeats.
     public static final List<NameAliasRules.Alias> PLAYERS = List.of(
-            alias("SyntocxLeftFoot", "Tesco", 0x000000),
+            alias("SyntocxLeftFoot", "✡ Tesco ✡", 0x0055FF, 0xFFFFFF, 0xFFFFFF, 0xBFD5FF, 0x80AAFF, 0x4080FF, 0x0055FF, 0xFFFFFF, 0x0055FF),
             alias("SyntocxRightFoot", "Lidl", 0xFF5555),
             alias("SyntocxFeetPics", "petal", 0xFF75ED, 0xFC83EB, 0xFC90EB, 0xFFA1ED, 0xFFADEE),
             alias("__beacon", "Syntocx", 0xFF55FF),

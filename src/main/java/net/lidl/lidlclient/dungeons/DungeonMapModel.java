@@ -57,6 +57,8 @@ public final class DungeonMapModel {
                     int nx = cx + direction[0], nz = cz + direction[1];
                     if (nx < 0 || nz < 0 || nx >= GRID || nz >= GRID) continue;
                     if (at(cx + direction[0]/2, cz + direction[1]/2).kind != Kind.CONNECTION
+                            || at(cx + direction[0]/2, cz + direction[1]/2).door==Door.WITHER
+                            || at(cx + direction[0]/2, cz + direction[1]/2).door==Door.BLOOD
                             || at(nx, nz).kind != Kind.ROOM) continue;
                     int next = nz * GRID + nx;
                     if (visited.add(next)) queue.add(next);

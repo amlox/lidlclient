@@ -148,3 +148,10 @@ when normal room overlays are off, and disappear when entered or when using Full
 scanned. No unseen geometry, room names or secrets are exposed by the marker, and
 it never changes exploration, clears or secret progress. If the relevant chunks
 have not loaded or the catalogue cannot identify a room, it stays unpredicted.
+
+Fairy rooms are discovered when entered but are never classified as cleared or
+fully secreted. They keep their Fairy palette colour and have no clear checkmark.
+In Full scanned, observed Wither/Blood doors render in a final overlay above room
+bodies, without requiring either adjacent room to be entered or map-known. Door
+caps extend one pixel into both adjoining room edges for horizontal and vertical
+connections. Opening a door preserves its category for the rest of the run.

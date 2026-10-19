@@ -40,6 +40,8 @@ public final class DungeonMapStyle {
         return DungeonMapColors.palette().room(tile.type);
     }
     public static State state(DungeonMapModel model,List<Integer> group) {
+        Tile representative=model.representative(group);
+        if(representative.type==Type.FAIRY) return group.stream().anyMatch(i->model.at(i%GRID,i/GRID).discovered)?State.DISCOVERED:State.UNOPENED;
         State result=State.UNKNOWN;
         for(int id:group) {
             State next=model.at(id%GRID,id/GRID).state;
@@ -61,10 +63,17 @@ public final class DungeonMapStyle {
     public static final int UNDISCOVERED_GREY=0xFF777777;
     public static int roomColor(Tile room,State state,boolean discovered,boolean full,boolean darken,double darkness) {
         if(!discovered) {
-            int undiscovered=DungeonMapColors.palette().get(DungeonMapPalette.Key.UNDISCOVERED);
+            int undiscovered=!full||room.type==Type.NORMAL?DungeonMapColors.palette().get(DungeonMapPalette.Key.UNDISCOVERED):DungeonMapColors.palette().room(room.type);
             return full&&darken?DungeonMapVisibility.darken(undiscovered,darkness):undiscovered;
         }
+        if(room.type==Type.FAIRY) return DungeonMapColors.palette().room(Type.FAIRY);
         return stateColor(color(room),state,discovered,full&&darken,darkness);
+    }
+    public static boolean specialDoor(Tile tile) {return tile.door==Door.WITHER||tile.door==Door.BLOOD;}
+    /** Full-map door caps extend one pixel into both adjoining rooms. */
+    public static Rect specialDoorBounds(int x,int z) {
+        Rect r=tile(x,z,Kind.DOOR);
+        return x%2==1?new Rect(r.x()-1,r.y(),r.width()+2,r.height()):new Rect(r.x(),r.y()-1,r.width(),r.height()+2);
     }
     /** Prefer the entered side of a frontier door; no colour leaks from an unentered room. */
     public static int legitDoorColor(DungeonMapModel model,int x,int z) {return legitDoorColor(model,model.groups(),x,z);}

@@ -40,3 +40,7 @@ LidlClient-tagged party reports. No Odin source implementation or assets are
 bundled. Noamm and Skyblocker sync adapters, authentication and Skyblocker room
 aliases have been removed. There are no account keys or service credentials in
 source or artifacts. Relay usage does not imply endorsement.
+
+The floor-specific boss-area boundary values also follow Odin's public
+DungeonListener.kt getBoss lookup (same project, BSD-3-Clause). The independent
+Lidl predicate uses these coordinate facts; no Odin implementation is bundled.

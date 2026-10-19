@@ -62,6 +62,7 @@ public final class DungeonMapRenderer {
     }
     public static void draw(GuiGraphicsExtractor g,DungeonMapModel model,int left,int top,
                             int extent,boolean overlays,boolean players,String floor) {
+        if(!DungeonMap.isEnabled()||DungeonMap.scanner()!=null&&DungeonMap.scanner().inBoss()) return;
         var client=Minecraft.getInstance();
         g.pose().pushMatrix();g.pose().translate((float)left,(float)top);
         float scale=extent/(float)SIZE;g.pose().scale(scale,scale);
@@ -73,6 +74,8 @@ public final class DungeonMapRenderer {
         for(var group:groups) for(int id:group) {owners.put(id,model.representative(group));roomStates.put(id,state(model,group));}
         for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
             Tile t=model.at(x,z);
+            // Render full-map special doors last, independently of either room's discovery.
+            if(DungeonMap.fullMap()&&x%2!=z%2&&specialDoor(t)) continue;
             if(!visibility.visible(x,z)) continue;
             if(x%2==1 && z%2==1) {
                 Tile owner=owners.get((z-1)*GRID+x-1);
@@ -94,6 +97,11 @@ public final class DungeonMapRenderer {
             var rect=tile(x,z,t.kind);
             int fillColor=t.kind==Kind.DOOR?doorColor(model,groups,x,z,DungeonMap.fullMap()):roomColor(source,visibility.discovered(x,z),roomStates.getOrDefault(sourceId,State.UNOPENED));
             fill(g,rect.x(),rect.y(),rect.width(),rect.height(),fillColor);
+        }
+        if(DungeonMap.fullMap()) for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
+            if(x%2==z%2||!specialDoor(model.at(x,z))) continue;
+            Rect door=specialDoorBounds(x,z);
+            fill(g,door.x(),door.y(),door.width(),door.height(),DungeonMapColors.palette().door(model.at(x,z).door));
         }
         for(var group:groups) {
             int first=group.getFirst();

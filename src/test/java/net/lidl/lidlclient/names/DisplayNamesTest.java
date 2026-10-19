@@ -54,4 +54,17 @@ class DisplayNamesTest {
         assertEquals(0x55FFFF, colors.getFirst());
         for (int i = 7; i < 11; i++) assertEquals(0xFF5555, colors.get(i));
     }
+    @Test void decoratedTescoReplacesEveryOccurrenceAcrossAllSharedRenderInputs() {
+        String input="SyntocxLeftFoot | SYNTOCXLEFTFOOT";
+        String expected="✡ Tesco ✡ | ✡ Tesco ✡";
+        var component=Component.literal(input);
+        assertEquals(expected,DisplayNames.replace((FormattedText)component).getString());
+        assertEquals(input,component.getString());
+        assertEquals(expected,text(DisplayNames.replace(FormattedCharSequence.forward(input,Style.EMPTY))));
+        var raw=DisplayNames.fromString(input);assertEquals(expected,text(raw));
+        var colors=new ArrayList<Integer>();raw.accept((index,style,cp)->{colors.add(style.getColor()==null?null:style.getColor().getValue());return true;});
+        assertEquals(0x0055FF,colors.get(0));assertEquals(0xFFFFFF,colors.get(2));assertEquals(0x0055FF,colors.get(6));assertEquals(0x0055FF,colors.get(8));
+        assertEquals(colors.subList(0,9),colors.subList(12,21));
+        assertSame(raw,DisplayNames.replace(raw));
+    }
 }

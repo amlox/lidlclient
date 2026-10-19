@@ -2,8 +2,6 @@ package net.lidl.lidlclient.dungeons;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.lidl.lidlclient.LidlClient;
@@ -18,7 +16,10 @@ public final class DungeonMap implements ClientModInitializer {
     private static DungeonMapScanner scanner;
     private static int ticks;
     public static boolean isEnabled() { return enabled; }
-    public static void setEnabled(boolean value) { enabled = value; }
+    public static void setEnabled(boolean value) {
+        enabled=value;
+        if(!value) {ticks=0;if(scanner!=null) scanner.reset();}
+    }
     public static boolean names() { return names; }
     public static void setNames(boolean value) { names = value; }
     public static boolean players() { return players; }
@@ -49,6 +50,7 @@ public final class DungeonMap implements ClientModInitializer {
     public static double darkness() { return darkness; }
     public static void setDarkness(double value) { darkness = value; }
     public static void recordSecrets(String actionBar) {
+        if(!enabled) return;
         var client=Minecraft.getInstance();
         if(scanner==null || !scanner.active() || client.player==null) return;
         var count=DungeonSecretProgress.parse(actionBar);
@@ -61,6 +63,7 @@ public final class DungeonMap implements ClientModInitializer {
     public static void openSyncStatus() {var client=Minecraft.getInstance();client.setScreen(new DungeonRelayStatusScreen(client.screen));}
     public static DungeonMapScanner scanner() { return scanner; }
     public static void open() {
+        if(!enabled||scanner!=null&&scanner.inBoss()) return;
         Minecraft client = Minecraft.getInstance();
         client.setScreen(new DungeonMapScreen(client.screen));
     }
@@ -69,16 +72,13 @@ public final class DungeonMap implements ClientModInitializer {
         scanner = new DungeonMapScanner();
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(client->scanner.sync().reset());
         ClientReceiveMessageEvents.GAME.register((message,overlay)->{
-            if(overlay) recordSecrets(message.getString());
+            if(enabled&&overlay) recordSecrets(message.getString());
         });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if(!enabled) return;
             if (++ticks % 5 == 0) scanner.tick(client);
             else if(scanner.active()) scanner.markers().update(client,scanner.party());
         });
-        ClientCommandRegistrationCallback.EVENT.register((dispatcher, access) ->
-                dispatcher.register(ClientCommands.literal("lidlmap").executes(context -> {
-                    Minecraft.getInstance().schedule(DungeonMap::open); return 1;
-                })));
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT, LidlClient.id("dungeon_map"), (graphics, delta) -> {
             Minecraft client = Minecraft.getInstance();
             if (!enabled || !scanner.active() || client.options.hideGui || client.screen instanceof DungeonMapScreen) return;

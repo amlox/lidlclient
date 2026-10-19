@@ -17,7 +17,7 @@ public final class DungeonPlayerMarkers {
     public List<Marker> markers() {return markers;}
     public void reset() {positions.reset();skins.clear();markers=List.of();}
     public void map(Minecraft client,DungeonParty party,MapItemSavedData data,DungeonMapPixels.Calibration calibration) {
-        if(client.player==null) return;
+        if(!DungeonMap.isEnabled()||client.player==null) return;
         String self=client.player.getName().getString();
         var others=party.names().stream().filter(name->!name.equalsIgnoreCase(self)&&!party.dead(name)).toList();
         var decorations=((DungeonMapDataAccessor)data).lidlclient$decorations();
@@ -26,6 +26,7 @@ public final class DungeonPlayerMarkers {
         positions.map(icons,others,self,calibration);
     }
     public void update(Minecraft client,DungeonParty party) {
+        if(!DungeonMap.isEnabled()) return;
         if(client.player==null||client.level==null||client.getConnection()==null) {reset();return;}
         String self=client.player.getName().getString();
         LinkedHashSet<String> names=new LinkedHashSet<>(party.names());names.add(self);

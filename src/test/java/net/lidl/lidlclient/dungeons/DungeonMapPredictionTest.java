@@ -36,8 +36,8 @@ class DungeonMapPredictionTest {
             var room=new Tile();room.kind=Kind.ROOM;room.type=Type.FAIRY;
             assertEquals(0xFFF0A0BC,DungeonMapStyle.roomColor(room,State.DISCOVERED,true,false,false,0));
             assertEquals(0xFF123456,DungeonMapStyle.roomColor(room,State.UNOPENED,false,false,true,65));
-            assertEquals(0xFF123456,DungeonMapStyle.roomColor(room,State.UNOPENED,false,true,false,65));
-            assertEquals(DungeonMapVisibility.darken(0xFF123456,50),DungeonMapStyle.roomColor(room,State.UNOPENED,false,true,true,50));
+            assertEquals(0xFFF0A0BC,DungeonMapStyle.roomColor(room,State.UNOPENED,false,true,false,65));
+            assertEquals(DungeonMapVisibility.darken(0xFFF0A0BC,50),DungeonMapStyle.roomColor(room,State.UNOPENED,false,true,true,50));
             assertEquals("#123456",DungeonMapPalette.hex(palette.get(UNDISCOVERED)));
         } finally {palette.set(FAIRY,fairy);palette.set(UNDISCOVERED,unknown);}
     }
@@ -50,5 +50,18 @@ class DungeonMapPredictionTest {
         room.identified=false;assertNull(DungeonMapStyle.prediction(room,false,false,true));
         room.identified=true;room.type=Type.FAIRY;assertNull(DungeonMapStyle.prediction(room,false,false,true));
         assertFalse(room.discovered);assertEquals(State.UNKNOWN,room.state);
+    }
+    @Test void onlyNormalUnenteredFullScanRoomsUseTheUndiscoveredPaletteColour() {
+        var palette=DungeonMapColors.palette();int previous=palette.get(UNDISCOVERED);
+        try {
+            palette.set(UNDISCOVERED,0x123456);
+            var room=new Tile();room.kind=Kind.ROOM;room.state=State.UNOPENED;
+            for(Type type:Type.values()) {
+                room.type=type;int full=type==Type.NORMAL?0xFF123456:palette.room(type);
+                assertEquals(full,DungeonMapStyle.roomColor(room,State.UNOPENED,false,true,false,65),type.name());
+                assertEquals(DungeonMapVisibility.darken(full,50),DungeonMapStyle.roomColor(room,State.UNOPENED,false,true,true,50),type.name());
+                assertEquals(0xFF123456,DungeonMapStyle.roomColor(room,State.UNOPENED,false,false,false,0),type.name());
+            }
+        } finally {palette.set(UNDISCOVERED,previous);}
     }
 }

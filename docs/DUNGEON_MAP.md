@@ -2,8 +2,9 @@
 
 Open `/lidl` > QoL features > Dungeon map. Right-click its card for room overlays,
 player heads, size, horizontal/vertical position and discovery display. These
-settings save in the shared config. The toggle controls the HUD. `/lidlmap` or
-**Open dungeon map** opens the larger live view; hover a room for its full name
+settings save in the shared config. Disabling the module stops scans, marker updates, secret parsing, prediction,
+rendering and relay syncing immediately, closes the relay and clears run data.
+Re-enabling starts a fresh scan on the normal tick schedule. **Open dungeon map** opens the larger live view; hover a room for its full name
 and its observed secret progress plus total crypts. Secret progress starts at 0/X.
 
 The feature activates on Hypixel when the scoreboard identifies a Catacombs floor
@@ -13,7 +14,11 @@ hashes vertical block columns in already-loaded chunks against a bundled catalog
 of 140 modern rooms to identify names. Long, L-shaped and 2x2 rooms are grouped by
 their connections. Missing/unreceived rooms remain unknown; no chunks are requested
 and the map does not predict rooms the server has not sent. The boss arena lies
-outside the normal room grid and is not mapped.
+outside the normal room grid and is not mapped. Entering the boss area hides the
+HUD and closes the large map screen. Map scanning, marker/secret updates and relay
+sync pause there; the GUI cannot reopen the map until you leave the boss area.
+Detection uses floor-specific F1–F7/M1–M7 coordinate boundaries and is checked
+every five ticks. The setting stays enabled for the next dungeon.
 
 White checkmarks mean cleared, green checkmarks mean fully complete, red crosses
 mean failed and `?` means unopened. The compact Noamm-style square uses 16px rooms,
@@ -37,8 +42,14 @@ positions are pinned to the edge. Until the server has provided any position, th
 member appears in a `?` row above the map instead of inventing a room position. Press **Rescan** if the room layout needs rebuilding. Changing
 worlds, leaving a dungeon or disconnecting resets the map automatically.
 
-Scanning runs on the client thread every five ticks with at most six column probes
-per update. Room data is bundled, so no web service or Noamm installation is needed.
+World scanning runs on the client thread every five ticks with at most six grid
+positions per update. Each resolved position is skipped on later passes. Once
+all positions have been resolved from loaded chunks, world block scans stop for
+that run. Unloaded chunks and unrecognized room cores remain unfinished. The
+Hypixel map, clears/secrets, player markers, boss detection and sync still update.
+Rescan, disabling/re-enabling or a new run/world resets scan progress. If the
+server map later reveals geometry at a previously empty position, that position
+becomes unfinished again rather than retaining a false completion. Room data is bundled, so no web service or Noamm installation is needed.
 Source: modern NoammAddons, CC0-1.0. See THIRD_PARTY_NOTICES.md for pinned versions.
 Live runs are needed to validate Hypixel's current map palette and scoreboard text.
 
@@ -57,8 +68,8 @@ their own door palette colours in both views. World-scan-only doors stay hidden.
 receiving a teammate's secret count never marks it entered. Player markers remain
 visible in either view. Exploration persists until the run/world is reset.
 
-**Darken undiscovered rooms** (default on) only affects Full scanned. The configured undiscovered colour on
-room tiles and joins is dimmed by **Undiscovered darkness (%)** while explored
+**Darken undiscovered rooms** (default on) only affects Full scanned. The base colour of
+undiscovered room tiles and joins is dimmed by **Undiscovered darkness (%)** while explored
 rooms stay at their normal color. 0% keeps full brightness; 100% makes them black.
 The default is 65% darkness (35% brightness). Exploration persists until the run/world is reset. All
 these options save in the shared config. The old background opacity setting is
@@ -75,7 +86,11 @@ resets that category, and Cancel/Esc abandons that picker edit.
 
 The overview has non-cleared/base, puzzle, trap, Mini Boss, Blood and Fairy colours;
 Fairy rooms default to soft pink (#F2B6CE). **Undiscovered rooms** is a separate
-colour shared by both views (default #777777); Full scanned optionally darkens it.
+colour (default #777777). Legit view uses it for all unentered room types.
+Full scanned uses it only for unentered normal rooms; unentered puzzles, Fairy,
+Blood and other special rooms retain their own configured category colours.
+The Full scanned darkness setting applies to the selected base colour in either
+case. Unknown types retain the default unknown-room colour.
 There are also Normal, Wither and Blood door colours and independent **Cleared rooms** and
 **Cleared + all secrets** colours. The latter two are exact body colours rather
 than blends. Non-cleared special rooms retain their own category colours.
@@ -143,3 +158,10 @@ when normal room overlays are off, and disappear when entered or when using Full
 scanned. No unseen geometry, room names or secrets are exposed by the marker, and
 it never changes exploration, clears or secret progress. If the relevant chunks
 have not loaded or the catalogue cannot identify a room, it stays unpredicted.
+
+Fairy rooms are discovered when entered but are never classified as cleared or
+fully secreted. They keep their Fairy palette colour and have no clear checkmark.
+In Full scanned, observed Wither/Blood doors render in a final overlay above room
+bodies, without requiring either adjacent room to be entered or map-known. Door
+caps extend one pixel into both adjoining room edges for horizontal and vertical
+connections. Opening a door preserves its category for the rest of the run.

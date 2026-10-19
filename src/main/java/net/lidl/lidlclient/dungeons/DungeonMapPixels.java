@@ -53,6 +53,7 @@ public final class DungeonMapPixels {
                     case 85, 119 -> State.UNOPENED;
                     default -> State.DISCOVERED;
                 };
+                if(t.type==Type.FAIRY&&t.state!=State.UNOPENED) t.state=State.DISCOVERED;
                 t.discovered |= t.state != State.UNOPENED;
             } else if (x%2!=z%2 && (t.door==Door.WITHER||t.door==Door.BLOOD)) {
                 // Generic brown/open map pixels must not erase a scanned special door.

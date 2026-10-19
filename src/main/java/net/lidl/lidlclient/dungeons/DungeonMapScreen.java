@@ -37,7 +37,7 @@ public final class DungeonMapScreen extends Screen {
             }
             graphics.text(font,Component.literal(detail),(width-font.width(detail))/2,height-53,0xFFDAE5FA,true);
         } else {
-            String text="Waiting for a Hypixel Catacombs run";
+            String text=DungeonMap.isEnabled()?"Waiting for a Hypixel Catacombs run":"Dungeon map is disabled";
             graphics.text(font,Component.literal(text),(width-font.width(text))/2,height/2,0xFFADBBD0,true);
         }
         String legend="Green: complete   White: cleared   Red: failed";

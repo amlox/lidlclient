@@ -61,7 +61,7 @@ public final class DungeonMapStyle {
     public static final int UNDISCOVERED_GREY=0xFF777777;
     public static int roomColor(Tile room,State state,boolean discovered,boolean full,boolean darken,double darkness) {
         if(!discovered) {
-            int undiscovered=DungeonMapColors.palette().get(DungeonMapPalette.Key.UNDISCOVERED);
+            int undiscovered=!full||room.type==Type.NORMAL?DungeonMapColors.palette().get(DungeonMapPalette.Key.UNDISCOVERED):DungeonMapColors.palette().room(room.type);
             return full&&darken?DungeonMapVisibility.darken(undiscovered,darkness):undiscovered;
         }
         return stateColor(color(room),state,discovered,full&&darken,darkness);

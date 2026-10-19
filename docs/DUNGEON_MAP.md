@@ -2,8 +2,9 @@
 
 Open `/lidl` > QoL features > Dungeon map. Right-click its card for room overlays,
 player heads, size, horizontal/vertical position and discovery display. These
-settings save in the shared config. The toggle controls the HUD. `/lidlmap` or
-**Open dungeon map** opens the larger live view; hover a room for its full name
+settings save in the shared config. Disabling the module stops scans, marker updates, secret parsing, prediction,
+rendering and relay syncing immediately, closes the relay and clears run data.
+Re-enabling starts a fresh scan on the normal tick schedule. **Open dungeon map** opens the larger live view; hover a room for its full name
 and its observed secret progress plus total crypts. Secret progress starts at 0/X.
 
 The feature activates on Hypixel when the scoreboard identifies a Catacombs floor
@@ -57,8 +58,8 @@ their own door palette colours in both views. World-scan-only doors stay hidden.
 receiving a teammate's secret count never marks it entered. Player markers remain
 visible in either view. Exploration persists until the run/world is reset.
 
-**Darken undiscovered rooms** (default on) only affects Full scanned. The configured undiscovered colour on
-room tiles and joins is dimmed by **Undiscovered darkness (%)** while explored
+**Darken undiscovered rooms** (default on) only affects Full scanned. The base colour of
+undiscovered room tiles and joins is dimmed by **Undiscovered darkness (%)** while explored
 rooms stay at their normal color. 0% keeps full brightness; 100% makes them black.
 The default is 65% darkness (35% brightness). Exploration persists until the run/world is reset. All
 these options save in the shared config. The old background opacity setting is
@@ -75,7 +76,11 @@ resets that category, and Cancel/Esc abandons that picker edit.
 
 The overview has non-cleared/base, puzzle, trap, Mini Boss, Blood and Fairy colours;
 Fairy rooms default to soft pink (#F2B6CE). **Undiscovered rooms** is a separate
-colour shared by both views (default #777777); Full scanned optionally darkens it.
+colour (default #777777). Legit view uses it for all unentered room types.
+Full scanned uses it only for unentered normal rooms; unentered puzzles, Fairy,
+Blood and other special rooms retain their own configured category colours.
+The Full scanned darkness setting applies to the selected base colour in either
+case. Unknown types retain the default unknown-room colour.
 There are also Normal, Wither and Blood door colours and independent **Cleared rooms** and
 **Cleared + all secrets** colours. The latter two are exact body colours rather
 than blends. Non-cleared special rooms retain their own category colours.

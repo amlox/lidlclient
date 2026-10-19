@@ -62,6 +62,7 @@ public final class DungeonMapRenderer {
     }
     public static void draw(GuiGraphicsExtractor g,DungeonMapModel model,int left,int top,
                             int extent,boolean overlays,boolean players,String floor) {
+        if(!DungeonMap.isEnabled()) return;
         var client=Minecraft.getInstance();
         g.pose().pushMatrix();g.pose().translate((float)left,(float)top);
         float scale=extent/(float)SIZE;g.pose().scale(scale,scale);

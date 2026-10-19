@@ -26,7 +26,7 @@ public final class DungeonMapScanner {
     private final DungeonParty party = new DungeonParty();
 
     public DungeonMapModel model() { return model; }
-    public boolean active() { return active; }
+    public boolean active() { return active&&DungeonMap.isEnabled(); }
     public String floor() { return floor; }
     private final DungeonPlayerMarkers markers=new DungeonPlayerMarkers();
     private final DungeonSecretSync sync=new DungeonSecretSync();
@@ -38,6 +38,7 @@ public final class DungeonMapScanner {
     public void reset() { model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; cursor = 0; calibration = null; active = false; floor = ""; }
 
     public void tick(Minecraft client) {
+        if(!DungeonMap.isEnabled()) return;
         if (client.level != level) { reset(); level = client.level; }
         if (client.level == null || client.player == null) { reset(); return; }
         var server = client.getCurrentServer();

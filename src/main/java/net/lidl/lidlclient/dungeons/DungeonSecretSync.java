@@ -17,13 +17,14 @@ public final class DungeonSecretSync {
     private String scope="";
     private long nextSend;
     public String status() {
+        if(!DungeonMap.isEnabled()) return "Map disabled";
         if(!DungeonMap.secretSync()) return "Disabled";
         if(scope.isEmpty()) return "Waiting for dungeon instance";
         return connection.status();
     }
     public void reset() {connection.close();sent.clear();locals.clear();pending.clear();lastRequests.clear();scope="";nextSend=0;}
     public void local(DungeonMapScanner scanner,int x,int z) {
-        if(!DungeonMap.secretSync()) return;
+        if(!DungeonMap.isEnabled()||!DungeonMap.secretSync()) return;
         var model=scanner.model();int id=z*GRID+x;
         for(var group:model.groups()) if(group.contains(id)) {
             Tile room=model.representative(group);
@@ -55,7 +56,7 @@ public final class DungeonSecretSync {
     }
 
     public void tick(Minecraft client,DungeonMapScanner scanner,RoomCatalog catalog) {
-        if(!DungeonMap.secretSync()||!scanner.active()) {if(!scope.isEmpty()) reset();return;}
+        if(!DungeonMap.isEnabled()||!DungeonMap.secretSync()||!scanner.active()) {if(!scope.isEmpty()) reset();return;}
         var endpoint=endpoint(scanner.instance());
         if(endpoint==null||scanner.instance().isEmpty()||client.player==null||client.getConnection()==null) return;
         Set<String> members=new TreeSet<>(String.CASE_INSENSITIVE_ORDER);members.addAll(scanner.party().names());members.add(client.player.getName().getString());
@@ -64,6 +65,7 @@ public final class DungeonSecretSync {
         if(!scope.isEmpty()&&!scope.equals(current)) {connection.close();sent.clear();pending.clear();lastRequests.clear();nextSend=0;}scope=current;
         String instance=scanner.instance(),floor=scanner.floor();String self=client.player.getName().getString();
         connection.connect(client,endpoint,()->{sent.clear();nextSend=0;connection.send(request(instance,floor,self));},message->{
+            if(!DungeonMap.isEnabled()||!DungeonMap.secretSync()) return;
             String peer=requestedBy(message,instance,floor,members);
             if(peer!=null&&!peer.equalsIgnoreCase(self)) {
                 long now=System.nanoTime();String key=peer.toLowerCase(Locale.ROOT);Long last=lastRequests.get(key);

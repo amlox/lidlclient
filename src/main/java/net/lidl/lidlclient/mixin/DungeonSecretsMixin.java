@@ -13,6 +13,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class DungeonSecretsMixin {
     @Inject(method="setActionBarText",at=@At("TAIL"))
     private void lidlclient$roomSecrets(ClientboundSetActionBarTextPacket packet,CallbackInfo ci) {
-        DungeonMap.recordSecrets(packet.text().getString());
+        if(DungeonMap.isEnabled()) DungeonMap.recordSecrets(packet.text().getString());
     }
 }

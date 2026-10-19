@@ -30,17 +30,20 @@ public final class DungeonPlayerMarkers {
         if(client.player==null||client.level==null||client.getConnection()==null) {reset();return;}
         String self=client.player.getName().getString();
         LinkedHashSet<String> names=new LinkedHashSet<>(party.names());names.add(self);
-        List<Marker> next=new ArrayList<>();
         for(String name:names) {
             var info=client.getConnection().getPlayerInfo(name);
             if(info!=null) skins.put(name.toLowerCase(Locale.ROOT),info.getSkin().body().texturePath());
-            for(var player:client.level.players()) if(player.getName().getString().equalsIgnoreCase(name)) {
-                positions.live(name,player.getX(),player.getZ(),player.getYRot());
-                if((Object)player instanceof AbstractClientPlayer avatar) skins.put(name.toLowerCase(Locale.ROOT),avatar.getSkin().body().texturePath());
-                break;
-            }
-            next.add(new Marker(name,skins.get(name.toLowerCase(Locale.ROOT)),positions.get(name),name.equalsIgnoreCase(self),party.dead(name)));
         }
+        Set<String> seen=new HashSet<>();
+        for(var player:client.level.players()) {
+            String name=player.getName().getString();
+            if(!name.equalsIgnoreCase(self)&&!party.contains(name)) continue;
+            if(!seen.add(name.toLowerCase(Locale.ROOT))) continue;
+            positions.live(name,player.getX(),player.getZ(),player.getYRot());
+            if((Object)player instanceof AbstractClientPlayer avatar) skins.put(name.toLowerCase(Locale.ROOT),avatar.getSkin().body().texturePath());
+        }
+        List<Marker> next=new ArrayList<>(names.size());
+        for(String name:names) next.add(new Marker(name,skins.get(name.toLowerCase(Locale.ROOT)),positions.get(name),name.equalsIgnoreCase(self),party.dead(name)));
         markers=List.copyOf(next);
     }
 }

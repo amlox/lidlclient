@@ -25,10 +25,9 @@ public final class PlayerSize implements ClientModInitializer {
     }
 
     private static void save() {
-        ClientConfig.set("player_size", "enabled", enabled);
-        ClientConfig.set("player_size", "X (width)", localX);
-        ClientConfig.set("player_size", "Y (height)", localY);
-        ClientConfig.set("player_size", "Z (depth)", localZ);
+        Map<String,Object> values=new java.util.LinkedHashMap<>();
+        values.put("enabled",enabled);values.put("X (width)",localX);values.put("Y (height)",localY);values.put("Z (depth)",localZ);
+        ClientConfig.setAll("player_size",values);
     }
 
     public static boolean isEnabled() { load(); return enabled; }

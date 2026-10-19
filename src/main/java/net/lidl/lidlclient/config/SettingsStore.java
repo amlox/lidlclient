@@ -63,20 +63,24 @@ public final class SettingsStore {
         return value == null ? null : value.deepCopy();
     }
 
-    public synchronized boolean set(String module, String key, JsonElement value) {
-        JsonObject modules = root.getAsJsonObject("modules");
-        JsonElement existing = modules.get(module);
-        JsonObject section = existing != null && existing.isJsonObject() ? existing.getAsJsonObject() : new JsonObject();
-        JsonElement previous = section.get(key);
-        if (value == null || value.isJsonNull()) {
-            if (previous == null) return true;
-            section.remove(key);
-        } else {
-            if (value.equals(previous)) return true;
-            section.add(key, value.deepCopy());
+    public synchronized boolean set(String module,String key,JsonElement value) {
+        return setAll(module,java.util.Collections.singletonMap(key,value));
+    }
+
+    /** Apply one module edit in a single atomic file replacement, preserving unknown keys. */
+    public synchronized boolean setAll(String module,Map<String,JsonElement> values) {
+        JsonObject modules=root.getAsJsonObject("modules");
+        JsonElement existing=modules.get(module);
+        JsonObject section=existing!=null&&existing.isJsonObject()?existing.getAsJsonObject():new JsonObject();
+        boolean changed=false;
+        for(var entry:values.entrySet()) {
+            JsonElement value=entry.getValue(),previous=section.get(entry.getKey());
+            if(value==null||value.isJsonNull()) {
+                if(previous!=null) {section.remove(entry.getKey());changed=true;}
+            } else if(!value.equals(previous)) {section.add(entry.getKey(),value.deepCopy());changed=true;}
         }
-        modules.add(module, section);
-        return save();
+        if(!changed) return true;
+        modules.add(module,section);return save();
     }
 
     public synchronized void migrate(String module, Map<String, JsonElement> values) {

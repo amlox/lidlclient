@@ -66,5 +66,17 @@ class DungeonMapVisibilityTest {
         assertFalse(party.show("UnrelatedRealPlayer",false));assertTrue(party.show("Myself",true));
         party.reset();assertFalse(party.show("ActualPlayer",false));
     }
+    @Test void sharedGroupVisibilityMatchesFreshGraphIncludingAfterGeometryChanges() {
+        var model=new DungeonMapModel();
+        model.identify(0,0,new RoomCatalog.Room("One",Type.NORMAL,3,0));model.identify(2,0,new RoomCatalog.Room("Two",Type.PUZZLE,0,0));
+        model.at(0,0).discovered=true;model.at(2,0).mapKnown=true;
+        for(Kind join:java.util.List.of(Kind.DOOR,Kind.CONNECTION)) {
+            model.at(1,0).kind=join;model.at(1,0).mapKnown=true;
+            for(boolean full:java.util.List.of(true,false)) {
+                var expected=new DungeonMapVisibility(model,full);var actual=new DungeonMapVisibility(model,full,model.groups());
+                for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {assertEquals(expected.visible(x,z),actual.visible(x,z));assertEquals(expected.discovered(x,z),actual.discovered(x,z));}
+            }
+        }
+    }
 }
 

@@ -75,4 +75,24 @@ class SettingsStoreTest {
         store.get("future", "data").getAsJsonObject().addProperty("keep", false);
         assertTrue(store.get("future", "data").getAsJsonObject().get("keep").getAsBoolean());
     }
+    @Test void batchEditsRoundTripTogetherPreservingUnrelatedValuesAndNullableResets() throws Exception {
+        Path file=directory.resolve("lidlclient.json");
+        var store=new SettingsStore(file,message->fail(message));
+        store.set("size","future",new JsonPrimitive("keep"));
+        Map<String,JsonElement> edit=new LinkedHashMap<>();
+        edit.put("enabled",new JsonPrimitive(false));edit.put("x",new JsonPrimitive(.5));edit.put("y",new JsonPrimitive(3));
+        assertTrue(store.setAll("size",edit));
+        var restored=new SettingsStore(file,message->fail(message));
+        assertFalse(restored.get("size","enabled").getAsBoolean());assertEquals(.5,restored.get("size","x").getAsDouble());assertEquals(3,restored.get("size","y").getAsInt());
+        edit.put("x",JsonNull.INSTANCE);edit.put("y",null);assertTrue(store.setAll("size",edit));
+        restored=new SettingsStore(file,message->fail(message));assertNull(restored.get("size","x"));assertNull(restored.get("size","y"));assertEquals("keep",restored.get("size","future").getAsString());
+        String unchanged=Files.readString(file);assertTrue(store.setAll("size",edit));assertEquals(unchanged,Files.readString(file));
+    }
+    @Test void failedBatchSaveDoesNotPartiallyReplaceTheOnDiskConfig() throws Exception {
+        Path file=directory.resolve("lidlclient.json");var warnings=new ArrayList<String>();
+        var store=new SettingsStore(file,warnings::add);store.set("map","first",new JsonPrimitive(1));String original=Files.readString(file);
+        Files.createDirectory(directory.resolve("lidlclient.json.tmp"));
+        assertFalse(store.setAll("map",Map.of("first",new JsonPrimitive(2),"second",new JsonPrimitive(3))));
+        assertEquals(original,Files.readString(file));assertFalse(warnings.isEmpty());
+    }
 }

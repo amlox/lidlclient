@@ -40,6 +40,12 @@ public final class ClientConfig {
         STORE.set(module, key, value == null ? null : JSON.toJsonTree(value));
     }
 
+    public static void setAll(String module,Map<String,?> values) {
+        Map<String,JsonElement> updates=new LinkedHashMap<>();
+        values.forEach((key,value)->updates.put(key,value==null?JsonNull.INSTANCE:JSON.toJsonTree(value)));
+        STORE.setAll(module,updates);
+    }
+
     public static void migrateLegacy(String module, String filename, Map<String, String> keys) {
         if (bool(module, "_legacyImported", false)) return;
         var file = FabricLoader.getInstance().getConfigDir().resolve(filename);

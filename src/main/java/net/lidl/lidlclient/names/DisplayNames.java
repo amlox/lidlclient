@@ -6,6 +6,7 @@ import java.util.*;
 
 /** Builds styled render copies, preserving rank colors, hover/click actions and original text. */
 public final class DisplayNames {
+    private static final java.util.regex.Pattern FORMAT=java.util.regex.Pattern.compile("(?i)§[0-9A-FK-ORX]");
     private record Glyph(int codepoint, Style style) { }
     private record AliasSequence(List<Glyph> glyphs) implements FormattedCharSequence {
         @Override public boolean accept(FormattedCharSink sink) {
@@ -39,7 +40,7 @@ public final class DisplayNames {
 
     public static FormattedText replace(FormattedText source) {
         if (!NameChanger.isRenderingEnabled()) return source;
-        if (NameChanger.findMatches(source.getString().replaceAll("(?i)§[0-9A-FK-ORX]", "")).isEmpty()) return source;
+        if (NameChanger.findMatches(FORMAT.matcher(source.getString()).replaceAll("")).isEmpty()) return source;
         // Visit only render inputs, never Component.getString() or chat-event payloads.
         StringBuilder text = new StringBuilder();
         List<Style> styles = new ArrayList<>();

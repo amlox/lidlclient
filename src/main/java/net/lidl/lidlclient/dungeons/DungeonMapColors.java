@@ -18,13 +18,16 @@ public final class DungeonMapColors {
         }
     }
     public static void save(Map<DungeonMapPalette.Key,Integer> colors) {
+        Map<String,Object> values=new java.util.LinkedHashMap<>();
         for(var entry:colors.entrySet()) {
             PALETTE.set(entry.getKey(),entry.getValue());
-            ClientConfig.set("dungeon_map","color."+entry.getKey().name(),DungeonMapPalette.hex(entry.getValue()));
+            values.put("color."+entry.getKey().name(),DungeonMapPalette.hex(entry.getValue()));
         }
+        ClientConfig.setAll("dungeon_map",values);
     }
     public static void open() {
         Minecraft client=Minecraft.getInstance();
         client.setScreen(new DungeonMapColorScreen(client.screen));
     }
 }
+

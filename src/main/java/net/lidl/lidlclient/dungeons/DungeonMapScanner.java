@@ -13,6 +13,7 @@ import static net.lidl.lidlclient.dungeons.DungeonMapModel.*;
 
 /** Bounded scans of already loaded chunks, supplemented by the server's hotbar map. */
 public final class DungeonMapScanner {
+    private static final Pattern FORMAT=Pattern.compile("(?i)§[0-9a-fk-or]");
     private static final Pattern FLOOR = Pattern.compile("The Catacombs \\((E|[FM][1-7])\\)");
     private final RoomCatalog catalog = RoomCatalog.bundled();
     private final Map<Block, Integer> tokens = new IdentityHashMap<>();
@@ -49,8 +50,7 @@ public final class DungeonMapScanner {
         if (!host.equals("hypixel.net") && !host.endsWith(".hypixel.net")) { reset(); return; }
         String detected = "", detectedInstance="";
         for (var team : client.level.getScoreboard().getPlayerTeams()) {
-            String text = (team.getPlayerPrefix().getString() + team.getPlayerSuffix().getString())
-                    .replaceAll("(?i)§[0-9a-fk-or]", "");
+            String text = FORMAT.matcher(team.getPlayerPrefix().getString() + team.getPlayerSuffix().getString()).replaceAll("");
             var serverId=INSTANCE.matcher(text);if(serverId.find()) detectedInstance=serverId.group(1);
             if (text.contains("Queue")) continue;
             var match = FLOOR.matcher(text);

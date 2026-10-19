@@ -4,6 +4,7 @@ import java.util.*;
 
 /** Position sources in priority order: live entity, server map, retained last position. */
 public final class DungeonMarkerPositions {
+    private static final java.util.regex.Pattern ICON_INDEX=java.util.regex.Pattern.compile("(\\d+)$");
     public record Position(double x,double z,float yaw) { }
     public record Icon(String id,boolean self,byte x,byte z,byte rotation) { }
     private final Map<String,Position> positions=new HashMap<>();
@@ -17,7 +18,7 @@ public final class DungeonMarkerPositions {
             String name=null;
             if(icon.self()) name=self;
             else {
-                var match=java.util.regex.Pattern.compile("(\\d+)$").matcher(icon.id());
+                var match=ICON_INDEX.matcher(icon.id());
                 if(match.find()) {
                     try {int index=Integer.parseInt(match.group(1));if(index<livingOthers.size()) name=livingOthers.get(index);}
                     catch(NumberFormatException ignored) { }
@@ -31,3 +32,4 @@ public final class DungeonMarkerPositions {
         }
     }
 }
+

@@ -3,24 +3,17 @@
   "id": "lidlclient",
   "version": "${version}",
   "name": "Lidl Client",
-  "description": "lowk hate the gews",
+  "description": "Client-side quality-of-life features, dungeon maps and visual customisation.",
   "authors": [
     "Me!"
   ],
   "contact": {
-    "homepage": "https://fabricmc.net/",
-    "sources": "https://github.com/FabricMC/fabric-example-mod"
+    "sources": "https://github.com/amlox/lidlclient"
   },
   "license": "CC0-1.0",
   "icon": "assets/lidlclient/icon.png",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
-    "main": [
-      "net.lidl.lidlclient.LidlClient"
-    ],
-    "fabric-datagen": [
-      "net.lidl.lidlclient.LidlClientDataGenerator"
-    ],
     "client": [
       "net.lidl.lidlclient.PartyCMDS.PartyCommands",
       "net.lidl.lidlclient.slots.Slots",

@@ -11,6 +11,8 @@ public final class NameAliasRules {
     }
     public record Match(int start, int end, Alias alias) { }
 
+    private static final Pattern CONTROLS=Pattern.compile("[\\p{Cc}\\p{Cf}]");
+
     public static final List<Alias> ALIASES = BuiltInAliases.PLAYERS;
 
     private static final Resolver BUILT_IN = new Resolver(null, "");
@@ -24,7 +26,7 @@ public final class NameAliasRules {
 
     public static String cleanCustomName(String input) {
         if (input == null) return "";
-        String clean = input.replaceAll("[\\p{Cc}\\p{Cf}]", "").strip();
+        String clean = CONTROLS.matcher(input).replaceAll("").strip();
         StringBuilder result = new StringBuilder();
         int glyphs = 0;
         for (int offset = 0; offset < clean.length() && result.length() < 4096;) {
@@ -84,10 +86,11 @@ public final class NameAliasRules {
         }
 
         public List<Match> find(String text) {
-            List<Match> matches = new ArrayList<>();
             Matcher matcher = names.matcher(text);
-            while (matcher.find()) matches.add(new Match(matcher.start(), matcher.end(),
-                    aliases.get(matcher.group().toLowerCase(Locale.ROOT))));
+            if(!matcher.find()) return List.of();
+            List<Match> matches = new ArrayList<>();
+            do {matches.add(new Match(matcher.start(), matcher.end(),
+                    aliases.get(matcher.group().toLowerCase(Locale.ROOT))));} while(matcher.find());
             return matches;
         }
     }

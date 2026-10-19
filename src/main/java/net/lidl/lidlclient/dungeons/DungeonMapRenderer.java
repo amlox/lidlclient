@@ -67,22 +67,25 @@ public final class DungeonMapRenderer {
         g.pose().pushMatrix();g.pose().translate((float)left,(float)top);
         float scale=extent/(float)SIZE;g.pose().scale(scale,scale);
         // No map-wide fill or border: only rooms, overlays and real party heads.
-        var visibility=new DungeonMapVisibility(model,DungeonMap.fullMap());
         var groups=model.groups();
-        Map<Integer,Tile> owners=new HashMap<>();
-        Map<Integer,State> roomStates=new HashMap<>();
-        for(var group:groups) for(int id:group) {owners.put(id,model.representative(group));roomStates.put(id,state(model,group));}
+        var visibility=new DungeonMapVisibility(model,DungeonMap.fullMap(),groups);
+        Tile[] owners=new Tile[GRID*GRID];
+        State[] roomStates=new State[GRID*GRID];
+        for(var group:groups) {
+            Tile owner=model.representative(group);State roomState=state(model,group);
+            for(int id:group) {owners[id]=owner;roomStates[id]=roomState;}
+        }
         for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
             Tile t=model.at(x,z);
             // Render full-map special doors last, independently of either room's discovery.
             if(DungeonMap.fullMap()&&x%2!=z%2&&specialDoor(t)) continue;
             if(!visibility.visible(x,z)) continue;
             if(x%2==1 && z%2==1) {
-                Tile owner=owners.get((z-1)*GRID+x-1);
-                if(owner!=null && owner==owners.get((z-1)*GRID+x+1)
-                        && owner==owners.get((z+1)*GRID+x-1) && owner==owners.get((z+1)*GRID+x+1)) {
+                Tile owner=owners[(z-1)*GRID+x-1];
+                if(owner!=null && owner==owners[(z-1)*GRID+x+1]
+                        && owner==owners[(z+1)*GRID+x-1] && owner==owners[(z+1)*GRID+x+1]) {
                     var junction=tile(x,z,Kind.CONNECTION);
-                    fill(g,junction.x(),junction.y(),junction.width(),junction.height(),roomColor(owner,visibility.discovered(x,z),roomStates.getOrDefault((z-1)*GRID+x-1,State.UNOPENED)));
+                    fill(g,junction.x(),junction.y(),junction.width(),junction.height(),roomColor(owner,visibility.discovered(x,z),roomStates[(z-1)*GRID+x-1]==null?State.UNOPENED:roomStates[(z-1)*GRID+x-1]));
                     continue;
                 }
             }
@@ -92,10 +95,10 @@ public final class DungeonMapRenderer {
             if(t.kind==Kind.CONNECTION) {
                 if(x%2==1) sourceId=z*GRID+x-1;
                 else if(z>0) sourceId=(z-1)*GRID+x;
-                source=owners.getOrDefault(sourceId,t);
+                source=owners[sourceId]==null?t:owners[sourceId];
             }
             var rect=tile(x,z,t.kind);
-            int fillColor=t.kind==Kind.DOOR?doorColor(model,groups,x,z,DungeonMap.fullMap()):roomColor(source,visibility.discovered(x,z),roomStates.getOrDefault(sourceId,State.UNOPENED));
+            int fillColor=t.kind==Kind.DOOR?doorColor(model,groups,x,z,DungeonMap.fullMap()):roomColor(source,visibility.discovered(x,z),roomStates[sourceId]==null?State.UNOPENED:roomStates[sourceId]);
             fill(g,rect.x(),rect.y(),rect.width(),rect.height(),fillColor);
         }
         if(DungeonMap.fullMap()) for(int z=0;z<GRID;z++) for(int x=0;x<GRID;x++) {
@@ -107,7 +110,7 @@ public final class DungeonMapRenderer {
             int first=group.getFirst();
             if(!visibility.visible(first%GRID,first/GRID)) continue;
             Tile room=model.representative(group);
-            Rect bounds=label(group);State state=state(model,group);
+            Rect bounds=label(group);State state=roomStates[first];
             boolean undiscovered=!visibility.discovered(first%GRID,first/GRID);
             if(!DungeonMap.fullMap()&&undiscovered) {
                 String predicted=prediction(room,false,false,DungeonMap.puzzlePrediction());

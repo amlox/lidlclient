@@ -11,7 +11,7 @@ Relevant files: HotbarMapScanner.kt, DungeonScanner.kt, MapUtils.kt, ScanUtils.k
 RoomType.kt and DoorType.kt. The source repository's LICENSE is CC0-1.0, the same
 license as LidlClient's LICENSE.
 
-Bundled rooms.json contains names, types, shapes, cores and total secret/crypt
+Bundled rooms.json contains names, types, cores and total secret/crypt
 counts selected from rooms-modern.json on NoammAddons' data branch, revision
 3c7b32c471148899e68022cfd2afdfc843be91a1. Secret coordinates and all unrelated data
 are omitted. No Noamm branding, textures, network services or binaries are used.

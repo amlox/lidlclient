@@ -11,13 +11,6 @@ repositories {
 	// for more information about repositories.
 }
 
-fabricApi {
-	configureDataGeneration {
-		client = true
-		modId = "lidlclient"
-	}
-}
-
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -45,6 +38,8 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 25
+	// Keep useful crash locations without shipping local-variable debug tables.
+	it.options.debugOptions.debugLevel = "source,lines"
 }
 
 java {

@@ -6,8 +6,9 @@ import static net.lidl.lidlclient.dungeons.DungeonMapModel.*;
 /** Render-only masks shared by rooms, connectors, labels, markers and hover details. */
 public final class DungeonMapVisibility {
     private final boolean[] visible=new boolean[GRID*GRID], discovered=new boolean[GRID*GRID];
-    public DungeonMapVisibility(DungeonMapModel model,boolean full) {
-        for(var group:model.groups()) {
+    public DungeonMapVisibility(DungeonMapModel model,boolean full) {this(model,full,model.groups());}
+    public DungeonMapVisibility(DungeonMapModel model,boolean full,List<List<Integer>> groups) {
+        for(var group:groups) {
             boolean entered=group.stream().anyMatch(i->model.at(i%GRID,i/GRID).discovered);
             for(int id:group) {visible[id]=full||entered||model.at(id%GRID,id/GRID).mapKnown;discovered[id]=entered;}
         }

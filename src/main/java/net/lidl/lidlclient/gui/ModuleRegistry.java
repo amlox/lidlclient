@@ -38,6 +38,7 @@ public final class ModuleRegistry {
                 "Scanned rooms, names and clear states (Noamm based)",
                 DungeonMap::isEnabled, DungeonMap::setEnabled,
                 new ChoiceSetting("Map view", List.of("Full scanned", "Entered rooms"), DungeonMap::view, DungeonMap::setView),
+                new BooleanSetting("Puzzle prediction (legit)", DungeonMap::puzzlePrediction, DungeonMap::setPuzzlePrediction),
                 new BooleanSetting("Darken undiscovered rooms", DungeonMap::darkenUndiscovered, DungeonMap::setDarkenUndiscovered),
                 new NumberSetting("Undiscovered darkness (%)", 0, 100, 5, DungeonMap::darkness, DungeonMap::setDarkness),
                 new ActionSetting("Room / door colours", DungeonMapColors::open),

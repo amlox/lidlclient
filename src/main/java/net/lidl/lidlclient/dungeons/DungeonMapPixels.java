@@ -54,6 +54,11 @@ public final class DungeonMapPixels {
                     default -> State.DISCOVERED;
                 };
                 t.discovered |= t.state != State.UNOPENED;
+            } else if (x%2!=z%2 && (t.door==Door.WITHER||t.door==Door.BLOOD)) {
+                // Generic brown/open map pixels must not erase a scanned special door.
+                model.observeDoor(x,z,middle==18?Door.BLOOD:middle==119?Door.WITHER:Door.NORMAL);
+                t.mapKnown=true;t.state=middle==119||middle==85?State.UNOPENED:State.DISCOVERED;
+                t.discovered|=t.state!=State.UNOPENED;
             } else if (side != 0 && type != Type.UNKNOWN) {
                 t.kind = Kind.CONNECTION; t.type = type; t.state = State.DISCOVERED;
                 t.mapKnown=true;
@@ -63,9 +68,7 @@ public final class DungeonMapPixels {
                 if (middle == 119 || middle == 85 || doorType != Type.UNKNOWN) {
                     t.kind = Kind.DOOR;
                     t.mapKnown=true;
-                    if(middle==119) t.door=Door.WITHER;
-                    else if(middle==18) t.door=Door.BLOOD;
-                    else if(middle==30) t.door=Door.ENTRANCE;
+                    model.observeDoor(x,z,middle==119?Door.WITHER:middle==18?Door.BLOOD:middle==30?Door.ENTRANCE:Door.NORMAL);
                     t.type = middle == 119 ? Type.UNKNOWN : doorType;
                     t.state = middle == 119 || middle == 85 ? State.UNOPENED : State.DISCOVERED;
                     t.discovered |= t.state != State.UNOPENED;
@@ -74,4 +77,5 @@ public final class DungeonMapPixels {
         }
     }
 }
+
 

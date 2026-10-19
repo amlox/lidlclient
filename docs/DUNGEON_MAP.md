@@ -47,17 +47,18 @@ Live runs are needed to validate Hypixel's current map palette and scoreboard te
 **Map view** switches between **Full scanned** (default) and **Entered rooms**
 (the legit view). Full scanned shows rooms identified from map data and loaded
 chunks. Legit view only reveals geometry supplied by Hypixel's dungeon map:
-unentered rooms shown by that map have solid grey bodies, while rooms known only
+unentered rooms shown by that map use the Undiscovered rooms colour (grey by default), while rooms known only
 from block scans stay hidden. Entered rooms use the configured room/state colours.
 Unentered rooms have no name, secret overlay or hover identity in legit view.
-A door shown by the server map takes the colour of its entered connected room
+A normal door shown by the server map takes the colour of its entered connected room
 (first the left/top side if both are entered); when neither side is entered it is
-grey too. World-scan-only doors stay hidden. Identifying a room from blocks or
+the undiscovered colour too. Wither and Blood doors always override this with
+their own door palette colours in both views. World-scan-only doors stay hidden. Identifying a room from blocks or
 receiving a teammate's secret count never marks it entered. Player markers remain
 visible in either view. Exploration persists until the run/world is reset.
 
-**Darken undiscovered rooms** (default on) only affects Full scanned. Undiscovered
-room tiles, joins and names are dimmed by **Undiscovered darkness (%)** while explored
+**Darken undiscovered rooms** (default on) only affects Full scanned. The configured undiscovered colour on
+room tiles and joins is dimmed by **Undiscovered darkness (%)** while explored
 rooms stay at their normal color. 0% keeps full brightness; 100% makes them black.
 The default is 65% darkness (35% brightness). Exploration persists until the run/world is reset. All
 these options save in the shared config. The old background opacity setting is
@@ -72,14 +73,19 @@ field is optional and accepts #RRGGBB, &#RRGGBB, bare six hex digits, 0xRRGGBB o
 Minecraft codes (&0 through &f). Invalid input disables Use colour. **Default**
 resets that category, and Cancel/Esc abandons that picker edit.
 
-The overview has non-cleared/base, puzzle, trap, Mini Boss and Blood colours;
-Normal, Wither and Blood door colours; and independent **Cleared rooms** and
+The overview has non-cleared/base, puzzle, trap, Mini Boss, Blood and Fairy colours;
+Fairy rooms default to soft pink (#F2B6CE). **Undiscovered rooms** is a separate
+colour shared by both views (default #777777); Full scanned optionally darkens it.
+There are also Normal, Wither and Blood door colours and independent **Cleared rooms** and
 **Cleared + all secrets** colours. The latter two are exact body colours rather
 than blends. Non-cleared special rooms retain their own category colours.
 Cleared + all secrets requires a server-map clear plus every secret (or the server
 map's full-completion mark). The white/green checkmarks still indicate these states.
-Legit-view undiscovered grey takes priority over all state colours; its doors
+The configured legit-view undiscovered colour takes priority over all state colours; normal doors
 inherit connected room colours, while Full scanned uses the door categories.
+Wither and Blood doors always retain their separate categories in both modes,
+even after opening. Loaded doorway probes revisit known map doors so an initial
+normal classification can be upgraded when the chunk is available.
 **Save** applies the entire draft and persists it. **Defaults** resets the whole
 draft; Cancel/Esc closes without applying. Drafts survive window resizing and
 opening/closing individual pickers.
@@ -126,3 +132,14 @@ All LidlClient users in a party need this version and sync enabled. Two isolated
 through the live relay using LidlClient's real version header. Live two-client
 Hypixel testing is still needed to validate the full in-game path; automated tests
 cover protocol and model behaviour.
+
+## Puzzle prediction (legit)
+
+**Puzzle prediction (legit)** is enabled by default and saved with the other map
+settings. On an unentered room already revealed geometrically by Hypixel's map,
+a full-scan catalogue match adds **P** for a puzzle or **N** for a normal room.
+Unknown and other special room types get no prediction. These markers appear even
+when normal room overlays are off, and disappear when entered or when using Full
+scanned. No unseen geometry, room names or secrets are exposed by the marker, and
+it never changes exploration, clears or secret progress. If the relevant chunks
+have not loaded or the catalogue cannot identify a room, it stays unpredicted.

@@ -12,7 +12,7 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 
 /** Settings are persisted by ModulePersistence through the standard Lidl GUI. */
 public final class DungeonMap implements ClientModInitializer {
-    private static boolean enabled = true, names = true, players = true, stats, darkenUndiscovered = true, secretSync=true;
+    private static boolean enabled = true, names = true, players = true, stats, darkenUndiscovered = true, secretSync=true, puzzlePrediction=true;
     private static String overlay = "Checkmarks", view = "Full scanned";
     private static double size = 190, x = 2, y = 15, textScale = 0.8, headScale = 1, darkness = 65;
     private static DungeonMapScanner scanner;
@@ -42,6 +42,8 @@ public final class DungeonMap implements ClientModInitializer {
     public static boolean fullMap() { return view.equals("Full scanned"); }
     public static boolean darkenUndiscovered() { return darkenUndiscovered; }
     public static void setDarkenUndiscovered(boolean value) { darkenUndiscovered = value; }
+    public static boolean puzzlePrediction() {return puzzlePrediction;}
+    public static void setPuzzlePrediction(boolean value) {puzzlePrediction=value;}
     public static boolean secretSync() {return secretSync;}
     public static void setSecretSync(boolean value) {secretSync=value;if(scanner!=null) scanner.sync().reset();}
     public static double darkness() { return darkness; }

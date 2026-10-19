@@ -92,16 +92,25 @@ public final class DungeonMapRenderer {
                 source=owners.getOrDefault(sourceId,t);
             }
             var rect=tile(x,z,t.kind);
-            int fillColor=t.kind==Kind.DOOR&&!DungeonMap.fullMap()?legitDoorColor(model,groups,x,z):roomColor(source,visibility.discovered(x,z),roomStates.getOrDefault(sourceId,State.UNOPENED));
+            int fillColor=t.kind==Kind.DOOR?doorColor(model,groups,x,z,DungeonMap.fullMap()):roomColor(source,visibility.discovered(x,z),roomStates.getOrDefault(sourceId,State.UNOPENED));
             fill(g,rect.x(),rect.y(),rect.width(),rect.height(),fillColor);
         }
-        if(overlays) for(var group:groups) {
+        for(var group:groups) {
             int first=group.getFirst();
             if(!visibility.visible(first%GRID,first/GRID)) continue;
             Tile room=model.representative(group);
             Rect bounds=label(group);State state=state(model,group);
             boolean undiscovered=!visibility.discovered(first%GRID,first/GRID);
-            if(!DungeonMap.fullMap()&&undiscovered) continue;
+            if(!DungeonMap.fullMap()&&undiscovered) {
+                String predicted=prediction(room,false,false,DungeonMap.puzzlePrediction());
+                if(predicted!=null) {
+                    int px=(int)Math.round(bounds.x()+bounds.width()/2),py=(int)Math.round(bounds.y()+bounds.height()/2);
+                    g.fill(px-5,py-6,px+5,py+5,0xB0000000);
+                    g.text(client.font,Component.literal(predicted),px-client.font.width(predicted)/2,py-4,0xFFFFFFFF,true);
+                }
+                continue;
+            }
+            if(!overlays) continue;
             if(DungeonMap.overlay().equals("Checkmarks")) mark(g,state,bounds.x()+bounds.width()/2,bounds.y()+bounds.height()/2);
             else roomText(g,room,state,bounds,DungeonMap.overlay().equals("Names + secrets"),
                     undiscovered && DungeonMap.darkenUndiscovered() && DungeonMap.fullMap(),model.foundSecrets(group));

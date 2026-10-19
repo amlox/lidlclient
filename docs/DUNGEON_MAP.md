@@ -42,8 +42,14 @@ positions are pinned to the edge. Until the server has provided any position, th
 member appears in a `?` row above the map instead of inventing a room position. Press **Rescan** if the room layout needs rebuilding. Changing
 worlds, leaving a dungeon or disconnecting resets the map automatically.
 
-Scanning runs on the client thread every five ticks with at most six column probes
-per update. Room data is bundled, so no web service or Noamm installation is needed.
+World scanning runs on the client thread every five ticks with at most six grid
+positions per update. Each resolved position is skipped on later passes. Once
+all positions have been resolved from loaded chunks, world block scans stop for
+that run. Unloaded chunks and unrecognized room cores remain unfinished. The
+Hypixel map, clears/secrets, player markers, boss detection and sync still update.
+Rescan, disabling/re-enabling or a new run/world resets scan progress. If the
+server map later reveals geometry at a previously empty position, that position
+becomes unfinished again rather than retaining a false completion. Room data is bundled, so no web service or Noamm installation is needed.
 Source: modern NoammAddons, CC0-1.0. See THIRD_PARTY_NOTICES.md for pinned versions.
 Live runs are needed to validate Hypixel's current map palette and scoreboard text.
 

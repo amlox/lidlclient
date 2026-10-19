@@ -18,6 +18,8 @@ public final class DungeonMapScanner {
     private final Map<Block, Integer> tokens = new IdentityHashMap<>();
     private static final Pattern INSTANCE=Pattern.compile("\\b\\d{2}/\\d{2}/\\d{2}\\s+(\\w{1,24})\\b");
     private int cursor;
+    private final DungeonScanProgress progress=new DungeonScanProgress();
+    public boolean fullyScanned() {return progress.complete();}
     private Object level;
     private DungeonMapPixels.Calibration calibration;
     private boolean active, inBoss;
@@ -36,7 +38,7 @@ public final class DungeonMapScanner {
     // Match Odin's scoreboard lobby identifier (up to six characters).
     public String instance() {return instance.substring(0,Math.min(6,instance.length()));}
     public DungeonParty party() { return party; }
-    public void reset() { model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; cursor = 0; calibration = null; active = false; inBoss=false; floor = ""; }
+    public void reset() { progress.reset(); model.reset(); party.reset(); markers.reset(); sync.reset(); instance=""; cursor = 0; calibration = null; active = false; inBoss=false; floor = ""; }
 
     public void tick(Minecraft client) {
         if(!DungeonMap.isEnabled()) return;
@@ -88,11 +90,15 @@ public final class DungeonMapScanner {
         }
         markers.update(client,party);
         sync.tick(client,this,catalog);
+        progress.reconcile(model);
+        if(progress.complete()) return;
         // Six column probes per update; no background world access or chunk requests.
         for (int i = 0; i < 6; i++) {
             int index = cursor++ % (GRID * GRID), x = index % GRID, z = index / GRID;
+            if(progress.finished(index)) continue;
             Tile tile = model.at(x,z);
-            if (center(x,z) && tile.identified) continue;
+            // Centre junctions are rendered from their adjoining room geometry.
+            if(x%2==1&&z%2==1 || center(x,z)&&tile.identified) {progress.finish(index,false);continue;}
             int worldX = WORLD_START + x * WORLD_STEP, worldZ = WORLD_START + z * WORLD_STEP;
             if (!client.level.hasChunk(worldX >> 4, worldZ >> 4)) continue;
             var pos = new BlockPos.MutableBlockPos(worldX, 0, worldZ);
@@ -101,15 +107,15 @@ public final class DungeonMapScanner {
             if(x%2!=z%2) {
                 Block block=client.level.getBlockState(pos.setY(69)).getBlock();
                 detectedDoor=DungeonDoorScan.classify(BuiltInRegistries.BLOCK.getKey(block).toString());
-                if(tile.kind==Kind.DOOR) {model.observeDoor(x,z,detectedDoor);continue;}
-                if(tile.kind==Kind.CONNECTION && detectedDoor==Door.NORMAL) continue;
+                if(tile.kind==Kind.DOOR) {model.observeDoor(x,z,detectedDoor);progress.finish(index,false);continue;}
+                if(tile.kind==Kind.CONNECTION && detectedDoor==Door.NORMAL) {progress.finish(index,false);continue;}
             }
             int roof = -1;
             for (int y = 255; y >= 0; y--) {
                 var state = client.level.getBlockState(pos.setY(y));
                 if (!state.isAir() && !state.is(Blocks.GOLD_BLOCK)) { roof = y; break; }
             }
-            if (roof < 0) continue;
+            if (roof <= 0) {if(tile.kind==Kind.EMPTY) progress.finish(index,true);continue;}
             if (center(x,z)) {
                 int hash = 1;
                 for (int y = 140; y >= 12; y--) {
@@ -118,10 +124,11 @@ public final class DungeonMapScanner {
                     hash = hash * 31 + token;
                 }
                 var room = catalog.find(hash);
-                if (room != null) model.identify(x,z,room);
+                if (room != null) {model.identify(x,z,room);progress.finish(index,false);}
             } else if (x % 2 != z % 2) {
                 boolean doorway = roof == 73 || roof == 74 || roof == 81 || roof == 82;
                 tile.kind = doorway ? Kind.DOOR : Kind.CONNECTION;
+                progress.finish(index,false);
                 if(doorway) {
                     model.observeDoor(x,z,detectedDoor);
                     tile.type=switch(tile.door) {case BLOOD->Type.BLOOD;case ENTRANCE->Type.ENTRANCE;case WITHER->Type.UNKNOWN;default->Type.NORMAL;};

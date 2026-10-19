@@ -44,16 +44,17 @@ Live runs are needed to validate Hypixel's current map palette and scoreboard te
 
 ## Discovery display
 
-**Map view** switches between **Full scanned** (default) and **Entered rooms**.
-Full scanned shows the layout identified from map data and loaded chunks. Entered
-rooms only shows room groups that the base Hypixel dungeon map has marked
-discovered, plus their visible connections. Identifying a room from blocks never
-marks it entered. The server map is the reference for exploration; it is not a
-record of which individual party member entered a room. Until a valid dungeon map
-is received, Entered rooms stays empty. Hidden rooms are also hidden from overlays,
-hover details and the optional room count. Party markers remain visible in either
-view. Base-map door connections bordering entered rooms render in gray, including
-unopened doors; world-scan-only doors do not leak into the Entered rooms view.
+**Map view** switches between **Full scanned** (default) and **Entered rooms**
+(the legit view). Full scanned shows rooms identified from map data and loaded
+chunks. Legit view only reveals geometry supplied by Hypixel's dungeon map:
+unentered rooms shown by that map have solid grey bodies, while rooms known only
+from block scans stay hidden. Entered rooms use the configured room/state colours.
+Unentered rooms have no name, secret overlay or hover identity in legit view.
+A door shown by the server map takes the colour of its entered connected room
+(first the left/top side if both are entered); when neither side is entered it is
+grey too. World-scan-only doors stay hidden. Identifying a room from blocks or
+receiving a teammate's secret count never marks it entered. Player markers remain
+visible in either view. Exploration persists until the run/world is reset.
 
 **Darken undiscovered rooms** (default on) only affects Full scanned. Undiscovered
 room tiles, joins and names are dimmed by **Undiscovered darkness (%)** while explored
@@ -64,19 +65,29 @@ ignored; the map always remains transparent.
 
 ## Colours and secret progress
 
-Click **Room / door colours** in the Dungeon map settings to edit puzzle, base,
-trap, Mini Boss and Blood rooms, plus Normal, Wither and Blood doors. Each has
-its own input and live colour swatch. Inputs accept #RRGGBB, &#RRGGBB, bare six
-hex digits, 0xRRGGBB or a Minecraft colour code (&0 through &f). Save applies all
-valid colours and stores them in the shared config; invalid input disables Save.
-Defaults restores the default input values, then Save applies them. Cancel/Esc
-keeps the previous palette. Room colours and door colours are independent, and a
-Wither door keeps its category after opening.
+Click **Room / door colours**, then click a category to open its visual picker.
+Drag inside the saturation/brightness square and along the hue strip. Before/after
+swatches preview the choice; **Use colour** puts it in the palette draft. A hex
+field is optional and accepts #RRGGBB, &#RRGGBB, bare six hex digits, 0xRRGGBB or
+Minecraft codes (&0 through &f). Invalid input disables Use colour. **Default**
+resets that category, and Cancel/Esc abandons that picker edit.
+
+The overview has non-cleared/base, puzzle, trap, Mini Boss and Blood colours;
+Normal, Wither and Blood door colours; and independent **Cleared rooms** and
+**Cleared + all secrets** colours. The latter two are exact body colours rather
+than blends. Non-cleared special rooms retain their own category colours.
+Cleared + all secrets requires a server-map clear plus every secret (or the server
+map's full-completion mark). The white/green checkmarks still indicate these states.
+Legit-view undiscovered grey takes priority over all state colours; its doors
+inherit connected room colours, while Full scanned uses the door categories.
+**Save** applies the entire draft and persists it. **Defaults** resets the whole
+draft; Cancel/Esc closes without applying. Drafts survive window resizing and
+opening/closing individual pickers.
 
 Names + secrets and the hover details display observed found/total secret counts.
 They begin at 0/X, update from Hypixel's room-specific action-bar count when you
 are in an identified room, and become X/X when the base map marks the room fully
-complete. Unknown/mismatched action-bar totals are ignored. Without a compatible connected sync provider, incomplete rooms you have not observed may stay at
+complete. Unknown/mismatched action-bar totals are ignored. Without a connected LidlClient teammate, rooms you have not observed may stay at
 0/X. Rooms with zero catalogue secrets (including zero-secret Mini Boss and puzzle
 rooms) omit the secret counter completely.
 All counts reset with the dungeon/world. Crypts remain catalogue totals.
@@ -84,48 +95,34 @@ All counts reset with the dungeon/world. Crypts remain catalogue totals.
 
 ## Shared progress and room states
 
-Room bodies, joins and overlays distinguish four states: undiscovered (question
-mark and optional darkness), discovered (normal room color), cleared (lighter tint
-and white checkmark), and all secrets found (green tint and green checkmark).
-Failed puzzles keep their red failure marker. The server map supplies shared room
-clears and full completion regardless of which teammate was there. Observed or
-synced full secret counts can also promote a positive-secret room to green.
+Room bodies, joins and overlays distinguish undiscovered, discovered, cleared,
+and cleared with all secrets. Failed puzzles retain their failure marker. The
+server map supplies shared clears and full completion; synced counts can complete
+the secret requirement for an already-cleared room.
 
-**Secret sync (WebSockets)** replaces the old party-chat transport entirely and is
-enabled by default. There are no `[LidlMap]` messages, chat listeners or chat fallback.
-Use **Secret sync status** to inspect each provider. Disable the setting to close
-all three sockets; leaving the dungeon or changing worlds also closes them.
+**Secret sync (WebSockets)** is enabled by default. **Lidl secret sync status**
+shows the single connection. LidlClient uses Odin's instance-scoped relay at
+`wss://ws.odtheking.com/<lobbyId>` as requested; the lobby ID matches Odin's
+six-character scoreboard lookup. It uses one socket, with no Noamm or Skyblocker
+connections, room aliases, profile-key access, authentication requests, or /locraw
+commands. No secret reports are sent to Hypixel chat and there is no chat fallback.
 
-LidlClient speaks each provider's native protocol:
+Only versioned LidlClient-tagged reports from current dungeon-roster names are
+accepted, with matching instance/floor and validated room name, connected tile
+coordinates and count bounds. Native untagged Odin reports are ignored. Reports
+retain Odin's base wire fields so the relay can carry them; this does not promise
+that other mods will ignore outgoing Lidl reports. The relay is unauthenticated:
+roster/name checks reduce accidental cross-run updates but are not proof of a
+sender's account identity. No Minecraft account tokens or profile keys are sent.
 
-- Odin: instance-scoped `wss://ws.odtheking.com/`, matching roster names, room names
-  and tile lists, with `foundSecrets` counts.
-- Noamm: `wss://ws.noamm.org`, authenticated with a signed Minecraft public profile
-  certificate, followed by a `dungeon_start` registration with the instance, floor,
-  party and entrance. Reads room metadata and `dungeonroomsecrets` counts.
-- Skyblocker: authenticated `wss://ws.hysky.de` subscriptions to `DUNGEON_SECRETS`,
-  using UUID-checked `room_secret_count` and `room_match` messages. A bundled table
-  maps supported Skyblocker room IDs to Lidl/Noamm names; unknown mappings are ignored.
-
-Local action-bar updates are coalesced and sent only when a room count changes,
-with at most one room-count update per second per provider. Incoming updates never
-trigger an automatic resend, cannot reduce progress and must fit the local room's
-catalogue total. Room metadata can identify a server-map-known room but never marks
-it entered. Pending counts wait up to 60 seconds for matching room metadata.
-Odin and Skyblocker provide sender identity; Noamm's room-only packets rely on the
-authenticated backend's dungeon grouping. Stale socket callbacks are discarded on
-run changes. Counts and in-memory service tokens are never written to the config.
-
-Noamm and Skyblocker authentication use a random challenge signed locally by the
-vanilla Minecraft profile private key. Only the public certificate, its Mojang
-signature, UUID and signed challenge are sent. Minecraft access tokens and private
-keys are never sent to these services. The client identifies itself as `lidlclient`,
-not as another mod. A rejected connection/authentication appears as unavailable
-and retries with bounded backoff; normal map progress continues without chat.
-
-Each other player needs their own mod's secret-sync feature enabled. The providers
-are separate services: LidlClient receives all three directly rather than assuming
-they share one network. Service authentication, room naming and tile order need
-live cross-client validation; unit tests use recorded source-compatible fixtures.
-
-Dungeon location metadata is read from `/locraw` system responses. If no other mod supplies it, LidlClient requests it once after entering the dungeon and hides only that automatic response. Odin uses its native scoreboard lobby identifier; Noamm and Skyblocker use the full server identifier.
+On connection, a scoped Lidl request asks peers to resend their observed room
+snapshots, so clients joining or reconnecting can catch up. Repeat requests from
+the same peer are limited to one per ten seconds. Counts are coalesced to at most one changed room per second, never decrease local
+progress, and incoming messages are not relayed back. Unknown room geometry waits
+up to 60 seconds for server-map data. Unrelated, malformed and oversized reports
+are ignored. Disabling sync, leaving a dungeon or changing worlds closes the
+socket; failures retry with bounded backoff and the map continues locally.
+All LidlClient users in a party need this version and sync enabled. Two isolated test connections exchanged Lidl-tagged counts and catch-up requests
+through the live relay using LidlClient's real version header. Live two-client
+Hypixel testing is still needed to validate the full in-game path; automated tests
+cover protocol and model behaviour.

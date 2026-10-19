@@ -42,7 +42,7 @@ public final class ModuleRegistry {
                 new NumberSetting("Undiscovered darkness (%)", 0, 100, 5, DungeonMap::darkness, DungeonMap::setDarkness),
                 new ActionSetting("Room / door colours", DungeonMapColors::open),
                 new BooleanSetting("Secret sync (WebSockets)", DungeonMap::secretSync, DungeonMap::setSecretSync),
-                new ActionSetting("Secret sync status", DungeonMap::openSyncStatus),
+                new ActionSetting("Lidl secret sync status", DungeonMap::openSyncStatus),
                 new BooleanSetting("Room overlays", DungeonMap::names, DungeonMap::setNames),
                 new ChoiceSetting("Room style", List.of("Checkmarks", "Room names", "Names + secrets"), DungeonMap::overlay, DungeonMap::setOverlay),
                 new BooleanSetting("Player markers", DungeonMap::players, DungeonMap::setPlayers),

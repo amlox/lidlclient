@@ -30,8 +30,8 @@ public final class DungeonMapRenderer {
         pixels(g,pattern,left+1,top+1,0xC0000000);pixels(g,pattern,left,top,color);
     }
     private static int roomColor(Tile tile,boolean discovered,State state) {
-        if(tile.kind==Kind.DOOR) return DungeonMap.fullMap()?color(tile):0xFF777777;
-        return stateColor(color(tile),state,discovered,DungeonMap.fullMap()&&DungeonMap.darkenUndiscovered(),DungeonMap.darkness());
+        if(tile.kind==Kind.DOOR) return color(tile);
+        return DungeonMapStyle.roomColor(tile,state,discovered,DungeonMap.fullMap(),DungeonMap.darkenUndiscovered(),DungeonMap.darkness());
     }
     private static void roomText(GuiGraphicsExtractor g,Tile room,State state,Rect bounds,boolean secrets,boolean dim,int found) {
         if(room.type==Type.ENTRANCE || room.type==Type.FAIRY || (state==State.UNOPENED && !room.identified)) return;
@@ -92,7 +92,8 @@ public final class DungeonMapRenderer {
                 source=owners.getOrDefault(sourceId,t);
             }
             var rect=tile(x,z,t.kind);
-            fill(g,rect.x(),rect.y(),rect.width(),rect.height(),roomColor(source,visibility.discovered(x,z),roomStates.getOrDefault(sourceId,State.UNOPENED)));
+            int fillColor=t.kind==Kind.DOOR&&!DungeonMap.fullMap()?legitDoorColor(model,groups,x,z):roomColor(source,visibility.discovered(x,z),roomStates.getOrDefault(sourceId,State.UNOPENED));
+            fill(g,rect.x(),rect.y(),rect.width(),rect.height(),fillColor);
         }
         if(overlays) for(var group:groups) {
             int first=group.getFirst();
@@ -100,6 +101,7 @@ public final class DungeonMapRenderer {
             Tile room=model.representative(group);
             Rect bounds=label(group);State state=state(model,group);
             boolean undiscovered=!visibility.discovered(first%GRID,first/GRID);
+            if(!DungeonMap.fullMap()&&undiscovered) continue;
             if(DungeonMap.overlay().equals("Checkmarks")) mark(g,state,bounds.x()+bounds.width()/2,bounds.y()+bounds.height()/2);
             else roomText(g,room,state,bounds,DungeonMap.overlay().equals("Names + secrets"),
                     undiscovered && DungeonMap.darkenUndiscovered() && DungeonMap.fullMap(),model.foundSecrets(group));
@@ -136,4 +138,5 @@ public final class DungeonMapRenderer {
         g.pose().popMatrix();
     }
 }
+
 

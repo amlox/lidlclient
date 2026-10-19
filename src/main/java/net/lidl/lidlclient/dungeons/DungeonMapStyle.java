@@ -47,16 +47,34 @@ public final class DungeonMapStyle {
         }
         if(result==State.FAILED || result==State.GREEN) return result;
         Tile room=model.representative(group);
-        if(room.identified && room.secrets>0 && model.foundSecrets(group)>=room.secrets) return State.GREEN;
+        if(result==State.CLEARED && room.identified && room.secrets>0 && model.foundSecrets(group)>=room.secrets) return State.GREEN;
         if(result==State.CLEARED) return result;
         return group.stream().anyMatch(i->model.at(i%GRID,i/GRID).discovered)?State.DISCOVERED:State.UNOPENED;
     }
     public static int stateColor(int base,State state,boolean discovered,boolean darken,double darkness) {
         if(!discovered) return darken?DungeonMapVisibility.darken(base,darkness):base;
-        if(state==State.GREEN) return blend(base,0xFF55FF55,0.7);
-        if(state==State.CLEARED) return blend(base,0xFFFFFFFF,0.3);
+        if(state==State.GREEN) return DungeonMapColors.palette().get(DungeonMapPalette.Key.SECRETED);
+        if(state==State.CLEARED) return DungeonMapColors.palette().get(DungeonMapPalette.Key.CLEARED);
         if(state==State.FAILED) return blend(base,0xFFFF3333,0.3);
         return base;
+    }
+    public static final int UNDISCOVERED_GREY=0xFF777777;
+    public static int roomColor(Tile room,State state,boolean discovered,boolean full,boolean darken,double darkness) {
+        if(!full&&!discovered) return UNDISCOVERED_GREY;
+        return stateColor(color(room),state,discovered,full&&darken,darkness);
+    }
+    /** Prefer the entered side of a frontier door; no colour leaks from an unentered room. */
+    public static int legitDoorColor(DungeonMapModel model,int x,int z) {return legitDoorColor(model,model.groups(),x,z);}
+    public static int legitDoorColor(DungeonMapModel model,List<List<Integer>> groups,int x,int z) {
+        int ax=x%2==1?x-1:x,az=z%2==1?z-1:z;
+        int bx=x%2==1?x+1:x,bz=z%2==1?z+1:z;
+        for(int[] cell:new int[][]{{ax,az},{bx,bz}}) {
+            var group=groups.stream().filter(g->g.contains(cell[1]*GRID+cell[0])).findFirst().orElse(List.of());
+            if(group.isEmpty()||group.stream().noneMatch(id->model.at(id%GRID,id/GRID).discovered)) continue;
+            Tile room=model.representative(group);
+            return roomColor(room,state(model,group),true,false,false,0);
+        }
+        return UNDISCOVERED_GREY;
     }
     private static int blend(int base,int overlay,double amount) {
         int r=(int)(((base>>16)&255)*(1-amount)+((overlay>>16)&255)*amount);
@@ -69,4 +87,5 @@ public final class DungeonMapStyle {
     }
     public static double world(double coordinate) { return INSET+ROOM/2.0+(coordinate-WORLD_START)/32.0*PITCH; }
 }
+
 

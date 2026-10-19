@@ -29,7 +29,8 @@ public final class DungeonMapScreen extends Screen {
             if(mouseX>=left&&mouseY>=top&&gx<128&&gz<128&&x>=0&&z>=0&&x<GRID&&z<GRID&&center(x,z)) {
                 int id=z*GRID+x;
                 var group=scanner.model().groups().stream().filter(g->g.contains(id)).findFirst();
-                if(group.isPresent() && new DungeonMapVisibility(scanner.model(),DungeonMap.fullMap()).visible(x,z)) {
+                var mask=new DungeonMapVisibility(scanner.model(),DungeonMap.fullMap());
+                if(group.isPresent() && mask.visible(x,z) && (DungeonMap.fullMap()||mask.discovered(x,z))) {
                     Tile t=scanner.model().representative(group.get());
                     detail=t.identified?t.name+(t.secrets>0?" | "+DungeonSecretProgress.label(scanner.model().foundSecrets(group.get()),t.secrets)+" secrets":"")+" | "+t.crypts+" crypts":t.type+" | Not identified yet";
                 }
@@ -46,4 +47,5 @@ public final class DungeonMapScreen extends Screen {
     @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }
+
 

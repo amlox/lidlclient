@@ -66,7 +66,6 @@ public final class DungeonMap implements ClientModInitializer {
     @Override public void onInitializeClient() {
         scanner = new DungeonMapScanner();
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STOPPING.register(client->scanner.sync().reset());
-        ClientReceiveMessageEvents.ALLOW_GAME.register((message,overlay)->overlay||!scanner.location(message.getString()));
         ClientReceiveMessageEvents.GAME.register((message,overlay)->{
             if(overlay) recordSecrets(message.getString());
         });

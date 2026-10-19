@@ -6,9 +6,10 @@ import static net.lidl.lidlclient.dungeons.DungeonMapModel.*;
 /** Editable palette and parsing, independent of Minecraft/config initialization. */
 public final class DungeonMapPalette {
     public enum Key {
-        PUZZLE("Puzzle rooms",0x7B007B), NORMAL("Base rooms",0x794600), TRAP("Trap rooms",0xFF8200),
+        PUZZLE("Puzzle rooms",0x7B007B), NORMAL("Non-cleared base rooms",0x794600), TRAP("Trap rooms",0xFF8200),
         MINIBOSS("Mini Boss rooms",0xFFC800), BLOOD("Blood rooms",0xB20000),
-        NORMAL_DOOR("Normal doors",0x794600), WITHER_DOOR("Wither doors",0x101010), BLOOD_DOOR("Blood doors",0xB20000);
+        NORMAL_DOOR("Normal doors",0x794600), WITHER_DOOR("Wither doors",0x101010), BLOOD_DOOR("Blood doors",0xB20000),
+        CLEARED("Cleared rooms",0xA1814C), SECRETED("Cleared + all secrets",0x55FF55);
         public final String label;
         public final int rgb;
         Key(String label,int rgb) {this.label=label;this.rgb=rgb;}
@@ -38,3 +39,4 @@ public final class DungeonMapPalette {
         return text.matches("(?i)[0-9a-f]{6}")?0xFF000000|Integer.parseInt(text,16):null;
     }
 }
+

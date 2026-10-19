@@ -17,12 +17,15 @@ class DungeonMapTeamTest {
         assertEquals(54,tracker.get("teammate").x());
         tracker.reset();assertNull(tracker.get("teammate"));
     }
-    @Test void unopenedMapDoorsRemainVisibleAtTheEdgeOfEnteredRoomsWithoutRevealingRooms() {
+    @Test void legitViewShowsOnlyServerRevealedRoomsAndColoursDoorsFromTheEnteredSide() {
         var model=new DungeonMapModel();model.at(0,0).kind=Kind.ROOM;model.at(0,0).discovered=true;
         var door=model.at(1,0);door.kind=Kind.DOOR;door.mapKnown=true;door.state=State.UNOPENED;
-        model.at(2,0).kind=Kind.ROOM;
+        model.at(2,0).kind=Kind.ROOM;model.at(2,0).mapKnown=true;
         var view=new DungeonMapVisibility(model,false);
-        assertTrue(view.visible(1,0));assertFalse(view.visible(2,0));
+        assertTrue(view.visible(1,0));assertTrue(view.visible(2,0));assertFalse(view.discovered(2,0));
+        model.at(0,0).type=Type.PUZZLE;
+        assertEquals(DungeonMapColors.palette().room(Type.PUZZLE),DungeonMapStyle.legitDoorColor(model,1,0));
+        assertEquals(DungeonMapStyle.UNDISCOVERED_GREY,DungeonMapStyle.roomColor(model.at(2,0),State.UNOPENED,false,false,false,0));
         door.mapKnown=false;assertFalse(new DungeonMapVisibility(model,false).visible(1,0));
     }
     @Test void fourRoomStatesHaveDistinctFillsAndSecretCompletionPromotesToGreen() {
@@ -34,7 +37,8 @@ class DungeonMapTeamTest {
         var model=new DungeonMapModel();model.identify(0,0,new RoomCatalog.Room("Room",Type.NORMAL,3,0));
         assertEquals(State.UNOPENED,DungeonMapStyle.state(model,List.of(0)));
         model.at(0,0).discovered=true;assertEquals(State.DISCOVERED,DungeonMapStyle.state(model,List.of(0)));
-        model.at(0,0).state=State.CLEARED;assertEquals(State.CLEARED,DungeonMapStyle.state(model,List.of(0)));
+        model.updateSecrets(0,0,3,3);assertEquals(State.DISCOVERED,DungeonMapStyle.state(model,List.of(0)));
+        model.at(0,0).foundSecrets=2;model.at(0,0).state=State.CLEARED;assertEquals(State.CLEARED,DungeonMapStyle.state(model,List.of(0)));
         model.updateSecrets(0,0,3,3);assertEquals(State.GREEN,DungeonMapStyle.state(model,List.of(0)));
     }
 }

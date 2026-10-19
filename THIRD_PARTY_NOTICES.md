@@ -20,34 +20,23 @@ https://github.com/Noamm9/NoammAddons/blob/data/rooms-modern.json
 
 The room-secret action-bar count pattern and total-matching rule also follow
 NoammAddons' modern ActionBarParser.kt (main, revision
-b2566e40173292f2b408a8ce85b0d255c825cb1a). No WebSocket or profile API is used.
+b2566e40173292f2b408a8ce85b0d255c825cb1a). The action-bar parser itself uses no network API.
 
 
 Party map-marker indexing and map-decoration access follow modern NoammAddons'
-MapUpdater.kt, TabListUtils.kt and IMapState.java (CC0-1.0). The former party-chat transport has been removed; native WebSocket adapters now
-use the services selected by the user.
+MapUpdater.kt, TabListUtils.kt and IMapState.java (CC0-1.0).
 
+## Lidl secret-sync transport
 
-## Native secret-sync interoperability
+LidlClient uses the Odin WebSocket relay selected by the user. The independent
+transport and JSON fields follow Odin's public DungeonMap.kt SyncPayload,
+ClickGUIModule.kt endpoint, LocationUtils.kt scoreboard lobby identifier and
+WebSocketConnection.kt at source tree
+f2840a0aa7d1aea12321d6f3b287010ea7227a8a (BSD-3-Clause):
+https://github.com/odtheking/Odin
 
-LidlClient independently implements JSON wire formats observed in the following
-public projects. Skyblocker Java implementation code is not bundled, linked or
-copied; its service/envelope fields, UUID/count payloads and room-ID filenames are
-used as protocol facts. The room alias table is generated from matching filenames,
-public display names and the existing Lidl/Noamm catalogue.
-
-- Odin (BSD-3-Clause), source tree f2840a0aa7d1aea12321d6f3b287010ea7227a8a:
-  DungeonMap.kt SyncPayload, ClickGUIModule.kt endpoint and WebSocketConnection.kt.
-  https://github.com/odtheking/Odin
-- NoammAddons (CC0-1.0), 26.1.2 source tree
-  792df9286ccf97daf5b01be0ceb4fb4bd1a5e53a: WebSocket.kt, PacketRegistry.kt,
-  ApiAuth.kt, C2SPacketDungeonStart.kt, S2CPacketRoomSecrets.kt and
-  S2CPacketDungeonRoom.kt. The certificate proof format follows Noamm's CC0 API.
-  https://github.com/Noamm9/NoammAddons
-- Skyblocker (LGPL-3.0), source tree ca1163e2b7309113cc4dd3c084829d4417606235:
-  Payload, Service, Type, DungeonRoomSecretCountMessage, DungeonRoomMatchMessage
-  and authentication request/response protocol definitions.
-  https://github.com/SkyblockerMod/Skyblocker
-
-Service credentials and account keys are not included in the source or artifacts.
-Provider names identify interoperability and do not imply endorsement.
+LidlClient adds its own version, instance and floor fields and only accepts
+LidlClient-tagged party reports. No Odin source implementation or assets are
+bundled. Noamm and Skyblocker sync adapters, authentication and Skyblocker room
+aliases have been removed. There are no account keys or service credentials in
+source or artifacts. Relay usage does not imply endorsement.

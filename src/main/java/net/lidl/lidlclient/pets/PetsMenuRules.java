@@ -7,7 +7,7 @@ import java.util.regex.Pattern;
 /** Pure recognition and bounded reopen suppression, separate from Minecraft events. */
 public final class PetsMenuRules {
     public static final long SUPPRESSION_NS = 2_000_000_000L;
-    private static final Pattern TITLE = Pattern.compile("^Pets(?: \\(\\d+/\\d+\\))?$");
+    private static final Pattern TITLE = Pattern.compile("^(?:Pets(?: \\(\\d+/\\d+\\))?|\\(\\d+/\\d+\\) Pets)$");
     private boolean armed;
     private long selectedAt;
 
@@ -23,7 +23,7 @@ public final class PetsMenuRules {
                                          boolean topContainerSlot, List<String> lore) {
         if (!normalLeftClick || !playerHead || !topContainerSlot || !isPetsMenu(title)) return false;
         return lore.stream().map(line -> plain(line).toLowerCase(Locale.ROOT))
-                .anyMatch(line -> line.matches("(?:left[- ]click|click)\\s+to\\s+(?:summon|despawn)(?: this pet| your pet)?[!.]?"));
+                .anyMatch(line -> line.matches("(?:left[- ]click|click)\\s+to\\s+summon(?: this pet| your pet)?[!.]?"));
     }
 
     public void selected(long now) {

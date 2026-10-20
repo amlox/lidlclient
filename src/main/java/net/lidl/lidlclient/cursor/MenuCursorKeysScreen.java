@@ -59,7 +59,7 @@ public final class MenuCursorKeysScreen extends Screen {
         g.text(font,title,(width-font.width(title))/2,16,0xFFFFFFFF,false);
         var line = Component.literal(capturing ? "Press the menu hotkey; Esc cancels." : "Add the same keys your menu-opening mod uses.");
         g.text(font,line,(width-font.width(line))/2,34,0xFFADBBD0,false);
-        var hint = Component.literal("Existing hotkey actions are unchanged. Esc cancels a pending wait.");
+        var hint = Component.literal("Esc cancels a wait. Existing hotkeys still work.");
         g.text(font,hint,Math.max(4,(width-font.width(hint))/2),height-83,0xFFADBBD0,false);
         if (MenuCursor.keys().isEmpty()) g.text(font,Component.literal("No keys added yet."),width/2-55,72,0xFFADBBD0,false);
         super.extractRenderState(g,mx,my,delta);

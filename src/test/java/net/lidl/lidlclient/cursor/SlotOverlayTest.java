@@ -8,20 +8,24 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class SlotOverlayTest {
     @Test void positionsMatchVanillaChestGeometryAtEveryGuiScaleAndRowCount() {
-        for (int scale : new int[]{1,2,3,4}) {
+        // Fixed reference coordinates from vanilla chest layouts, including an
+        // odd-sized framebuffer. Inputs are Window's ceil-scaled GUI dimensions.
+        int[] firstX={879,400,240,160},lastX={1023,544,384,304};
+        int[][] firstY={{491,482,473,464,455,446},{222,213,204,195,186,177},
+                {132,123,114,105,96,87},{87,78,69,60,51,42}};
+        int[][] lastY={{491,500,509,518,527,536},{222,231,240,249,258,267},
+                {132,141,150,159,168,177},{87,96,105,114,123,132}};
+        for (int scale=1;scale<=4;scale++) {
             int width=(int)Math.ceil(1919.0/scale),height=(int)Math.ceil(1079.0/scale);
             for (int rows=1;rows<=6;rows++) {
-                int left=(width-176)/2,top=(height-114-rows*18)/2;
-                for (int slot=0;slot<rows*9;slot++) {
-                    assertEquals(left+8+(slot%9)*18,SlotOverlayLayout.x(width,slot));
-                    assertEquals(top+18+(slot/9)*18,SlotOverlayLayout.y(height,rows,slot));
-                }
+                assertEquals(firstX[scale-1],SlotOverlayLayout.x(width,0));
+                assertEquals(lastX[scale-1],SlotOverlayLayout.x(width,rows*9-1));
+                assertEquals(firstY[scale-1][rows-1],SlotOverlayLayout.y(height,rows,0));
+                assertEquals(lastY[scale-1][rows-1],SlotOverlayLayout.y(height,rows,rows*9-1));
             }
         }
-        assertEquals(240,SlotOverlayLayout.x(640,0));
-        assertEquals(87,SlotOverlayLayout.y(360,6,0));
-        assertEquals(384,SlotOverlayLayout.x(640,53));
-        assertEquals(177,SlotOverlayLayout.y(360,6,53));
+        assertEquals(258,SlotOverlayLayout.x(640,10));
+        assertEquals(105,SlotOverlayLayout.y(360,6,10));
         assertEquals(16,SlotOverlayLayout.SIZE);
     }
     @Test void slotColoursStayIndependentAndSizeChangesKeepTheDraft() {

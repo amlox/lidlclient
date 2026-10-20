@@ -7,8 +7,9 @@ public final class PanelResize {
     private PanelResize() { }
     public static int edges(double mx,double my,int x,int y,int w,int h) {
         int result=0;
-        if (mx<x+6) result|=LEFT; else if (mx>=x+w-6) result|=RIGHT;
-        if (my<y+6) result|=TOP; else if (my>=y+h-6) result|=BOTTOM;
+        int grip=Math.clamp(Math.min(w,h)/40,2,6);
+        if (mx<x+grip) result|=LEFT; else if (mx>=x+w-grip) result|=RIGHT;
+        if (my<y+grip) result|=TOP; else if (my>=y+h-grip) result|=BOTTOM;
         return result;
     }
     public static Bounds resize(Bounds start,int edges,double dx,double dy,int vw,int vh,int minW,int minH) {

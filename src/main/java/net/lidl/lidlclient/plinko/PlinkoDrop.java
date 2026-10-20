@@ -4,12 +4,12 @@ import java.util.random.RandomGenerator;
 
 /** Visual path only: no economy, payout selection, or frame-rate-dependent physics. */
 public final class PlinkoDrop {
-    public static final int ROWS=12;
+    public static final int ROWS=12, FIRST_ROW=5, BUCKETS=ROWS+FIRST_ROW;
     public static final double FALL=.32, HOP=.22, LAND=FALL+ROWS*HOP, DURATION=LAND+.45;
     private final double[] xs=new double[ROWS+2];
     public PlinkoDrop(RandomGenerator random) {
         xs[0]=xs[1]=.5;
-        double step=.84/(ROWS+1)/2;
+        double step=.84/BUCKETS/2;
         for (int i=2;i<xs.length;i++) xs[i]=xs[i-1]+(random.nextBoolean()?step:-step);
     }
     public double x(double age) {

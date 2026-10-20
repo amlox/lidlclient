@@ -73,9 +73,10 @@ public final class PlinkoPanel implements HudPanel {
     @Override public int preferredWidth() { return 260; }
     @Override public int preferredHeight() { return 280; }
 
-    @Override public int minimumWidth() { return 220; }
-    @Override public int minimumHeight() { return 240; }
+    @Override public int minimumWidth() { return 104; }
+    @Override public int minimumHeight() { return 112; }
     @Override public boolean click(double x,double y,int w,int h) {
+        x=x*260/w; y=y*280/h; w=260; h=280;
         if (x>=w/2-44 && x<w/2+44 && y>=h-23 && y<h-7) { spawn(); return true; }
         return false;
     }
@@ -84,13 +85,13 @@ public final class PlinkoPanel implements HudPanel {
         int count=PlinkoDrop.ROWS;
         if (w==cachedWidth && h==cachedHeight && count==cachedRows) return;
         cachedWidth=w; cachedHeight=h; cachedRows=count;
-        int total=count*(count+1)/2;
-        pegX=new int[total]; pegY=new int[total]; binEdges=new int[count+2];
-        double pitch=(w*.84)/(count+1), top=h*.19, bottom=h*.79;
+        int total=count*(2*PlinkoDrop.FIRST_ROW+count-1)/2;
+        pegX=new int[total]; pegY=new int[total]; binEdges=new int[PlinkoDrop.BUCKETS+1];
+        double pitch=(w*.84)/PlinkoDrop.BUCKETS, top=h*.19, bottom=h*.79;
         pegSize=Math.max(1,(int)Math.round(Math.min(w,h)/100.0));
         int index=0;
         for (int row=0;row<count;row++) {
-            int columns=row+1;
+            int columns=row+PlinkoDrop.FIRST_ROW;
             for (int col=0;col<columns;col++) {
                 pegX[index]=(int)Math.round(w*.5+(col-(columns-1)*.5)*pitch)-pegSize/2;
                 pegY[index]=(int)Math.round(top+row*(bottom-top)/(count-1))-pegSize/2;
@@ -102,6 +103,14 @@ public final class PlinkoPanel implements HudPanel {
         boardBottom=(int)Math.round(h*.83); binBottom=(int)Math.round(h*.89);
     }
     @Override public void render(GuiGraphicsExtractor g,int x,int y,int w,int h,boolean editing) {
+        // Render in a stable design space: text, buttons, balls and pegs scale together.
+        g.pose().pushMatrix();
+        g.pose().translate((float)x,(float)y);
+        g.pose().scale(w/260f,h/280f);
+        try { renderBoard(g,editing); } finally { g.pose().popMatrix(); }
+    }
+    private void renderBoard(GuiGraphicsExtractor g,boolean editing) {
+        int x=0,y=0,w=260,h=280;
         layout(w,h);
         int alpha=(int)Math.round(opacity*255/100);
         if (alpha>0) g.fill(x,y,x+w,y+h,(alpha<<24)|(background&0xFFFFFF));

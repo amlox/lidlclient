@@ -3,7 +3,7 @@
 Enable **Plinko** in `/lidl` → Gambling. It starts disabled. Right-click for
 background opacity (0–80%), border thickness (1–3 GUI pixels), separate accent,
 peg and panel colours, and **Drop test**. Size and row-count sliders have been
-removed. The board has twelve triangular rows: one peg, then two, through twelve.
+removed. The board has twelve triangular rows: five pegs, then six, through sixteen.
 
 ## Editor
 
@@ -13,7 +13,7 @@ Use `/lidlgui`, General settings → **GUI editor**, or Plinko → **Move panels
 - Drag any edge or corner to resize it; corner handles appear only in the editor.
 - Middle-click a panel to open its module/category with settings expanded and
   scrolled into view. Escape returns to the editor.
-- Plinko's minimum size is 220 × 240 GUI pixels. Width and height are independent.
+- Plinko's minimum size is 104 × 112 GUI pixels. Width and height are independent.
 - Done or Escape exits. Disabled panels remain editable previews.
 
 Positions and dimensions persist in the existing client configuration. Dragging
@@ -54,8 +54,8 @@ settings shortcut automatically. The host owns sizing, placement, and input;
 feature state remains outside the editor.
 
 There is one shared HUD hook and no simulation tick loop. Disabled panels do no
-render/layout work outside previews. Plinko caches geometry until dimensions
-change, draws 78 pegs with simple fills, and caps animated balls at eight. It uses
+render/layout work outside previews. Plinko renders in a fixed design space, scaling all contents and hit targets
+together with the panel. It caches board geometry, draws 126 pegs with simple fills, and caps animated balls at eight. It uses
 no blur, textures, particles, or per-frame path generation. Tests cover placement,
 anchored resizing, minimum/viewport limits, triangular path contacts, bucket
 landing, expiration, and frame-rate independence. In-game appearance, mouse

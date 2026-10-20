@@ -22,7 +22,7 @@ public final class PanelEditorScreen extends Screen {
     @Override protected void init() {
         finishDrag();
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
-                .bounds(width/2-40, height-24,80,20).build());
+                .bounds(4, height-24,56,20).build());
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
         g.fill(0,0,width,height,0x24000000);

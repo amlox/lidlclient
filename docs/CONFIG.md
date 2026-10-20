@@ -10,7 +10,7 @@ The file includes:
 - Each PartyCMDS command switch.
 - Your X/Y/Z size overrides. Reset to default removes the overrides.
 - The Dungeonbreaker keyboard or mouse binding (including changes in vanilla Controls).
-- Registered boolean, numeric and choice settings, including temporary test modules.
+- Registered boolean, numeric and choice settings.
 
 Existing party-command and player-size files are imported once without overwriting
 newer choices. Existing Minecraft keybind preferences are retained if no key is

@@ -12,8 +12,6 @@
     "requireAnnotations": true
   },
   "client": [
-    "DungeonMapDataAccessor",
-    "DungeonSecretsMixin",
     "PetsContainerClickMixin",
     "PetsScreenMixin",
     "PlayerSizeMixin",

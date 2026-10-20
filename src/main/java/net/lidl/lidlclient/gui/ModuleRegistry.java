@@ -15,6 +15,7 @@ import net.lidl.lidlclient.green.GreenScreen;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
 import net.lidl.lidlclient.names.NameChanger;
+import net.lidl.lidlclient.cursor.MenuCursor;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,6 +45,10 @@ public final class ModuleRegistry {
                 "Transparent green screen tint",
                 GreenScreen::isEnabled, GreenScreen::setEnabled));
 
+        modules.add(new GuiModule("menu_cursor", "Instant menu cursor", "QoL features",
+                "Release cursor while your menu hotkey loads", MenuCursor::isEnabled, MenuCursor::setEnabled,
+                new ActionSetting("Edit keybinds", MenuCursor::openBindings),
+                new NumberSetting("Wait timeout (seconds)", .25, 5, .25, MenuCursor::timeout, MenuCursor::setTimeout)));
         modules.add(new GuiModule("dungeonbreaker_swap", "Dungeonbreaker swap", "QoL features",
                 "Select Dungeonbreaker from your hotbar",
                 DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,

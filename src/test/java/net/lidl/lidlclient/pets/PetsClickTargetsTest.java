@@ -48,14 +48,21 @@ class PetsClickTargetsTest {
         }
     }
 
-    @Test void minecraftVersionHasEarlyPetClickHooks() throws Exception {
+    @Test void minecraftVersionHasPetAndCursorInputHooks() throws Exception {
         Map<String, List<String>> expected = Map.of(
                 "net/minecraft/client/gui/screens/inventory/AbstractContainerScreen", List.of(
                         "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
                         "getHoveredSlot(DD)Lnet/minecraft/world/inventory/Slot;",
                         "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ContainerInput;)V"),
                 "net/minecraft/client/multiplayer/MultiPlayerGameMode", List.of(
-                        "handleContainerInput(IIILnet/minecraft/world/inventory/ContainerInput;Lnet/minecraft/world/entity/player/Player;)V"));
+                        "handleContainerInput(IIILnet/minecraft/world/inventory/ContainerInput;Lnet/minecraft/world/entity/player/Player;)V"),
+                "net/minecraft/client/KeyboardHandler", List.of(
+                        "keyPress(JILnet/minecraft/client/input/KeyEvent;)V"),
+                "net/minecraft/client/MouseHandler", List.of(
+                        "grabMouse()V", "releaseMouse()V",
+                        "onButton(JLnet/minecraft/client/input/MouseButtonInfo;I)V"),
+                "net/minecraft/client/Minecraft", List.of(
+                        "setScreen(Lnet/minecraft/client/gui/screens/Screen;)V"));
         for (var entry : expected.entrySet()) {
             Set<String> actual = methods(entry.getKey());
             for (String method : entry.getValue()) {

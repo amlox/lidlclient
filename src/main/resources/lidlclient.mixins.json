@@ -12,6 +12,9 @@
     "requireAnnotations": true
   },
   "client": [
+    "MenuCursorKeyboardMixin",
+    "MenuCursorMouseMixin",
+    "MenuCursorScreenMixin",
     "PetsContainerClickMixin",
     "PetsScreenMixin",
     "PlayerSizeMixin",

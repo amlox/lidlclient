@@ -216,7 +216,7 @@ public class ModuleScreen extends Screen {
         if (setting instanceof ActionSetting action) {
             boolean hovered = contains(mouseX, mouseY, x + 6, y + 3, cardWidth() - 12, SETTING - 6);
             SmoothRenderer.panel(graphics, x + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
-                    hovered ? 0xB4425573 : 0xA02B374B, hovered ? WHITE : 0x907F90AB,
+                    GuiAppearance.tint(hovered ? 0xB4425573 : 0xA02B374B), hovered ? GuiAppearance.accent() : GuiAppearance.tint(0x907F90AB),
                     .9f, hovered ? 3 : 1, .24f, clip);
             int available = cardWidth() - 24;
             int labelWidth = Math.min(available, UiText.width(font, action.label()));
@@ -227,8 +227,8 @@ public class ModuleScreen extends Screen {
         boolean on = setting instanceof BooleanSetting bool && bool.value();
         boolean hovered = contains(mouseX, mouseY, x, y, cardWidth(), SETTING);
         SmoothRenderer.panel(graphics, x + 6, y + 3, cardWidth() - 12, SETTING - 6, 5,
-                on ? 0x883E4D67 : (hovered ? 0x782B374B : 0x50080D17),
-                on ? 0xAACFDDF5 : (hovered ? 0x907F90AB : 0x303F4D66),
+                GuiAppearance.tint(on ? 0x883E4D67 : (hovered ? 0x782B374B : 0x50080D17)),
+                GuiAppearance.tint(on ? 0xAACFDDF5 : (hovered ? 0x907F90AB : 0x303F4D66)),
                 .7f, on ? 3 : (hovered ? 2 : 0), on ? .3f : .18f, clip);
         String value = setting == bindingKey ? "Press key..." : setting.valueText();
         int valueWidth = Math.min(UiText.width(font, value), Math.max(24, cardWidth() / 3));

@@ -53,7 +53,9 @@ class PetsClickTargetsTest {
                 "net/minecraft/client/gui/screens/inventory/AbstractContainerScreen", List.of(
                         "mouseClicked(Lnet/minecraft/client/input/MouseButtonEvent;Z)Z",
                         "getHoveredSlot(DD)Lnet/minecraft/world/inventory/Slot;",
-                        "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ContainerInput;)V"));
+                        "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ContainerInput;)V"),
+                "net/minecraft/client/multiplayer/MultiPlayerGameMode", List.of(
+                        "handleContainerInput(IIILnet/minecraft/world/inventory/ContainerInput;Lnet/minecraft/world/entity/player/Player;)V"));
         for (var entry : expected.entrySet()) {
             Set<String> actual = methods(entry.getKey());
             for (String method : entry.getValue()) {

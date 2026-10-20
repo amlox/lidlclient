@@ -17,7 +17,7 @@ import net.minecraft.world.item.Items;
 import java.util.List;
 import java.util.Locale;
 
-/** Sends a server-only pet click without local inventory pickup, then closes immediately. */
+/** Sends a version-correct pet selection and clears pickup prediction before closing. */
 public final class ZeroPingPets implements ClientModInitializer {
     private static boolean enabled = ClientConfig.bool("instant_pets", "enabled", true);
     private static final PetsMenuRules GUARD = new PetsMenuRules();
@@ -48,7 +48,8 @@ public final class ZeroPingPets implements ClientModInitializer {
         Minecraft client = Minecraft.getInstance();
         if (!enabled || !onHypixel(client) || client.player == null || slot == null
                 || client.getConnection() == null || client.gameMode == null || client.screen != screen
-                || !(screen.getMenu() instanceof ChestMenu chest) || !chest.getCarried().isEmpty()) return false;
+                || !(screen.getMenu() instanceof ChestMenu chest) || client.player.containerMenu != chest
+                || !chest.getCarried().isEmpty()) return false;
         var stack = slot.getItem();
         var lore = stack.get(DataComponents.LORE);
         List<String> lines = lore == null ? List.of() : lore.lines().stream().map(line -> line.getString()).toList();
@@ -60,7 +61,12 @@ public final class ZeroPingPets implements ClientModInitializer {
         selectedConnection = client.getConnection();
         // Use the game's packet/state-id/hashed-stack handling. Close in this same
         // click callback, so pickup prediction is never visible for a rendered frame.
-        client.gameMode.handleInventoryMouseClick(chest.containerId, slotId, button, input, client.player);
+        var selectedStack = stack.copy();
+        client.gameMode.handleContainerInput(chest.containerId, slotId, button, input, client.player);
+        // This is a server menu action, not a real pickup. Restore prediction before
+        // closeContainer can return a carried pet icon to the player's inventory.
+        slot.set(selectedStack);
+        chest.setCarried(net.minecraft.world.item.ItemStack.EMPTY);
         client.player.closeContainer();
         return true;
     }

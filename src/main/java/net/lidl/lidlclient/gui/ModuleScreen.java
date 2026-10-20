@@ -55,7 +55,21 @@ public class ModuleScreen extends Screen {
     private String layoutExpandedId;
     private List<ModuleLayout.Row> layoutRows = List.of();
 
+    private Screen returnScreen;
+    private boolean revealModule;
+
     public ModuleScreen() { this(ModuleRegistry.modules(), ModuleRegistry.CATEGORIES); }
+
+    public ModuleScreen(String moduleId,Screen parent) {
+        this();
+        returnScreen=parent;
+        for (GuiModule module:modules) if (module.id().equals(moduleId)) {
+            selectedCategory=module.category(); expandedId=module.id(); revealModule=true; break;
+        }
+    }
+    @Override public void onClose() {
+        if (returnScreen!=null) minecraft.setScreen(returnScreen); else super.onClose();
+    }
 
     /** Also useful for custom registries and stress-testing large menus. */
     public ModuleScreen(List<GuiModule> modules) {
@@ -74,6 +88,10 @@ public class ModuleScreen extends Screen {
         draggingNumber = null;
         draggingScrollbar = false;
         panelWidth = Math.min(width, Math.max(220, Math.min(300, Math.round(width * 0.32f))));
+        if (revealModule) {
+            for (var row:rows()) if (row.module().id().equals(expandedId)) scroll=row.top();
+            revealModule=false;
+        }
         clampScroll();
         updateSlide();
     }

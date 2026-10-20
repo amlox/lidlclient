@@ -18,23 +18,27 @@ public final class PanelHost {
     public static final class Entry {
         public final HudPanel panel;
         public final PanelPlacement placement;
+        private int savedWidth, savedHeight;
         private Entry(HudPanel panel) {
             this.panel = panel;
             Double x = ClientConfig.number("panel_layout", panel.id()+".x");
             Double y = ClientConfig.number("panel_layout", panel.id()+".y");
             placement = new PanelPlacement(x == null ? .8 : x, y == null ? .5 : y);
+            Double w=ClientConfig.number("panel_layout",panel.id()+".width");
+            Double h=ClientConfig.number("panel_layout",panel.id()+".height");
+            savedWidth=w==null?panel.preferredWidth():(int)Math.clamp(w,panel.minimumWidth(),8192);
+            savedHeight=h==null?panel.preferredHeight():(int)Math.clamp(h,panel.minimumHeight(),8192);
         }
-        public int width(int viewportWidth, int viewportHeight) {
-            return Math.max(1, (int)Math.floor(panel.preferredWidth()*fit(viewportWidth,viewportHeight)));
-        }
-        public int height(int viewportWidth, int viewportHeight) {
-            return Math.max(1, (int)Math.floor(panel.preferredHeight()*fit(viewportWidth,viewportHeight)));
-        }
-        private double fit(int w, int h) {
-            return Math.min(1, Math.min((double)Math.max(1,w)/panel.preferredWidth(),
-                    (double)Math.max(1,h)/panel.preferredHeight()));
+        public int width(int vw,int vh) { return Math.max(1,Math.min(vw,savedWidth)); }
+        public int height(int vw,int vh) { return Math.max(1,Math.min(vh,savedHeight)); }
+        public void resize(PanelResize.Bounds bounds,int vw,int vh) {
+            savedWidth=Math.max(panel.minimumWidth(),bounds.width());
+            savedHeight=Math.max(panel.minimumHeight(),bounds.height());
+            placement.move(bounds.x(),bounds.y(),vw,vh,width(vw,vh),height(vw,vh));
         }
         public void save() {
+            ClientConfig.set("panel_layout",panel.id()+".width",savedWidth);
+            ClientConfig.set("panel_layout",panel.id()+".height",savedHeight);
             ClientConfig.set("panel_layout", panel.id()+".x", placement.xFraction());
             ClientConfig.set("panel_layout", panel.id()+".y", placement.yFraction());
         }

@@ -1,50 +1,62 @@
 # Plinko and movable panels
 
-Enable **Plinko** in `/lidl` → Gambling. It starts disabled. This version provides
-the board and customization foundation; balls, bets, currency, payouts, upgrades,
-and progression are not implemented yet.
+Enable **Plinko** in `/lidl` → Gambling. It starts disabled. Right-click for
+background opacity (0–80%), border thickness (1–3 GUI pixels), separate accent,
+peg and panel colours, and **Drop test**. Size and row-count sliders have been
+removed. The board has twelve triangular rows: one peg, then two, through twelve.
 
-Right-click Plinko for panel size (50–175%), background opacity (0–80%), border
-thickness (1–3 GUI pixels), peg rows (6–16), and separate accent, peg, and panel
-colours. The default is a translucent dark panel with a two-pixel border. Setting
-background opacity to zero makes the interior completely transparent. Settings
-and positions persist in the existing client configuration.
+## Editor
 
-## Moving panels
+Use `/lidlgui`, General settings → **GUI editor**, or Plinko → **Move panels**.
 
-Use `/lidlgui`, click **GUI editor** in General settings, or use Plinko's
-**Move panels** action. Left-drag anywhere on a panel. Done or Escape exits.
-Disabled panels appear as previews so they can be arranged without enabling them.
-Only the editor handles panel mouse input; normal gameplay stays untouched.
-Positions save on drag release and if the editor closes during a drag. The editor
-is a temporary mode and is never reopened by loading saved settings.
+- Drag inside a panel to move it.
+- Drag any edge or corner to resize it; corner handles appear only in the editor.
+- Middle-click a panel to open its module/category with settings expanded and
+  scrolled into view. Escape returns to the editor.
+- Plinko's minimum size is 220 × 240 GUI pixels. Width and height are independent.
+- Done or Escape exits. Disabled panels remain editable previews.
 
-The host uses Minecraft GUI coordinates, fits oversized panels to the viewport,
-and stores position as a fraction of available horizontal/vertical travel. Window
-resizing and GUI scale changes retain relative placement without moving panels
-off-screen. Panels are hidden while other screens are open; the editor renders
-its own previews without a duplicate HUD pass. Vanilla HUD hiding also applies.
+Positions and dimensions persist in the existing client configuration. Dragging
+saves on release or screen exit, not every frame. The editor is a temporary mode
+and never opens automatically when settings load. When the viewport is smaller
+than a panel, its displayed dimensions are capped to fit; saved dimensions are
+retained so expanding the window restores them. Relative placement keeps panels
+on-screen through GUI-scale and window changes. Resizing anchors the opposite
+edge/corner and clamps to both minimum size and the viewport.
 
-## Adding a future panel
+Only the editor handles panel mouse input. HUD panels are hidden while other
+screens are open; the editor renders its own previews without a duplicate HUD
+pass. Vanilla HUD hiding applies. The editor does not use Minecraft's menu blur.
 
-Implement `HudPanel` with a unique ID, enabled state, positive preferred dimensions,
-and a render method. Register one instance in `PanelHost.initialize()`. Declare its
-toggle and settings in `ModuleRegistry`. The host supplies fitted GUI bounds and
-the editing flag, manages dragging, and saves placement under `panel_layout`.
-Keep gameplay/progression state outside the editor and renderer. The editor does
-not enable modules or advance games. The editor card bypasses module persistence
-because it is a screen action, not a lasting feature toggle.
+## Drop test
 
-## Performance and validation
+Click **Drop test** at the bottom of the board in the editor, or use the module's
+Drop test action (which opens the editor). This works with disabled previews too.
+Each ball starts at the center, falls toward the first peg, then follows a random
+left/right bounce path through all twelve rows into a bucket. It rests briefly
+and fades. Up to eight concurrent drops are allowed; the button shows when full.
+Disabling Plinko clears existing drops. Drops use elapsed monotonic time, so
+animation speed is independent of frame rate, and expired drops are removed on
+the next render or spawn. Hidden drops do no work and may finish while hidden.
+Resizing maps the same normalized path to the new board without restarting it.
 
-There is one shared HUD hook, no background tick simulation or animation, and no
-blur, shaders, textures, or particles. Disabled panels return before rendering or
-layout. Plinko caches peg and bucket coordinates until dimensions/rows change,
-uses simple GUI fills and cached title components, and caps rows at 16 (168 pegs).
-Dragging writes configuration only at release/exit, never every frame.
+This is a visual animation prototype, not a physics/economy simulation. There are
+no balances, bets, payouts, profit calculations, or upgrades. `PlinkoDrop` is
+separate from rendering so future outcome logic can supply animation paths.
 
-Placement tests cover fixed coordinates at different viewport sizes, edge
-clamping, position restoration, tiny windows, and corrupt coordinates. Test live
-with `/lidlgui` at several GUI scales, drag to every edge, reopen/restart, and
-toggle Plinko off to check the editor preview and gameplay visibility separately.
-Actual in-game visual appearance and FPS still need a Minecraft client check.
+## Future panels and performance
+
+Implement `HudPanel` with a unique module ID, enabled state, preferred/minimum
+dimensions, and render method. Optionally implement its local-coordinate click
+handler for editor controls. Register an instance in `PanelHost.initialize()` and
+its toggle/settings in `ModuleRegistry`. Matching IDs provide the middle-click
+settings shortcut automatically. The host owns sizing, placement, and input;
+feature state remains outside the editor.
+
+There is one shared HUD hook and no simulation tick loop. Disabled panels do no
+render/layout work outside previews. Plinko caches geometry until dimensions
+change, draws 78 pegs with simple fills, and caps animated balls at eight. It uses
+no blur, textures, particles, or per-frame path generation. Tests cover placement,
+anchored resizing, minimum/viewport limits, triangular path contacts, bucket
+landing, expiration, and frame-rate independence. In-game appearance, mouse
+interaction, and FPS still need a Minecraft client check.

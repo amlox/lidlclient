@@ -39,10 +39,9 @@ public final class ModuleRegistry {
         modules.add(new GuiModule("plinko", "Plinko", "Gambling", "Customizable Plinko board",
                 PlinkoPanel::isEnabled, PlinkoPanel::setEnabled,
                 new ActionSetting("Move panels", PanelHost::openEditor),
-                new NumberSetting("Panel size (%)",50,175,5,PlinkoPanel::scale,PlinkoPanel::setScale),
+                new ActionSetting("Drop test", PlinkoPanel::dropTest),
                 new NumberSetting("Background opacity (%)",0,80,5,PlinkoPanel::opacity,PlinkoPanel::setOpacity),
                 new NumberSetting("Border thickness",1,3,1,PlinkoPanel::border,PlinkoPanel::setBorder),
-                new NumberSetting("Peg rows",6,16,1,PlinkoPanel::rows,PlinkoPanel::setRows),
                 new ActionSetting("Accent colour",PlinkoPanel::editAccent),
                 new ActionSetting("Peg colour",PlinkoPanel::editPegs),
                 new ActionSetting("Panel colour",PlinkoPanel::editBackground)));

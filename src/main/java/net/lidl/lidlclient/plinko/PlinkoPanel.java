@@ -8,11 +8,28 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
-/** Static board foundation. Future game state can be added without changing the panel host. */
+/** Cached triangular board with bounded visual-only test drops. */
 public final class PlinkoPanel implements HudPanel {
     public static final String ID = "plinko";
     private static boolean enabled;
-    private static double scale=100, opacity=25, border=2, rows=12;
+    private static double opacity=25, border=2;
+    private record Ball(PlinkoDrop path,long started) { }
+    private static final java.util.List<Ball> BALLS=new java.util.ArrayList<>(8);
+    private static final Component DROP=Component.literal("Drop test");
+    private static final Component FULL=Component.literal("Drop test (8/8)");
+    public static void dropTest() {
+        net.lidl.lidlclient.hud.PanelHost.openEditor();
+        spawn();
+    }
+    private static void spawn() {
+        long now=System.nanoTime();
+        expire(now);
+        if (BALLS.size()<8) BALLS.add(new Ball(new PlinkoDrop(java.util.concurrent.ThreadLocalRandom.current()),now));
+    }
+    private static void expire(long now) {
+        for (int i=BALLS.size()-1;i>=0;i--)
+            if ((now-BALLS.get(i).started())/1e9>=PlinkoDrop.DURATION) BALLS.remove(i);
+    }
     private static int accent=loadColour("Accent colour",0xFF91BFFF);
     private static int pegs=loadColour("Peg colour",0xFFE8EDF7);
     private static int background=loadColour("Panel colour",0xFF101622);
@@ -23,15 +40,11 @@ public final class PlinkoPanel implements HudPanel {
     private int pegSize, boardBottom, binBottom;
 
     public static boolean isEnabled() { return enabled; }
-    public static void setEnabled(boolean value) { enabled=value; }
-    public static double scale() { return scale; }
-    public static void setScale(double value) { scale=clamp(value,50,175,100); }
+    public static void setEnabled(boolean value) { enabled=value; if (!value) BALLS.clear(); }
     public static double opacity() { return opacity; }
     public static void setOpacity(double value) { opacity=clamp(value,0,80,25); }
     public static double border() { return border; }
     public static void setBorder(double value) { border=clamp(value,1,3,2); }
-    public static double rows() { return rows; }
-    public static void setRows(double value) { rows=Math.round(clamp(value,6,16,12)); }
     private static double clamp(double value,double min,double max,double fallback) {
         return Double.isFinite(value)?Math.clamp(value,min,max):fallback;
     }
@@ -57,20 +70,27 @@ public final class PlinkoPanel implements HudPanel {
     }
     @Override public String id() { return ID; }
     @Override public boolean enabled() { return enabled; }
-    @Override public int preferredWidth() { return (int)Math.round(260*scale/100); }
-    @Override public int preferredHeight() { return (int)Math.round(280*scale/100); }
+    @Override public int preferredWidth() { return 260; }
+    @Override public int preferredHeight() { return 280; }
+
+    @Override public int minimumWidth() { return 220; }
+    @Override public int minimumHeight() { return 240; }
+    @Override public boolean click(double x,double y,int w,int h) {
+        if (x>=w/2-44 && x<w/2+44 && y>=h-23 && y<h-7) { spawn(); return true; }
+        return false;
+    }
 
     private void layout(int w,int h) {
-        int count=(int)rows;
+        int count=PlinkoDrop.ROWS;
         if (w==cachedWidth && h==cachedHeight && count==cachedRows) return;
         cachedWidth=w; cachedHeight=h; cachedRows=count;
-        int total=count*(count+5)/2;
-        pegX=new int[total]; pegY=new int[total]; binEdges=new int[count+4];
-        double pitch=(w*.84)/(count+2), top=h*.19, bottom=h*.79;
+        int total=count*(count+1)/2;
+        pegX=new int[total]; pegY=new int[total]; binEdges=new int[count+2];
+        double pitch=(w*.84)/(count+1), top=h*.19, bottom=h*.79;
         pegSize=Math.max(1,(int)Math.round(Math.min(w,h)/100.0));
         int index=0;
         for (int row=0;row<count;row++) {
-            int columns=row+3;
+            int columns=row+1;
             for (int col=0;col<columns;col++) {
                 pegX[index]=(int)Math.round(w*.5+(col-(columns-1)*.5)*pitch)-pegSize/2;
                 pegY[index]=(int)Math.round(top+row*(bottom-top)/(count-1))-pegSize/2;
@@ -79,7 +99,7 @@ public final class PlinkoPanel implements HudPanel {
         }
         for (int i=0;i<binEdges.length;i++)
             binEdges[i]=(int)Math.round(w*.08+i*(w*.84)/(binEdges.length-1));
-        boardBottom=(int)Math.round(h*.85); binBottom=(int)Math.round(h*.94);
+        boardBottom=(int)Math.round(h*.83); binBottom=(int)Math.round(h*.89);
     }
     @Override public void render(GuiGraphicsExtractor g,int x,int y,int w,int h,boolean editing) {
         layout(w,h);
@@ -102,6 +122,23 @@ public final class PlinkoPanel implements HudPanel {
         for (int i=0;i<binEdges.length-1;i++)
             g.fill(x+binEdges[i]+1,y+boardBottom,x+binEdges[i+1]-1,y+binBottom,binTint);
         g.fill(x+binEdges[0],y+binBottom,x+binEdges[binEdges.length-1],y+binBottom+1,accent);
+        long now=System.nanoTime();
+        expire(now);
+        int radius=Math.max(2,(int)Math.round(Math.min(w,h)*.009));
+        for (int i=0;i<BALLS.size();i++) {
+            Ball ball=BALLS.get(i);
+            double age=(now-ball.started())/1e9;
+            int bx=x+(int)Math.round(ball.path().x(age)*w),by=y+(int)Math.round(ball.path().y(age)*h);
+            int tint=((int)Math.round(255*ball.path().opacity(age))<<24)|0xFFF0A6;
+            // Two clipped quads form a small rounded ball without textures or particles.
+            g.fill(bx-radius+1,by-radius,bx+radius-1,by+radius,tint);
+            g.fill(bx-radius,by-radius+1,bx+radius,by+radius-1,tint);
+        }
+        if (editing && w>=100 && h>=100) {
+            g.fill(x+w/2-44,y+h-23,x+w/2+44,y+h-7,0x553A506E);
+            Component label=BALLS.size()<8?DROP:FULL;
+            g.text(font,label,x+(w-font.width(label))/2,y+h-19,accent,false);
+        }
         g.disableScissor();
     }
 }

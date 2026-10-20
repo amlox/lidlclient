@@ -11,8 +11,10 @@ import net.minecraft.network.chat.Component;
 public final class PanelEditorScreen extends Screen {
     private final Screen parent;
     private PanelHost.Entry dragging;
-    private double offsetX, offsetY;
-    private static final Component HELP = Component.literal("Drag panels to move • Disabled modules are previews");
+    private double offsetX, offsetY, startMouseX, startMouseY;
+    private int resizeEdges;
+    private PanelResize.Bounds startBounds;
+    private static final Component HELP = Component.literal("Drag inside: move • Edges: resize • Middle-click: settings");
     public PanelEditorScreen(Screen parent) {
         super(Component.literal("Lidl GUI editor"));
         this.parent = parent;
@@ -25,6 +27,15 @@ public final class PanelEditorScreen extends Screen {
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
         g.fill(0,0,width,height,0x24000000);
         PanelHost.render(g,true);
+        for (var entry:PanelHost.entries()) {
+            int w=entry.width(width,height),h=entry.height(width,height);
+            int x=entry.placement.x(width,w),y=entry.placement.y(height,h);
+            // Corner handles are editor-only, and stay clear of panel contents.
+            for (int i=0;i<4;i++) {
+                int cx=(i&1)==0?x:x+w-5,cy=(i&2)==0?y:y+h-5;
+                g.fill(cx,cy,cx+5,cy+5,0xFFE8EDF7);
+            }
+        }
         g.text(font,HELP,Math.max(2,(width-font.width(HELP))/2),8,0xFFF3F5FC,true);
         super.extractRenderState(g,mx,my,delta);
     }
@@ -34,20 +45,34 @@ public final class PanelEditorScreen extends Screen {
     }
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean twice) {
         if (super.mouseClicked(event,twice)) return true;
-        if (event.button()!=0) return false;
+        if (event.button()!=0 && event.button()!=2) return false;
         var entries = PanelHost.entries();
         for (int i=entries.size()-1; i>=0; i--) {
             var entry=entries.get(i);
             int w=entry.width(width,height), h=entry.height(width,height);
             int x=entry.placement.x(width,w), y=entry.placement.y(height,h);
             if (event.x()>=x && event.x()<x+w && event.y()>=y && event.y()<y+h) {
-                dragging=entry; offsetX=event.x()-x; offsetY=event.y()-y; return true;
+                if (event.button()==2) {
+                    Minecraft.getInstance().setScreen(new net.lidl.lidlclient.gui.ModuleScreen(entry.panel.id(),this));
+                    return true;
+                }
+                resizeEdges=PanelResize.edges(event.x(),event.y(),x,y,w,h);
+                if (resizeEdges==0 && entry.panel.click(event.x()-x,event.y()-y,w,h)) return true;
+                dragging=entry; offsetX=event.x()-x; offsetY=event.y()-y;
+                startMouseX=event.x(); startMouseY=event.y();
+                startBounds=new PanelResize.Bounds(x,y,w,h);
+                return true;
             }
         }
         return false;
     }
     @Override public boolean mouseDragged(MouseButtonEvent event,double dx,double dy) {
         if (dragging==null || event.button()!=0) return super.mouseDragged(event,dx,dy);
+        if (resizeEdges!=0) {
+            dragging.resize(PanelResize.resize(startBounds,resizeEdges,event.x()-startMouseX,event.y()-startMouseY,
+                    width,height,dragging.panel.minimumWidth(),dragging.panel.minimumHeight()),width,height);
+            return true;
+        }
         dragging.placement.move(event.x()-offsetX,event.y()-offsetY,width,height,
                 dragging.width(width,height),dragging.height(width,height));
         return true;

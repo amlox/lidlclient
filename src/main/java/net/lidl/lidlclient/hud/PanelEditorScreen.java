@@ -28,6 +28,10 @@ public final class PanelEditorScreen extends Screen {
         g.text(font,HELP,Math.max(2,(width-font.width(HELP))/2),8,0xFFF3F5FC,true);
         super.extractRenderState(g,mx,my,delta);
     }
+    @Override public void extractBackground(GuiGraphicsExtractor g,int mx,int my,float delta) {
+        // Vanilla Screen adds a full-screen blur here. Keep the world visible and cheap.
+        Minecraft.getInstance().gui.extractDeferredSubtitles();
+    }
     @Override public boolean mouseClicked(MouseButtonEvent event, boolean twice) {
         if (super.mouseClicked(event,twice)) return true;
         if (event.button()!=0) return false;

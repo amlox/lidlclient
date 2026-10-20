@@ -27,10 +27,13 @@ public final class MenuCursorKeysScreen extends Screen {
         for (int row = 0; row < perPage && page*perPage+row < keys.size(); row++) {
             int index = page*perPage+row;
             int y = 66+row*24;
-            addRenderableWidget(Button.builder(keys.get(index).getDisplayName(),b -> {}).bounds(left,y,190,20).build()).active = false;
+            var key=keys.get(index);
+            addRenderableWidget(Button.builder(key.getDisplayName().copy().append(" · Slots"),b ->
+                    Minecraft.getInstance().setScreen(new SlotOverlayScreen(this,key)))
+                    .bounds(left,y,190,20).build()).active = !capturing;
             addRenderableWidget(Button.builder(Component.literal("Remove"),b -> {
                 MenuCursor.removeKey(index); rebuildWidgets();
-            }).bounds(left+196,y,74,20).build());
+            }).bounds(left+196,y,74,20).build()).active = !capturing;
         }
         int bottom = height-66;
         addRenderableWidget(Button.builder(Component.literal("Previous"),b -> { page--; rebuildWidgets(); })

@@ -48,6 +48,8 @@ public final class ModuleRegistry {
         modules.add(new GuiModule("menu_cursor", "Instant menu cursor", "QoL features",
                 "Release cursor while your menu hotkey loads", MenuCursor::isEnabled, MenuCursor::setEnabled,
                 new ActionSetting("Edit keybinds", MenuCursor::openBindings),
+                new BooleanSetting("Show slot overlay", MenuCursor::showOverlay, MenuCursor::setShowOverlay),
+                new NumberSetting("Slot opacity (%)", 5, 80, 5, MenuCursor::overlayOpacity, MenuCursor::setOverlayOpacity),
                 new NumberSetting("Wait timeout (seconds)", .25, 5, .25, MenuCursor::timeout, MenuCursor::setTimeout)));
         modules.add(new GuiModule("dungeonbreaker_swap", "Dungeonbreaker swap", "QoL features",
                 "Select Dungeonbreaker from your hotbar",

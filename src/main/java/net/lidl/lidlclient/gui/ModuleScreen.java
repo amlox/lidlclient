@@ -23,7 +23,6 @@ import java.util.List;
 /** Layout and widgets depend only on module declarations, never feature names or indices. */
 public class ModuleScreen extends Screen {
     private static final long SLIDE_DURATION_NS = 500_000_000L;
-    private static final int PANEL = 0x9805070D;
     private static final int WHITE = 0xFFF4F4FA;
     private static final int MUTED = 0xFFABAAB5;
     private static final int HEADER = 38;
@@ -147,15 +146,15 @@ public class ModuleScreen extends Screen {
         lastFrame = now;
         starOffset += (scroll * .14 - starOffset) * (1 - Math.exp(-elapsed * 12));
         ambientOffset += elapsed * 2.5; // Gentle downward drift, independent of scroll parallax.
-        graphics.fill(Math.round(backgroundX), 0, Math.round(backgroundX) + panelWidth, height, PANEL);
+        graphics.fill(Math.round(backgroundX), 0, Math.round(backgroundX) + panelWidth, height, GuiAppearance.background());
         int backgroundLeft = Math.max(0, Math.round(backgroundX));
         int backgroundRight = Math.max(backgroundLeft, Math.min(width, Math.round(backgroundX) + panelWidth - 9));
-        ConstellationRenderer.background(graphics, backgroundX, panelWidth - 9, height,
+        if (GuiAppearance.stars()) ConstellationRenderer.background(graphics, backgroundX, panelWidth - 9, height,
                 starOffset - ambientOffset, (now - openedAt) / 1_000_000_000.0,
                 new ScreenRectangle(backgroundLeft, 0, backgroundRight - backgroundLeft, height));
         graphics.fill(Math.round(panelX), 0, Math.round(panelX) + RAIL, height, 0x30000000);
         SmoothRenderer.line(graphics, panelX + RAIL, 0, height, 0.65f, 0x66FFFFFF, 0, null);
-        SmoothRenderer.line(graphics, panelX + panelWidth - 5, 0, height, 0.9f, WHITE, 6, null);
+        SmoothRenderer.line(graphics, panelX + panelWidth - 5, 0, height, 0.9f, GuiAppearance.accent(), 6, null);
         SmoothRenderer.line(graphics, panelX + panelWidth - 8, 0, height, 0.5f, 0x80FFFFFF, 0, null);
         text(graphics, selectedCategory.isEmpty() ? "LidlClient" : selectedCategory,
                 cardX(), 16, cardWidth(), WHITE);
@@ -169,8 +168,8 @@ public class ModuleScreen extends Screen {
             boolean active = category.equals(selectedCategory);
             boolean hovered = contains(mouseX, mouseY, panelX + 7, y, 34, 36);
             SmoothRenderer.panel(graphics, panelX + 7, y, 34, 36, 7,
-                    active ? 0xBC344055 : (hovered ? 0xA0283243 : 0x8A10151F),
-                    active || hovered ? WHITE : 0xA5798598, 1,
+                    GuiAppearance.tint(active ? 0xBC344055 : (hovered ? 0xA0283243 : 0x8A10151F)),
+                    active || hovered ? GuiAppearance.accent() : GuiAppearance.tint(0xA5798598), 1,
                     active ? 7 : (hovered ? 5 : 1), active ? .42f : .24f, glowClip(rail, y));
             CategoryIcons.draw(graphics, category, panelX + 24, y + 18,
                     active ? WHITE : MUTED, rail);
@@ -188,13 +187,13 @@ public class ModuleScreen extends Screen {
             boolean enabled = module.isEnabled();
             boolean hovered = contains(mouseX, mouseY, x, y, cardWidth(), HEADER);
             SmoothRenderer.panel(graphics, x, y, cardWidth(), row.height(), 8,
-                    enabled ? 0xC0364258 : (hovered ? 0xB4263042 : 0x94101520),
-                    enabled ? WHITE : (hovered ? 0xFFE0E8F7 : 0xA5798598),
+                    GuiAppearance.tint(enabled ? 0xC0364258 : (hovered ? 0xB4263042 : 0x94101520)),
+                    enabled ? GuiAppearance.accent() : GuiAppearance.tint(hovered ? 0xFFE0E8F7 : 0xA5798598),
                     enabled ? 1.3f : .9f, enabled ? 10 : (hovered ? 6 : 1.5f),
                     enabled ? .55f : (hovered ? .32f : .14f), glowClip(clip, y));
             if (enabled) {
                 SmoothRenderer.panel(graphics, x + 3, y + 10, 2, HEADER - 20, 1,
-                        WHITE, WHITE, 0, 3, .38f, clip);
+                        GuiAppearance.accent(), GuiAppearance.accent(), 0, 3, .38f, clip);
             }
             text(graphics, module.name(), x + 12, Math.round(y + (HEADER - UiText.HEIGHT) / 2f + 1),
                     cardWidth() - 24, enabled ? WHITE : 0xFFD6DAE4);
@@ -244,7 +243,7 @@ public class ModuleScreen extends Screen {
                     0x407F7F8C, 0, 0, 0, clip);
             SmoothRenderer.panel(graphics, x + 12, y + 26,
                     Math.max(1, trackWidth * (float) number.fraction()), 2, 1,
-                    WHITE, 0, 0, 0, clip);
+                    GuiAppearance.accent(), 0, 0, 0, clip);
         }
     }
 

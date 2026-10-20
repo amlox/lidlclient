@@ -41,7 +41,7 @@ public final class SmoothRenderer {
                 .transformMaxBounds(pose);
         if (clip != null) bounds = clip.intersection(bounds);
         if (bounds == null) return;
-        graphics.guiRenderState.addGuiElement(new MeshState(pose, bounds, clip, x, y, width, height, radius, fill, border, stroke, glow, pixel, glowStrength));
+        graphics.guiRenderState.addGuiElement(new MeshState(pose.translate(x, y), bounds, clip, width, height, radius, fill, border, stroke, glow, pixel, glowStrength));
     }
 
     public static void line(GuiGraphicsExtractor graphics, float x, float y, float height,
@@ -59,7 +59,7 @@ public final class SmoothRenderer {
     }
 
     private record MeshState(Matrix3x2f pose, ScreenRectangle bounds, ScreenRectangle scissorArea,
-                             float x, float y, float width, float height, float radius,
+                             float width, float height, float radius,
                              int fill, int border, float stroke, float glow, float pixel, float glowStrength)
             implements GuiElementRenderState {
         @Override public RenderPipeline pipeline() { return RenderPipelines.GUI; }
@@ -67,30 +67,32 @@ public final class SmoothRenderer {
         @Override public void buildVertices(VertexConsumer consumer) {
             var mesh = new RoundedGeometry.MeshBuilder((vx, vy, color) ->
                     consumer.addVertexWith2DPose(pose, vx, vy).setColor(color));
-            int segments = Math.clamp((int) Math.ceil(Math.sqrt(radius / pixel) * 3), 6, 24);
+            int segments = Math.clamp((int) Math.ceil(Math.sqrt(radius / pixel) * 2), 4, 16);
 
             if (glow > 0) {
                 // Non-overlapping gradient rings, rather than stacked opaque rectangles.
-                for (int ring = 8; ring > 0; ring--) {
-                    float far = glow * ring / 8;
-                    float near = glow * (ring - 1) / 8;
-                    mesh.ring(RoundedGeometry.contour(x, y, width, height, radius, -far, segments),
-                            RoundedGeometry.contour(x, y, width, height, radius, -near, segments),
+                for (int ring = 4; ring > 0; ring--) {
+                    float far = glow * ring / 4;
+                    float near = glow * (ring - 1) / 4;
+                    mesh.ring(RoundedGeometry.cachedContour(width, height, radius, -far, segments),
+                            RoundedGeometry.cachedContour(width, height, radius, -near, segments),
                             alpha(border, glowAlpha(far / glow, glowStrength)),
                             alpha(border, glowAlpha(near / glow, glowStrength)));
                 }
             }
 
-            float[] outside = RoundedGeometry.contour(x, y, width, height, radius, -pixel / 2, segments);
-            float[] inside = RoundedGeometry.contour(x, y, width, height, radius, pixel / 2, segments);
-            mesh.fan(inside, fill);
-            mesh.ring(outside, inside, alpha(fill, 0), fill);
+            float[] outside = RoundedGeometry.cachedContour(width, height, radius, -pixel / 2, segments);
+            float[] inside = RoundedGeometry.cachedContour(width, height, radius, pixel / 2, segments);
+            if ((fill >>> 24) != 0) {
+                mesh.fan(inside, fill);
+                mesh.ring(outside, inside, alpha(fill, 0), fill);
+            }
 
             if ((border >>> 24) != 0 && stroke > 0) {
                 float edge = Math.min(pixel / 2, stroke / 2);
-                float[] outerSolid = RoundedGeometry.contour(x, y, width, height, radius, edge, segments);
-                float[] innerSolid = RoundedGeometry.contour(x, y, width, height, radius, stroke - edge, segments);
-                float[] innerFade = RoundedGeometry.contour(x, y, width, height, radius, stroke + edge, segments);
+                float[] outerSolid = RoundedGeometry.cachedContour(width, height, radius, edge, segments);
+                float[] innerSolid = RoundedGeometry.cachedContour(width, height, radius, stroke - edge, segments);
+                float[] innerFade = RoundedGeometry.cachedContour(width, height, radius, stroke + edge, segments);
                 mesh.ring(outside, outerSolid, alpha(border, 0), border);
                 mesh.ring(outerSolid, innerSolid, border, border);
                 mesh.ring(innerSolid, innerFade, border, alpha(border, 0));

@@ -3,9 +3,6 @@ package net.lidl.lidlclient.pets;
 import net.lidl.lidlclient.config.ClientConfig;
 
 import net.fabricmc.api.ClientModInitializer;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
-import net.minecraft.network.HashedStack;
-import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.fabricmc.fabric.api.client.message.v1.ClientSendMessageEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -22,7 +19,7 @@ import java.util.Locale;
 
 /** Sends a server-only pet click without local inventory pickup, then closes immediately. */
 public final class ZeroPingPets implements ClientModInitializer {
-    private static boolean enabled = true;
+    private static boolean enabled = ClientConfig.bool("instant_pets", "enabled", true);
     private static final PetsMenuRules GUARD = new PetsMenuRules();
     private static ClientPacketListener selectedConnection;
 
@@ -50,7 +47,7 @@ public final class ZeroPingPets implements ClientModInitializer {
                                   int button, ContainerInput input) {
         Minecraft client = Minecraft.getInstance();
         if (!enabled || !onHypixel(client) || client.player == null || slot == null
-                || client.getConnection() == null || client.screen != screen
+                || client.getConnection() == null || client.gameMode == null || client.screen != screen
                 || !(screen.getMenu() instanceof ChestMenu chest) || !chest.getCarried().isEmpty()) return false;
         var stack = slot.getItem();
         var lore = stack.get(DataComponents.LORE);
@@ -61,11 +58,9 @@ public final class ZeroPingPets implements ClientModInitializer {
 
         GUARD.selected(System.nanoTime());
         selectedConnection = client.getConnection();
-        // Hypixel interprets this as a menu selection. Do not run vanilla's local
-        // pickup prediction or move the pet icon onto the cursor.
-        selectedConnection.send(new ServerboundContainerClickPacket(
-                chest.containerId, chest.getStateId(), (short) slotId, (byte) button, input,
-                Int2ObjectMaps.<HashedStack>emptyMap(), HashedStack.EMPTY));
+        // Use the game's packet/state-id/hashed-stack handling. Close in this same
+        // click callback, so pickup prediction is never visible for a rendered frame.
+        client.gameMode.handleInventoryMouseClick(chest.containerId, slotId, button, input, client.player);
         client.player.closeContainer();
         return true;
     }

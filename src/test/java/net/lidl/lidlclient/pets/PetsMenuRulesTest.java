@@ -17,9 +17,11 @@ class PetsMenuRulesTest {
 
     @Test void acceptsSummonAndDespawnLeftClickPrompts() {
         for (String prompt : List.of("Left-click to summon!", "§eLeft-click to summon!",
-                "Left click to summon", "Left-click to despawn!", "Click to despawn!")) {
+                "Left click to summon", "§eLeft-click  to summon this pet!", "Click to despawn your pet.", "Click to\u00a0summon!", "Left-click to despawn!", "Click to despawn!")) {
             assertTrue(PetsMenuRules.isPetSelection("Pets", true, true, true, List.of(prompt)), prompt);
         }
+        assertFalse(PetsMenuRules.isPetSelection("Pets", true, true, true, List.of("Click to convert to an item!")));
+        assertFalse(PetsMenuRules.isPetSelection("Pets", true, true, true, List.of("Click to remove pet!")));
         assertFalse(PetsMenuRules.isPetSelection("Pets", true, true, true, List.of("Right-click to summon!")));
         assertFalse(PetsMenuRules.isPetSelection("Pets", true, true, true, List.of("Right-click to favorite!")));
         assertFalse(PetsMenuRules.isPetSelection("Pets", false, true, true, List.of("Left-click to summon!")));

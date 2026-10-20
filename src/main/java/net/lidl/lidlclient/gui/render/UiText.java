@@ -13,8 +13,13 @@ public final class UiText {
             Identifier.fromNamespaceAndPath("lidlclient", "ui")));
     public static final int HEIGHT = 10;
     private UiText() { }
+    private static final java.util.Map<String, Component> COMPONENTS = new java.util.LinkedHashMap<>(256, .75f, true) {
+        @Override protected boolean removeEldestEntry(java.util.Map.Entry<String, Component> entry) {
+            return size() > 256;
+        }
+    };
 
-    public static Component component(String text) { return Component.literal(text).withStyle(STYLE); }
+    public static Component component(String text) { return COMPONENTS.computeIfAbsent(text, value -> Component.literal(value).withStyle(STYLE)); }
     public static int width(Font font, String text) { return font.width(component(text)); }
 
     public static void draw(GuiGraphicsExtractor graphics, Font font, String text,

@@ -5,11 +5,21 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class RoundedGeometryTest {
+    @Test void cachedLocalContoursPreserveGeometryAndReuseArrays() {
+        float[] cached = RoundedGeometry.cachedContour(120, 38, 8, -.25f, 12);
+        assertArrayEquals(RoundedGeometry.contour(0, 0, 120, 38, 8, -.25f, 12), cached);
+        assertSame(cached, RoundedGeometry.cachedContour(120, 38, 8, -.25f, 12));
+        assertNotSame(cached, RoundedGeometry.cachedContour(121, 38, 8, -.25f, 12));
+        for (int i = 0; i < 400; i++) RoundedGeometry.cachedContour(200+i, 38, 8, -.25f, 12);
+        assertArrayEquals(cached, RoundedGeometry.cachedContour(120, 38, 8, -.25f, 12));
+    }
+
     @Test void emittedFanAndRingMatchVanillaGuiQuadWinding() {
         var vertices = new java.util.ArrayList<float[]>();
         var mesh = new RoundedGeometry.MeshBuilder((x, y, color) -> vertices.add(new float[]{x, y}));
         float[] inner = RoundedGeometry.contour(0, 0, 120, 38, 8, 0.25f, 12);
         float[] outer = RoundedGeometry.contour(0, 0, 120, 38, 8, -0.25f, 12);
+        mesh.quad(new float[]{0,0,10,0,10,10,0,10}, 0xFFFFFFFF);
         mesh.fan(inner, 0xFFFFFFFF);
         mesh.ring(outer, inner, 0x00FFFFFF, 0xFFFFFFFF);
         assertEquals(0, vertices.size() % 4);

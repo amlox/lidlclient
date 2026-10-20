@@ -40,63 +40,71 @@ public final class ConstellationRenderer {
 
     public static void background(GuiGraphicsExtractor graphics, float x, float width,
                                    int height, double offset, double seconds, ScreenRectangle clip) {
-        int first = (int) Math.floor(offset / TILE) - 1;
-        int last = (int) Math.ceil((offset + height) / TILE);
-        for (int tile = first; tile <= last; tile++) {
-            float originY = tile * TILE - (float) offset;
-            boolean mirror = Math.floorMod(tile, 2) == 1;
-            for (int[] edge : EDGES) {
-                float[] a = POINTS[edge[0]], b = POINTS[edge[1]];
-                connection(graphics, x + px(a[0], width, mirror), originY + a[1],
-                        x + px(b[0], width, mirror), originY + b[1], clip);
-            }
-            for (int i = 0; i < POINTS.length; i++) {
-                float sx = x + px(POINTS[i][0], width, mirror), sy = originY + POINTS[i][1];
-                if (sy < -12 || sy > height + 12) continue;
-                float shine = twinkle(seconds, tile, i);
-                if (i == 1 || i == 4 || i == 8) star(graphics, sx, sy, i == 8 ? 7 : 4.5f, .85f * shine, clip);
-                else SmoothRenderer.panel(graphics, sx - .8f, sy - .8f, 1.6f, 1.6f, .8f,
-                        color(0xFFFFFF, .85f * shine), color(0xFFFFFF, .6f * shine), 0, 2.5f, clip);
-            }
-            for (int i = 0; i < SPARKLES.length; i++) {
-                float[] point = SPARKLES[i];
-                float sy = originY + point[1];
-                if (sy < -16 || sy > height + 16) continue;
-                star(graphics, x + px(point[0], width, mirror), sy, point[2], .95f * twinkle(seconds, tile, 13 + i), clip);
-            }
-            for (int i = 0; i < DUST.length; i++) {
-                float[] point = DUST[i];
-                float sy = originY + point[1];
-                if (sy < 0 || sy > height) continue;
-                float sx = x + px(point[0], width, mirror);
-                float size = point[2];
-                SmoothRenderer.panel(graphics, sx, sy, size, size, size / 2,
-                        color(0xFFFFFF, point[3] * twinkle(seconds, tile, 18 + i)), 0, 0, 0, clip);
+        if (clip.width() <= 0 || clip.height() <= 0) return;
+        float pixel = (float) (1.0 / Minecraft.getInstance().getWindow().getGuiScale());
+        graphics.guiRenderState.addGuiElement(new BackgroundState(new Matrix3x2f(graphics.pose()),
+                clip, clip, x, width, height, offset, seconds, pixel));
+    }
+
+    private record BackgroundState(Matrix3x2f pose, ScreenRectangle bounds, ScreenRectangle scissorArea,
+                                   float x, float width, int height, double offset, double seconds, float pixel)
+            implements GuiElementRenderState {
+        @Override public RenderPipeline pipeline() { return RenderPipelines.GUI; }
+        @Override public TextureSetup textureSetup() { return TextureSetup.noTexture(); }
+        @Override public void buildVertices(VertexConsumer consumer) {
+            var mesh = new RoundedGeometry.MeshBuilder((vx, vy, rgba) ->
+                    consumer.addVertexWith2DPose(pose, vx, vy).setColor(rgba));
+            int first = (int) Math.floor((offset - 18) / TILE);
+            int last = (int) Math.floor((offset + height + 18) / TILE);
+            for (int tile = first; tile <= last; tile++) {
+                float originY = tile * TILE - (float) offset;
+                boolean mirror = Math.floorMod(tile, 2) == 1;
+                for (int[] edge : EDGES) {
+                    float[] a = POINTS[edge[0]], b = POINTS[edge[1]];
+                    float y0 = originY + a[1], y1 = originY + b[1];
+                    if (Math.max(y0, y1) < 0 || Math.min(y0, y1) > height) continue;
+                    float x0 = x + px(a[0], width, mirror), x1 = x + px(b[0], width, mirror);
+                    float length = (float) Math.hypot(x1-x0,y1-y0);
+                    float dx = (y1-y0) / length * .4f, dy = (x0-x1) / length * .4f;
+                    mesh.quad(new float[]{x0-dx,y0-dy,x0+dx,y0+dy,x1+dx,y1+dy,x1-dx,y1-dy}, 0x60FFFFFF);
+                }
+                for (int i = 0; i < POINTS.length; i++) {
+                    float sx = x + px(POINTS[i][0],width,mirror), sy = originY + POINTS[i][1];
+                    if (sy < -16 || sy > height+16) continue;
+                    float shine = twinkle(seconds,tile,i);
+                    if (i == 1 || i == 4 || i == 8) drawStar(mesh,sx,sy,i == 8 ? 7 : 4.5f,shine,pixel);
+                    else dot(mesh,sx,sy,1.2f,shine);
+                }
+                for (int i = 0; i < SPARKLES.length; i++) {
+                    float[] point = SPARKLES[i];
+                    float sy = originY + point[1];
+                    if (sy < -18 || sy > height+18) continue;
+                    drawStar(mesh,x+px(point[0],width,mirror),sy,point[2],twinkle(seconds,tile,13+i),pixel);
+                }
+                for (int i = 0; i < DUST.length; i++) {
+                    float[] point = DUST[i];
+                    float sy = originY + point[1];
+                    if (sy < 0 || sy > height) continue;
+                    dot(mesh,x+px(point[0],width,mirror),sy,point[2],point[3]*twinkle(seconds,tile,18+i));
+                }
             }
         }
     }
 
-    private static float twinkle(double seconds, int tile, int star) {
+    private static void dot(RoundedGeometry.MeshBuilder mesh, float x, float y, float size, float opacity) {
+        mesh.quad(new float[]{x-size,y,x,y-size,x+size,y,x,y+size},color(0xFFFFFF,opacity));
+    }
+
+    static float twinkle(double seconds, int tile, int star) {
         // Stable identity per tile/star; no per-frame randomness or synchronized pulsing.
         long seed = (tile * 73856093L) ^ (star * 19349663L);
         double phase = Math.floorMod(seed, 6283) / 1000.0;
         double speed = .65 + Math.floorMod(seed * 31, 1100) / 1000.0;
-        return (float) (.55 + .45 * Math.pow(.5 + .5 * Math.sin(seconds * speed + phase), 2));
+        return (float) (.20 + .80 * Math.pow(.5 + .5 * Math.sin(seconds * speed + phase), 2));
     }
 
     private static float px(float fraction, float width, boolean mirror) {
         return 12 + (mirror ? 1 - fraction : fraction) * Math.max(1, width - 24);
-    }
-
-    private static void connection(GuiGraphicsExtractor graphics, float x0, float y0,
-                                   float x1, float y1, ScreenRectangle clip) {
-        float length = (float) Math.hypot(x1 - x0, y1 - y0);
-        graphics.pose().pushMatrix();
-        graphics.pose().translate(x0, y0);
-        graphics.pose().rotate((float) Math.atan2(y1 - y0, x1 - x0));
-        SmoothRenderer.panel(graphics, 0, -.3f, length, .6f, .3f,
-                0x58FFFFFF, 0x66FFFFFF, 0, 2.5f, clip);
-        graphics.pose().popMatrix();
     }
 
     public static void star(GuiGraphicsExtractor graphics, float x, float y, float radius,
@@ -131,21 +139,24 @@ public final class ConstellationRenderer {
         @Override public void buildVertices(VertexConsumer consumer) {
             var mesh = new RoundedGeometry.MeshBuilder((vx, vy, rgba) ->
                     consumer.addVertexWith2DPose(pose, vx, vy).setColor(rgba));
-            for (int i = 6; i > 0; i--) {
-                float outer = 1 + i * .19f, inner = 1 + (i - 1) * .19f;
-                float a0 = opacity * .55f * (float) Math.pow(1 - i / 6f, 2);
-                float a1 = opacity * .55f * (float) Math.pow(1 - (i - 1) / 6f, 2);
-                mesh.ring(points(x,y,radius*outer), points(x,y,radius*inner),
-                        color(0xFFFFFF,a0), color(0xFFFFFF,a1));
-            }
-            float aa = Math.min(pixel * .6f, radius * .12f);
-            mesh.fan(points(x,y,radius-aa), color(0x03040A,opacity));
-            mesh.ring(points(x,y,radius+aa), points(x,y,radius-aa),
-                    color(0x03040A,0), color(0x03040A,opacity));
-            float core = radius * .73f;
-            mesh.fan(points(x,y,core-aa), color(0xFFFFFF,opacity));
-            mesh.ring(points(x,y,core+aa), points(x,y,core-aa),
-                    color(0xFFFFFF,0), color(0xFFFFFF,opacity));
+            drawStar(mesh,x,y,radius,opacity,pixel);
         }
+    }
+
+    private static void drawStar(RoundedGeometry.MeshBuilder mesh, float x, float y,
+                                 float radius, float opacity, float pixel) {
+        // Three broad gradient rings: more visible sparkle, fewer vertices.
+        for (int i = 3; i > 0; i--) {
+            float outer = 1 + i * .45f, inner = 1 + (i-1) * .45f;
+            mesh.ring(points(x,y,radius*outer),points(x,y,radius*inner),
+                    color(0xFFFFFF,opacity * .8f * (1-i/3f)*(1-i/3f)),
+                    color(0xFFFFFF,opacity * .8f * (1-(i-1)/3f)*(1-(i-1)/3f)));
+        }
+        float aa = Math.min(pixel*.6f,radius*.12f);
+        mesh.fan(points(x,y,radius-aa),color(0x03040A,opacity));
+        mesh.ring(points(x,y,radius+aa),points(x,y,radius-aa),color(0x03040A,0),color(0x03040A,opacity));
+        float core = radius * .82f;
+        mesh.fan(points(x,y,core-aa),color(0xFFFFFF,opacity));
+        mesh.ring(points(x,y,core+aa),points(x,y,core-aa),color(0xFFFFFF,0),color(0xFFFFFF,opacity));
     }
 }

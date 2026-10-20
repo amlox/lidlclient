@@ -3,6 +3,19 @@ package net.lidl.lidlclient.gui.render;
 /** Pure geometry shared by the renderer and its tests. */
 final class RoundedGeometry {
     private RoundedGeometry() { }
+    private record Shape(float width, float height, float radius, float inset, int segments) { }
+    private static final java.util.Map<Shape, float[]> CONTOURS = new java.util.LinkedHashMap<>(256, .75f, true) {
+        @Override protected boolean removeEldestEntry(java.util.Map.Entry<Shape, float[]> entry) {
+            return size() > 256;
+        }
+    };
+
+    // Local coordinates let moving/scrolled panels share the same immutable curves.
+    static float[] cachedContour(float width, float height, float radius, float inset, int segments) {
+        return CONTOURS.computeIfAbsent(new Shape(width, height, radius, inset, segments),
+                shape -> contour(0, 0, width, height, radius, inset, segments));
+    }
+
 
     static float[] contour(float x, float y, float width, float height,
                                    float radius, float inset, int segments) {
@@ -33,6 +46,10 @@ final class RoundedGeometry {
         MeshBuilder(VertexSink sink) { this.sink = sink; }
 
         private void vertex(float x, float y, int color) { sink.vertex(x, y, color); }
+
+        void quad(float[] points, int color) {
+            for (int i = 6; i >= 0; i -= 2) vertex(points[i], points[i+1], color);
+        }
 
         void fan(float[] points, int color) {
             float cx = 0, cy = 0;

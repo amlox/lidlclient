@@ -30,6 +30,11 @@ public final class ModuleRegistry {
     private static List<GuiModule> createModules() {
         NameChanger.initializeSettings();
         List<GuiModule> modules = new ArrayList<>();
+        modules.add(new GuiModule("gui_appearance", "GUI appearance", "General settings",
+                "Toggle animated stars; right-click for colours", GuiAppearance::stars, GuiAppearance::setStars,
+                new ActionSetting("Accent colour", GuiAppearance::editAccent),
+                new ActionSetting("Background colour", GuiAppearance::editBackground),
+                new ActionSetting("Reset colours", GuiAppearance::reset)));
         modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,
                 new BooleanSetting("Mute chat", Slots::isMuteMessages, Slots::setMuteMessages),

@@ -16,6 +16,8 @@ import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.ModulePersistence;
 import net.lidl.lidlclient.names.NameChanger;
 import net.lidl.lidlclient.cursor.MenuCursor;
+import net.lidl.lidlclient.hud.PanelHost;
+import net.lidl.lidlclient.plinko.PlinkoPanel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,6 +33,19 @@ public final class ModuleRegistry {
     private static List<GuiModule> createModules() {
         NameChanger.initializeSettings();
         List<GuiModule> modules = new ArrayList<>();
+        modules.add(new GuiModule("gui_editor", "GUI editor", "General settings",
+                "Click to move panels; Done or Escape exits",
+                PanelHost::editing, PanelHost::setEditing));
+        modules.add(new GuiModule("plinko", "Plinko", "Gambling", "Customizable Plinko board",
+                PlinkoPanel::isEnabled, PlinkoPanel::setEnabled,
+                new ActionSetting("Move panels", PanelHost::openEditor),
+                new NumberSetting("Panel size (%)",50,175,5,PlinkoPanel::scale,PlinkoPanel::setScale),
+                new NumberSetting("Background opacity (%)",0,80,5,PlinkoPanel::opacity,PlinkoPanel::setOpacity),
+                new NumberSetting("Border thickness",1,3,1,PlinkoPanel::border,PlinkoPanel::setBorder),
+                new NumberSetting("Peg rows",6,16,1,PlinkoPanel::rows,PlinkoPanel::setRows),
+                new ActionSetting("Accent colour",PlinkoPanel::editAccent),
+                new ActionSetting("Peg colour",PlinkoPanel::editPegs),
+                new ActionSetting("Panel colour",PlinkoPanel::editBackground)));
         modules.add(new GuiModule("gui_appearance", "GUI appearance", "General settings",
                 "Toggle animated stars; right-click for colours", GuiAppearance::stars, GuiAppearance::setStars,
                 new ActionSetting("Accent colour", GuiAppearance::editAccent),
@@ -82,7 +97,9 @@ public final class ModuleRegistry {
                                 () -> PartyCommands.isCommandConfigured(command),
                                 value -> PartyCommands.setCommandEnabled(command, value))).toList()));
 
-        return validate(modules.stream().map(module -> ModulePersistence.bind(module, ClientConfig.store())).toList());
+        // Editor state is transient: restoring an enabled flag must never open a screen.
+        return validate(modules.stream().map(module -> module.id().equals("gui_editor") ? module
+                : ModulePersistence.bind(module, ClientConfig.store())).toList());
     }
 
     public static List<GuiModule> modules() { return MODULES; }

@@ -1,6 +1,9 @@
 package net.lidl.lidlclient.mixin;
 
 import net.lidl.lidlclient.cursor.MenuCursor;
+import net.lidl.lidlclient.input.RawKeyboard;
+import org.lwjgl.glfw.GLFWKeyCallbackI;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
@@ -20,9 +23,9 @@ public abstract class MenuCursorKeyboardMixin {
             ci.cancel();
         }
     }
-    // Observation only: never consume a watched key or alter cursor state in key dispatch.
-    @Inject(method="keyPress(JILnet/minecraft/client/input/KeyEvent;)V",at=@At("HEAD"))
-    private void lidlclient$releaseForMenu(long window,int action,KeyEvent event,CallbackInfo ci) {
-        MenuCursor.keyPressed(window,action,event);
+    // Chain the raw callback instead of injecting watched keys into Minecraft's keybind dispatch.
+    @ModifyArg(method="setup",at=@At(value="INVOKE",target="Lcom/mojang/blaze3d/platform/InputConstants;setupKeyboardCallbacks(Lcom/mojang/blaze3d/platform/Window;Lorg/lwjgl/glfw/GLFWKeyCallbackI;Lorg/lwjgl/glfw/GLFWCharCallbackI;Lorg/lwjgl/glfw/GLFWPreeditCallbackI;Lorg/lwjgl/glfw/GLFWIMEStatusCallbackI;)V"),index=1)
+    private GLFWKeyCallbackI lidlclient$shareRawKeys(GLFWKeyCallbackI original) {
+        return RawKeyboard.observe(original);
     }
 }

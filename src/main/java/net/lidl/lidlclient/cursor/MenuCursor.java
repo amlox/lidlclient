@@ -4,7 +4,8 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.input.KeyEvent;
+import net.lidl.lidlclient.input.RawKeyboard;
+import net.lidl.lidlclient.input.SharedHotkeys;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,8 +19,6 @@ import org.lwjgl.glfw.GLFW;
 public final class MenuCursor {
     private static final String ID = "menu_cursor";
     private static final CursorWait WAIT = new CursorWait();
-    private static final CursorDispatch DISPATCH = new CursorDispatch();
-    private static InputConstants.Key queuedKey;
     private static final List<InputConstants.Key> KEYS = loadKeys();
     private static final Map<String,SlotOverlay> OVERLAYS = SlotOverlayStore.read(ClientConfig.store().get(ID,"slotOverlays"));
     private static boolean showOverlay = ClientConfig.bool(ID,"Show slot overlay",false);
@@ -99,7 +98,27 @@ public final class MenuCursor {
             saveKeys();
         }
     }
-    private static void saveKeys() { ClientConfig.set(ID,"keys",KEYS.stream().map(InputConstants.Key::getName).toList()); }
+    private static void saveKeys() {
+        ClientConfig.set(ID,"keys",KEYS.stream().map(InputConstants.Key::getName).toList());
+        syncHotkeys();
+    }
+    private static final List<String> HOTKEY_OWNERS = new ArrayList<>();
+    private static void syncHotkeys() {
+        // One listener per key retains its own slot-overlay identity. Rebinding invalidates queued events.
+        HOTKEY_OWNERS.forEach(RawKeyboard.HOTKEYS::unbind);
+        HOTKEY_OWNERS.clear();
+        for (var key:KEYS) {
+            var raw=key.getType()==InputConstants.Type.SCANCODE
+                    ? SharedHotkeys.Key.scancode(key.getValue()) : SharedHotkeys.Key.symbol(key.getValue());
+            String owner=ID+":"+key.getName();
+            HOTKEY_OWNERS.add(owner);
+            RawKeyboard.HOTKEYS.bind(owner,List.of(raw),() -> {
+                var client=Minecraft.getInstance();
+                return enabled && client.isWindowActive() && client.player!=null
+                        && client.getConnection()!=null && client.screen==null && client.mouseHandler.isMouseGrabbed();
+            },window -> keyPressed(window,key));
+        }
+    }
     public static void openBindings() {
         var client = Minecraft.getInstance();
         client.setScreen(new MenuCursorKeysScreen(client.screen));
@@ -107,6 +126,7 @@ public final class MenuCursor {
     public static void initialize() {
         if (initialized) return;
         initialized = true;
+        syncHotkeys();
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,LidlClient.id("menu_cursor_slots"),
                 (graphics,deltaTracker) -> {
                     if (!showOverlay || !waitingInWorld() || activeKey == null) return;
@@ -121,54 +141,35 @@ public final class MenuCursor {
                                 SlotOverlay.translucent(entry.getValue(),overlayOpacity));
                     }
                 });
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            // Only mark ready here. Release after *all* mods finish their tick callbacks.
-            DISPATCH.afterTick();
-            if (!WAIT.pending()) return;
-            var result = WAIT.update(System.nanoTime(),client.screen != null,
-                    client.player != null && client.getConnection() == connection,client.isWindowActive());
-            if (result == CursorWait.Result.RESTORE) restore(client);
-            if (result != CursorWait.Result.WAITING) { connection = null; activeKey = null; }
-        });
+        ClientTickEvents.END_CLIENT_TICK.register(MenuCursor::updateWait);
     }
-    /** Observe at keyboard HEAD, even if another mod later consumes the event.
-     * Do not change cursor/key state until the normal keybind tick has completed. */
-    public static void keyPressed(long window, int action, KeyEvent event) {
-        var client = Minecraft.getInstance();
-        if (!enabled || action != GLFW.GLFW_PRESS || window != client.getWindow().handle()
-                || !client.isWindowActive() || client.player == null || client.getConnection() == null
-                || client.screen != null || !client.mouseHandler.isMouseGrabbed()) return;
-        var key = event.key() == GLFW.GLFW_KEY_UNKNOWN
-                ? InputConstants.Type.SCANCODE.getOrCreate(event.scancode())
-                : InputConstants.Type.KEYSYM.getOrCreate(event.key());
-        if (!KEYS.contains(key) || WAIT.pending() || !DISPATCH.queue()) return;
-        connection = client.getConnection();
-        queuedKey = key;
-    }
-    /** Runs after client ticks and immediately before queued look movement is applied. */
-    public static void beforeMouseMovement() {
-        if (!DISPATCH.pending()) return;
-        var client = Minecraft.getInstance();
-        if (!enabled || client.screen != null || client.player == null
-                || client.getConnection() != connection || !client.isWindowActive()
-                || !client.mouseHandler.isMouseGrabbed()) {
-            cancelDispatch();
-            connection = null;
-            return;
+    private static void updateWait(Minecraft client) {
+        if (!WAIT.pending()) return;
+        var result = WAIT.update(System.nanoTime(),client.screen != null,
+                client.player != null && client.getConnection() == connection,client.isWindowActive());
+        if (result == CursorWait.Result.RESTORE) restore(client);
+        if (result != CursorWait.Result.WAITING) {
+            ((CursorMouseAccess)client.mouseHandler).lidlclient$finishCursorRelease();
+            connection = null; activeKey = null;
         }
-        // Frames without a game tick must not apply the player's pre-menu flick.
-        clearMotion(client);
-        if (!DISPATCH.consume()) return;
-        var key = queuedKey;
-        queuedKey = null;
-        if (!WAIT.begin(System.nanoTime(),(long)(timeout * 1_000_000_000L))) return;
-        activeKey = key.getName();
-        client.mouseHandler.releaseMouse();
+    }
+    /** Called by the independent raw-input dispatcher; never consumes another mod's binding. */
+    private static void keyPressed(long window,InputConstants.Key key) {
+        var client=Minecraft.getInstance();
+        if (!enabled || window!=client.getWindow().handle() || !client.isWindowActive()
+                || client.player==null || client.getConnection()==null || client.screen!=null
+                || !client.mouseHandler.isMouseGrabbed()
+                || !WAIT.begin(System.nanoTime(),(long)(timeout*1_000_000_000L))) return;
+        connection=client.getConnection();
+        activeKey=key.getName();
+        // Keep logical gameplay focus intact for other mods, while freeing the physical cursor.
+        ((CursorMouseAccess)client.mouseHandler).lidlclient$releaseCursor();
         clearMotion(client);
     }
-    private static void cancelDispatch() {
-        DISPATCH.cancel();
-        queuedKey = null;
+    public static void beforeMouseMovement() {
+        updateWait(Minecraft.getInstance());
+        RawKeyboard.HOTKEYS.dispatch();
+        if (waitingInWorld()) clearMotion(Minecraft.getInstance());
     }
     public static boolean waitingInWorld() {
         var client = Minecraft.getInstance();
@@ -178,21 +179,24 @@ public final class MenuCursor {
     public static void screenChanged() {
         if (Minecraft.getInstance().screen != null) {
             WAIT.cancel();
-            cancelDispatch();
+            ((CursorMouseAccess)Minecraft.getInstance().mouseHandler).lidlclient$finishCursorRelease();
             connection = null;
             activeKey = null;
         }
     }
     public static void cancelAndRestore() {
-        cancelDispatch();
         var client = Minecraft.getInstance();
         boolean restore = client.screen == null && client.player != null && client.isWindowActive()
                 && client.getConnection() == connection;
-        if (WAIT.cancel() && restore) restore(client);
+        if (WAIT.cancel()) {
+            if (restore) restore(client);
+            else ((CursorMouseAccess)client.mouseHandler).lidlclient$finishCursorRelease();
+        }
         connection = null;
         activeKey = null;
     }
     private static void restore(Minecraft client) {
+        ((CursorMouseAccess)client.mouseHandler).lidlclient$finishCursorRelease();
         clearMotion(client);
         client.mouseHandler.grabMouse();
         clearMotion(client);

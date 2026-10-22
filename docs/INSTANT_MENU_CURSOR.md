@@ -7,41 +7,44 @@ keys are ignored. Each row has Remove, and longer lists have Previous/Next pages
 Keys and the module toggle persist across restarts. Escape cancels key capture.
 The module starts disabled with no keys.
 
-Keep your original mod's menu hotkey configured. This feature observes the same
-key and releases the cursor after normal key dispatch and the keybind-processing tick; it does not run a command,
-replace a keybind, open a placeholder screen, or shorten the server's response time.
-It only activates in a focused world when no screen is open and the mouse is grabbed.
-Watched keys are observed without cancellation or a registered Minecraft KeyMapping.
-Cursor changes are deferred until after all client tick callbacks, just before
-mouse movement is processed. This lets other mods consume their hotkeys while
-Minecraft still reports the mouse as grabbed, including mods that cancel raw key
-events. Frames before that tick discard queued look motion to prevent flicking.
-The handoff may wait up to one normal client tick (about 50 ms); server-menu wait
-and overlays begin when the cursor actually releases. Opening a screen, focus
-loss, disconnect, or disabling the feature discards a queued release.
+Keep your original mod's menu hotkey configured. Saved cursor keys and slot layouts
+carry forward automatically; no rebinding is needed. The cursor module now uses
+an independent **SharedHotkeys** framework, outside Minecraft's KeyMapping system.
+It never registers a competing binding, consumes a key press, clears a key state,
+or changes another mod's assigned keys.
 
-The cursor starts at Minecraft's normal centre position and can move freely while
-the menu loads, without turning the camera.
+The framework observes the raw GLFW keyboard callback and always forwards the
+original callback with the same window, key, scancode, action, and modifiers.
+Actions run before the next mouse-movement pass, after the original callback has
+returned. Short press/release taps between frames are retained; repeats and
+releases never retrigger. Multiple listeners may share a key. Removed/rebound
+listeners discard stale queued presses, and the input queue is bounded. Screen,
+focus, and gameplay eligibility are captured before the original callback runs
+and checked again when the action executes. A key that closes another GUI cannot
+accidentally start a cursor wait.
 
-When a real menu opens, it keeps the released cursor. Minecraft 26.1.2's
-releaseMouse returns immediately when already released, so the normal menu-open
-path does not recenter it again. Attempts to re-grab while waiting are blocked.
-New mouse presses during the wait are ignored so they cannot re-grab or click the
-world, and they are not replayed into the menu. Releases still pass through to
-avoid stuck buttons.
+During a wait, only the **physical OS cursor** is unlocked. Minecraft's logical
+mouse-grabbed flag stays true, allowing other mods' raw/tick/held-key handlers to
+continue seeing normal gameplay focus. Camera turning is blocked separately and
+queued look motion is cleared. This also removes the previous one-tick handoff
+delay. The cursor starts at Minecraft's centre position and moves freely while
+the server menu loads. No command or placeholder GUI is opened.
 
-**Wait timeout (seconds)** defaults to 1.5 and is adjustable from 0.25 to 5.
-If no menu appears, mouse control returns automatically with queued look motion
-cleared. Escape cancels the wait immediately and returns control; a menu that
-arrives later will open normally. Repeat key presses do not extend the timeout.
-Opening any screen hands off cursor ownership and cancels the wait. Disconnecting
-or losing window focus cancels without forcing the mouse to be captured.
+When a real screen arrives, the mouse hook completes the logical release without
+moving the already-free cursor. Escape or timeout restores normal mouse capture.
+Focus loss and disconnect finish the logical release without forcing capture.
+Disabling the module restores control when appropriate. New mouse presses during
+a wait are ignored to prevent world clicks/regrabbing, while releases still pass
+through. **Wait timeout (seconds)** defaults to 1.5 and is adjustable from 0.25 to 5;
+repeat presses do not extend it.
 
-In-game checks: bind the same key in both mods, press it, move the cursor during
-the server delay, and verify the camera stays still and the menu keeps the cursor
-position. Test multiple keys, repeats, no-response timeout, Escape, clicking during
-the wait, already-open menus, reconnecting and Alt-Tab. Other mods with custom raw
-input/cursor handling may need live compatibility testing.
+In-game checks: assign the same menu key in both mods, enable the cursor module,
+press and quickly release the key, and confirm the other mod still opens its menu
+while cursor movement does not turn the camera. Also test held keys, two different
+menu keys, no-response timeout, Escape, focus loss, reconnecting, and screen arrival
+without cursor recentering. Mods that inspect native GLFW cursor mode directly or
+replace callbacks without forwarding them still require testing with the actual
+mod pack; unit/build checks cannot verify those integrations.
 
 ## Slot aim overlay
 

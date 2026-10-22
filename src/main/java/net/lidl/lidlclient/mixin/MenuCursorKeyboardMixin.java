@@ -20,8 +20,8 @@ public abstract class MenuCursorKeyboardMixin {
             ci.cancel();
         }
     }
-    // Observe the key without consuming it, after vanilla queues other mods' keybinds.
-    @Inject(method="keyPress(JILnet/minecraft/client/input/KeyEvent;)V",at=@At("RETURN"))
+    // Observation only: never consume a watched key or alter cursor state in key dispatch.
+    @Inject(method="keyPress(JILnet/minecraft/client/input/KeyEvent;)V",at=@At("HEAD"))
     private void lidlclient$releaseForMenu(long window,int action,KeyEvent event,CallbackInfo ci) {
         MenuCursor.keyPressed(window,action,event);
     }

@@ -8,9 +8,18 @@ Keys and the module toggle persist across restarts. Escape cancels key capture.
 The module starts disabled with no keys.
 
 Keep your original mod's menu hotkey configured. This feature observes the same
-key and releases the cursor after normal key dispatch; it does not run a command,
+key and releases the cursor after normal key dispatch and the keybind-processing tick; it does not run a command,
 replace a keybind, open a placeholder screen, or shorten the server's response time.
 It only activates in a focused world when no screen is open and the mouse is grabbed.
+Watched keys are observed without cancellation or a registered Minecraft KeyMapping.
+Cursor changes are deferred until after all client tick callbacks, just before
+mouse movement is processed. This lets other mods consume their hotkeys while
+Minecraft still reports the mouse as grabbed, including mods that cancel raw key
+events. Frames before that tick discard queued look motion to prevent flicking.
+The handoff may wait up to one normal client tick (about 50 ms); server-menu wait
+and overlays begin when the cursor actually releases. Opening a screen, focus
+loss, disconnect, or disabling the feature discards a queued release.
+
 The cursor starts at Minecraft's normal centre position and can move freely while
 the menu loads, without turning the camera.
 

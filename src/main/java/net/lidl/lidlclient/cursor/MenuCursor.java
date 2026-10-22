@@ -18,6 +18,8 @@ import org.lwjgl.glfw.GLFW;
 public final class MenuCursor {
     private static final String ID = "menu_cursor";
     private static final CursorWait WAIT = new CursorWait();
+    private static final CursorDispatch DISPATCH = new CursorDispatch();
+    private static InputConstants.Key queuedKey;
     private static final List<InputConstants.Key> KEYS = loadKeys();
     private static final Map<String,SlotOverlay> OVERLAYS = SlotOverlayStore.read(ClientConfig.store().get(ID,"slotOverlays"));
     private static boolean showOverlay = ClientConfig.bool(ID,"Show slot overlay",false);
@@ -120,6 +122,8 @@ public final class MenuCursor {
                     }
                 });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            // Only mark ready here. Release after *all* mods finish their tick callbacks.
+            DISPATCH.afterTick();
             if (!WAIT.pending()) return;
             var result = WAIT.update(System.nanoTime(),client.screen != null,
                     client.player != null && client.getConnection() == connection,client.isWindowActive());
@@ -127,7 +131,8 @@ public final class MenuCursor {
             if (result != CursorWait.Result.WAITING) { connection = null; activeKey = null; }
         });
     }
-    /** Called after normal keyboard dispatch, before subsequent mouse movement. */
+    /** Observe at keyboard HEAD, even if another mod later consumes the event.
+     * Do not change cursor/key state until the normal keybind tick has completed. */
     public static void keyPressed(long window, int action, KeyEvent event) {
         var client = Minecraft.getInstance();
         if (!enabled || action != GLFW.GLFW_PRESS || window != client.getWindow().handle()
@@ -136,11 +141,34 @@ public final class MenuCursor {
         var key = event.key() == GLFW.GLFW_KEY_UNKNOWN
                 ? InputConstants.Type.SCANCODE.getOrCreate(event.scancode())
                 : InputConstants.Type.KEYSYM.getOrCreate(event.key());
-        if (!KEYS.contains(key) || !WAIT.begin(System.nanoTime(),(long)(timeout * 1_000_000_000L))) return;
+        if (!KEYS.contains(key) || WAIT.pending() || !DISPATCH.queue()) return;
         connection = client.getConnection();
+        queuedKey = key;
+    }
+    /** Runs after client ticks and immediately before queued look movement is applied. */
+    public static void beforeMouseMovement() {
+        if (!DISPATCH.pending()) return;
+        var client = Minecraft.getInstance();
+        if (!enabled || client.screen != null || client.player == null
+                || client.getConnection() != connection || !client.isWindowActive()
+                || !client.mouseHandler.isMouseGrabbed()) {
+            cancelDispatch();
+            connection = null;
+            return;
+        }
+        // Frames without a game tick must not apply the player's pre-menu flick.
+        clearMotion(client);
+        if (!DISPATCH.consume()) return;
+        var key = queuedKey;
+        queuedKey = null;
+        if (!WAIT.begin(System.nanoTime(),(long)(timeout * 1_000_000_000L))) return;
         activeKey = key.getName();
         client.mouseHandler.releaseMouse();
         clearMotion(client);
+    }
+    private static void cancelDispatch() {
+        DISPATCH.cancel();
+        queuedKey = null;
     }
     public static boolean waitingInWorld() {
         var client = Minecraft.getInstance();
@@ -150,11 +178,13 @@ public final class MenuCursor {
     public static void screenChanged() {
         if (Minecraft.getInstance().screen != null) {
             WAIT.cancel();
+            cancelDispatch();
             connection = null;
             activeKey = null;
         }
     }
     public static void cancelAndRestore() {
+        cancelDispatch();
         var client = Minecraft.getInstance();
         boolean restore = client.screen == null && client.player != null && client.isWindowActive()
                 && client.getConnection() == connection;

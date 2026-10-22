@@ -19,6 +19,10 @@ public abstract class MenuCursorMouseMixin implements CursorMouseAccess {
         accumulatedDX = 0;
         accumulatedDY = 0;
     }
+    @Inject(method="handleAccumulatedMovement()V",at=@At("HEAD"))
+    private void lidlclient$finishKeyDispatch(CallbackInfo ci) {
+        MenuCursor.beforeMouseMovement();
+    }
     @Inject(method="grabMouse()V",at=@At("HEAD"),cancellable=true)
     private void lidlclient$keepReleased(CallbackInfo ci) {
         if (MenuCursor.waitingInWorld()) ci.cancel();

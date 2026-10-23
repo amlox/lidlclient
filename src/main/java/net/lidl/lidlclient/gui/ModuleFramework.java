@@ -12,6 +12,12 @@ public final class ModuleFramework implements ClientModInitializer {
         ModuleRegistry.modules(); // Restore settings before the first gameplay frame.
         GreenScreen.initialize();
         net.lidl.lidlclient.cursor.MenuCursor.initialize();
+        net.lidl.lidlclient.hud.PanelHost.initialize();
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+                dispatcher.register(ClientCommands.literal("lidlgui").executes(context -> {
+                    Minecraft.getInstance().schedule(net.lidl.lidlclient.hud.PanelHost::openEditor);
+                    return 1;
+                })));
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("lidl").executes(context -> {
                     Minecraft client = Minecraft.getInstance();

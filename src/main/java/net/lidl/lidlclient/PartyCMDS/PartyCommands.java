@@ -385,7 +385,12 @@ public class PartyCommands implements ClientModInitializer {
             var definition=PartyReplyLibrary.find(command);
             if (!CONSECUTIVE.allows(command,definition==null?0:definition.consecutiveLimit())) return;
             if (definition!=null && definition.runCommands()) {
-                try { connection.sendCommand(definition.commandToRun(message)); }
+                try {
+                    String output=definition.commandToRun(message);
+                    if (net.lidl.lidlclient.reminders.Reminders.handles(output))
+                        net.lidl.lidlclient.reminders.Reminders.execute(output);
+                    else connection.sendCommand(output);
+                }
                 catch (IllegalArgumentException error) {
                     client.player.sendSystemMessage(Component.literal("[Party Commands] "+error.getMessage()));
                     return;

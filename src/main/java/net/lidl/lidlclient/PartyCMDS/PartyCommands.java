@@ -366,9 +366,14 @@ public class PartyCommands implements ClientModInitializer {
             LOGGER.info("Sending party message: {}", message);
 
             var definition=PartyReplyLibrary.find(command);
-            if (definition!=null && !definition.partyChat())
+            if (definition!=null && definition.runCommands()) {
+                try { connection.sendCommand(definition.commandToRun(message)); }
+                catch (IllegalArgumentException error) {
+                    client.player.sendSystemMessage(Component.literal("[Party Commands] "+error.getMessage()));
+                }
+            } else if (definition!=null && !definition.partyChat())
                 client.player.sendSystemMessage(Component.literal("[Party Commands — Only me] "+message));
-            else client.getConnection().sendCommand("pc " + message);
+            else connection.sendCommand("pc " + message);
         });
     }
 

@@ -68,4 +68,31 @@ class PartyReplyTest {
                 """)));
     }
 
+    @Test void loopProtectionBypassAllowsLiteralAndSubstitutedCommandReplies() {
+        var literal=new PartyReply("!chain",List.of("!dice"),true,true,true,false);
+        assertEquals("!dice",literal.render("Alex",""));
+        var echo=new PartyReply("!echo",List.of("{args}"),true,true,true,false);
+        assertEquals("!dice",echo.render("Alex","!dice"));
+        assertEquals(literal,ReplyCodec.read(ReplyCodec.JSON.toJsonTree(literal)));
+        assertEquals(literal,literal.withEnabled(false).withEnabled(true));
+        var legacy=ReplyCodec.read(JsonParser.parseString("""
+                {"trigger":"!old","answers":["{args}"],"enabled":true}
+                """));
+        assertFalse(legacy.bypassLoopProtection()); assertFalse(legacy.runCommands());
+        assertEquals("[Reply] !dice",legacy.render("Alex","!dice"));
+    }
+    @Test void directCommandsStripSlashWithoutAddingPartyChatAndPersistTheirMode() {
+        var command=new PartyReply("!warp",List.of("/warp {args}"),true,true,false,true);
+        assertFalse(command.partyChat()); assertTrue(command.runCommands());
+        assertEquals("warp hub",command.commandToRun(command.render("Alex","hub")));
+        assertEquals(command,ReplyCodec.read(ReplyCodec.JSON.toJsonTree(command)));
+        assertEquals(command,command.withEnabled(false).withEnabled(true));
+        for (String invalid:List.of("warp hub","/","/   ","//warp hub"))
+            assertThrows(IllegalArgumentException.class,()->command.commandToRun(invalid));
+        assertThrows(IllegalArgumentException.class,()->new PartyReply("!chat",List.of("Hi"),true).commandToRun("/warp hub"));
+        assertThrows(IllegalArgumentException.class,()->ReplyCodec.read(JsonParser.parseString("""
+                {"trigger":"!old","answers":["Hi"],"enabled":true,"bypassLoopProtection":"true"}
+                """)));
+    }
+
 }

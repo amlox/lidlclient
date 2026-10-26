@@ -21,7 +21,15 @@ public final class ReplyCodec {
         if (destination!=null && (!destination.isJsonPrimitive() || !destination.getAsJsonPrimitive().isBoolean()))
             throw new IllegalArgumentException("Expected a party-chat switch");
         return new PartyReply(trigger,answers.getAsJsonArray().asList().stream().map(ReplyCodec::string).toList(),
-                enabled.getAsBoolean(),destination==null || destination.getAsBoolean());
+                enabled.getAsBoolean(),destination==null || destination.getAsBoolean(),
+                flag(object,"bypassLoopProtection"),flag(object,"runCommands"));
+    }
+    private static boolean flag(JsonObject object,String name) {
+        var value=object.get(name);
+        if (value==null) return false;
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean())
+            throw new IllegalArgumentException("Expected a boolean for "+name);
+        return value.getAsBoolean();
     }
     public static String string(JsonElement value) {
         if (value==null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())

@@ -29,14 +29,22 @@ Matching uses the whole trigger, so `!hi` and `!high` can coexist. Creating a se
 The editor's output control selects where the result goes:
 
 - **Output: Party chat** sends the response to the party through `/pc`.
+- **Output: /Commands** executes a server slash command directly, without adding
+  `/pc`. For example, an answer `/warp hub` runs `/warp hub` when triggered. Every
+  answer in this mode must start with `/` followed by a command. Templates such as
+  `/warp {args}` work; Preview only shows the result and never executes it.
 - **Output: Only me** displays the result in your own chat, prefixed
   `[Party Commands — Only me]`. It does not send the result to the server.
 
 The command still reacts to supported incoming party-chat triggers in either mode.
 Output selection controls the destination; the list's On/Off switch controls whether
-it runs. There is no second Reply On/Off toggle inside the editor.
+it runs. **Allow ! replies** bypasses both the saved-answer check and automatic
+`[Reply]` prefix for responses starting with `!`. It defaults to Off. Turning it On
+allows command chains and may cause replies to trigger each other; the existing
+one-second cooldown still applies. There is no second Reply On/Off toggle inside the editor.
 
-Old saved definitions default to Party chat. Output choice persists across restarts,
+Old saved definitions default to Party chat, with slash-command execution and the
+loop-protection bypass both off. Output choice persists across restarts,
 command toggles and resetting base answers. The 300 ms response delay and one-second
 cooldown apply to both output modes. Pending replies are cancelled when disabled
 or when the Minecraft connection changes.

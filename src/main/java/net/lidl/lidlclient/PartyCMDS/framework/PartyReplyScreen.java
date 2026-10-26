@@ -14,7 +14,7 @@ public final class PartyReplyScreen extends Screen {
     private final String original;
     private final List<String> answers=new ArrayList<>();
     private int selected;
-    private boolean enabled=true,partyChat=true;
+    private boolean enabled=true,partyChat=true,bypassLoopProtection,runCommands;
     private EditBox trigger,input;
     private String triggerDraft="!hello",message="";
     public PartyReplyScreen(Screen parent,String trigger) {
@@ -24,6 +24,7 @@ public final class PartyReplyScreen extends Screen {
         else {
             var reply=PartyCommands.editableReply(trigger);
             answers.addAll(reply.answers()); enabled=reply.enabled(); partyChat=reply.partyChat(); triggerDraft=reply.trigger();
+            bypassLoopProtection=reply.bypassLoopProtection(); runCommands=reply.runCommands();
         }
     }
     private void retain() {
@@ -56,13 +57,20 @@ public final class PartyReplyScreen extends Screen {
         var remove=addRenderableWidget(Button.builder(Component.literal("Drop"),b -> {
             retain(); answers.remove(selected); selected=Math.min(selected,answers.size()-1); rebuildWidgets();
         }).bounds(left+238,110,58,20).build()); remove.active=answers.size()>1;
-        addRenderableWidget(Button.builder(Component.literal(partyChat?"Output: Party chat":"Output: Only me"),b -> {
-            retain(); partyChat=!partyChat; rebuildWidgets();
+        addRenderableWidget(Button.builder(Component.literal(runCommands?"Output: /Commands":partyChat?"Output: Party chat":"Output: Only me"),b -> {
+            retain();
+            if (partyChat) { partyChat=false; runCommands=false; }
+            else if (!runCommands) runCommands=true;
+            else { partyChat=true; runCommands=false; }
+            rebuildWidgets();
         }).bounds(left,136,146,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Allow ! replies: "+(bypassLoopProtection?"On":"Off")),b -> {
+            retain(); bypassLoopProtection=!bypassLoopProtection; rebuildWidgets();
+        }).bounds(left+150,136,146,20).build());
         addRenderableWidget(Button.builder(Component.literal("Preview"),b -> {
             try { retain(); message=definition().render("TestPlayer","example arguments"); }
             catch (RuntimeException error) { message=error.getMessage(); }
-        }).bounds(left+152,136,66,20).build());
+        }).bounds(left,164,144,20).build());
         addRenderableWidget(Button.builder(Component.literal("Reset base"),b -> {
             retain();
             try {
@@ -70,16 +78,17 @@ public final class PartyReplyScreen extends Screen {
                 answers.clear(); answers.addAll(base.answers()); selected=0;
                 message="Original base restored in draft"; rebuildWidgets();
             } catch (RuntimeException error) { message=error.getMessage(); }
-        }).bounds(left+224,136,72,20).build());
+        }).bounds(left+150,164,146,20).build());
         addRenderableWidget(Button.builder(Component.literal("Save"),b -> save())
                 .bounds(left,height-28,144,20).build());
         addRenderableWidget(Button.builder(Component.literal("Cancel"),b -> onClose()).bounds(left+150,height-28,146,20).build());
         setInitialFocus(original==null?trigger:input);
     }
-    private PartyReply definition() { return new PartyReply(triggerDraft.strip(),List.copyOf(answers),enabled,partyChat); }
+    private PartyReply definition() { return new PartyReply(triggerDraft.strip(),List.copyOf(answers),enabled,partyChat,bypassLoopProtection,runCommands); }
     private void save() {
         try {
             retain(); var reply=definition();
+            if (reply.runCommands()) for (String answer:reply.answers()) reply.commandToRun(answer);
             if (original==null) PartyReplyLibrary.create(reply); else PartyReplyLibrary.save(reply);
             onClose();
         } catch (RuntimeException error) { message=error.getMessage(); }
@@ -88,8 +97,7 @@ public final class PartyReplyScreen extends Screen {
         int left=(width-296)/2;
         g.fill(0,0,width,height,0xEB0B101B); g.centeredText(font,title,width/2,16,0xFFFFFFFF);
         g.text(font,"Trigger",left,31,0xFFADBBD0);
-        g.text(font,"Random answer "+(selected+1)+" / "+answers.size(),left,72,0xFFADBBD0);
-        g.text(font,"Variables: {player}  {args}  {roll:1:6}",left,164,0xFFADBBD0);
+        g.text(font,"Answer "+(selected+1)+"/"+answers.size()+"  {player} {args} {roll:1:6}",left,72,0xFFADBBD0);
         if (!message.isEmpty()) g.text(font,font.plainSubstrByWidth(message,width-24),12,height-47,0xFFFFFFFF);
         super.extractRenderState(g,mx,my,delta);
     }

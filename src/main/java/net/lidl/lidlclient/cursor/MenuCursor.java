@@ -20,6 +20,7 @@ public final class MenuCursor {
     private static final String ID = "menu_cursor";
     private static final CursorWait WAIT = new CursorWait();
     private static final List<InputConstants.Key> KEYS = loadKeys();
+    private static final Map<String,String> COMMANDS = loadCommands();
     private static final Map<String,SlotOverlay> OVERLAYS = SlotOverlayStore.read(ClientConfig.store().get(ID,"slotOverlays"));
     private static boolean showOverlay = ClientConfig.bool(ID,"Show slot overlay",false);
     private static double overlayOpacity = savedOpacity();
@@ -52,8 +53,30 @@ public final class MenuCursor {
         return keys;
     }
     private static boolean validKey(InputConstants.Key key) {
-        return key != InputConstants.UNKNOWN && key.getType() != InputConstants.Type.MOUSE
+        return key != InputConstants.UNKNOWN
+                && (key.getType()!=InputConstants.Type.MOUSE || key.getValue()>=0 && key.getValue()<=GLFW.GLFW_MOUSE_BUTTON_LAST)
                 && !(key.getType() == InputConstants.Type.KEYSYM && key.getValue() == GLFW.GLFW_KEY_ESCAPE);
+    }
+    private static Map<String,String> loadCommands() {
+        Map<String,String> commands=new java.util.HashMap<>();
+        var saved=ClientConfig.store().get(ID,"commands");
+        if (saved!=null && saved.isJsonObject()) saved.getAsJsonObject().entrySet().forEach(entry -> {
+            if (entry.getValue().isJsonPrimitive() && entry.getValue().getAsJsonPrimitive().isString()) {
+                try {
+                    String command=MenuCommand.normalize(entry.getValue().getAsString());
+                    if (!command.isEmpty()) commands.put(entry.getKey(),command);
+                } catch (IllegalArgumentException ignored) { }
+            }
+        });
+        return commands;
+    }
+    public static String command(InputConstants.Key key) { return COMMANDS.getOrDefault(key.getName(),""); }
+    public static void setCommand(InputConstants.Key key,String value) {
+        String command=MenuCommand.normalize(value);
+        if (!KEYS.contains(key)) return;
+        if (command.isEmpty()) COMMANDS.remove(key.getName());
+        else COMMANDS.put(key.getName(),command);
+        ClientConfig.set(ID,"commands",COMMANDS);
     }
     public static boolean simulateGui() { return simulateGui; }
     public static void setSimulateGui(boolean value) {
@@ -128,6 +151,7 @@ public final class MenuCursor {
         if (index >= 0 && index < KEYS.size()) {
             String removed=KEYS.remove(index).getName();
             OVERLAYS.remove(removed); LAST_ICONS.remove(removed);
+            COMMANDS.remove(removed); ClientConfig.set(ID,"commands",COMMANDS);
             ClientConfig.set(ID,"slotOverlays",OVERLAYS);
             saveKeys();
         }
@@ -142,7 +166,8 @@ public final class MenuCursor {
         HOTKEY_OWNERS.forEach(RawKeyboard.HOTKEYS::unbind);
         HOTKEY_OWNERS.clear();
         for (var key:KEYS) {
-            var raw=key.getType()==InputConstants.Type.SCANCODE
+            var raw=key.getType()==InputConstants.Type.MOUSE ? SharedHotkeys.Key.mouse(key.getValue())
+                    : key.getType()==InputConstants.Type.SCANCODE
                     ? SharedHotkeys.Key.scancode(key.getValue()) : SharedHotkeys.Key.symbol(key.getValue());
             String owner=ID+":"+key.getName();
             HOTKEY_OWNERS.add(owner);
@@ -191,6 +216,8 @@ public final class MenuCursor {
         // Keep logical gameplay focus intact for other mods, while freeing the physical cursor.
         ((CursorMouseAccess)client.mouseHandler).lidlclient$releaseCursor();
         clearMotion(client);
+        String command=command(key);
+        if (!command.isEmpty()) connection.sendCommand(command);
     }
     public static void beforeMouseMovement() {
         updateWait(Minecraft.getInstance());

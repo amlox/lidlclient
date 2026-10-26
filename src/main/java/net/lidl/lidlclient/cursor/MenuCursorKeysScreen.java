@@ -30,7 +30,10 @@ public final class MenuCursorKeysScreen extends Screen {
             var key=keys.get(index);
             addRenderableWidget(Button.builder(key.getDisplayName().copy().append(" · Slots"),b ->
                     Minecraft.getInstance().setScreen(new SlotOverlayScreen(this,key)))
-                    .bounds(left,y,190,20).build()).active = !capturing;
+                    .bounds(left,y,120,20).build()).active = !capturing;
+            addRenderableWidget(Button.builder(Component.literal(MenuCursor.command(key).isEmpty() ? "Command" : "Edit cmd"),b ->
+                    Minecraft.getInstance().setScreen(new MenuCommandScreen(this,key)))
+                    .bounds(left+124,y,68,20).build()).active = !capturing;
             addRenderableWidget(Button.builder(Component.literal("Remove"),b -> {
                 MenuCursor.removeKey(index); rebuildWidgets();
             }).bounds(left+196,y,74,20).build()).active = !capturing;
@@ -57,10 +60,18 @@ public final class MenuCursorKeysScreen extends Screen {
         rebuildWidgets();
         return true;
     }
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event,boolean doubleClick) {
+        if (!capturing) return super.mouseClicked(event,doubleClick);
+        MenuCursor.addKey(InputConstants.Type.MOUSE.getOrCreate(event.button()));
+        capturing=false;
+        page=Math.max(0,(MenuCursor.keys().size()-1)/perPage);
+        rebuildWidgets();
+        return true;
+    }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
         g.fill(0,0,width,height,0xEB0B101B);
         g.text(font,title,(width-font.width(title))/2,16,0xFFFFFFFF,false);
-        var line = Component.literal(capturing ? "Press the menu hotkey; Esc cancels." : "Add the same keys your menu-opening mod uses.");
+        var line = Component.literal(capturing ? "Press a key or mouse button; Esc cancels." : "Bind a key or mouse button; optionally add a command.");
         g.text(font,line,(width-font.width(line))/2,34,0xFFADBBD0,false);
         var hint = Component.literal("Esc cancels a wait. Existing hotkeys still work.");
         g.text(font,hint,Math.max(4,(width-font.width(hint))/2),height-83,0xFFADBBD0,false);

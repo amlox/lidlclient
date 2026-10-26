@@ -5,6 +5,12 @@ import org.lwjgl.glfw.GLFWKeyCallbackI;
 /** Wrap the callback being installed; retain and forward it, including modifiers and key releases. */
 public final class RawKeyboard {
     public static final SharedHotkeys HOTKEYS=new SharedHotkeys();
+    public static org.lwjgl.glfw.GLFWMouseButtonCallbackI observeMouse(org.lwjgl.glfw.GLFWMouseButtonCallbackI original) {
+        return (window,button,action,modifiers) -> {
+            try { HOTKEYS.observeMouse(window,button,action); }
+            finally { original.invoke(window,button,action,modifiers); }
+        };
+    }
     private RawKeyboard() { }
     public static GLFWKeyCallbackI observe(GLFWKeyCallbackI original) {
         return (window,key,scancode,action,modifiers) -> {

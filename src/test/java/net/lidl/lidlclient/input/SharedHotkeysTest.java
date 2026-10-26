@@ -7,6 +7,27 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class SharedHotkeysTest {
+    @Test void mouseFourIsDistinctFromKeyboardAndOnlyFiresOnPress() {
+        var hotkeys=new SharedHotkeys(); var seen=new ArrayList<Long>();
+        hotkeys.bind("mouse4",List.of(SharedHotkeys.Key.mouse(3)),seen::add);
+        hotkeys.observe(10,3,3,1);
+        hotkeys.observeMouse(20,3,1);
+        hotkeys.observeMouse(20,3,0);
+        hotkeys.observeMouse(20,3,2);
+        hotkeys.observeMouse(30,4,1);
+        hotkeys.dispatch();
+        assertEquals(List.of(20L),seen);
+    }
+    @Test void keyboardDoesNotReactToMouseAndRemovedMouseBindingDiscardsQueuedPress() {
+        var hotkeys=new SharedHotkeys(); var seen=new ArrayList<Long>();
+        hotkeys.bind("keyboard",List.of(SharedHotkeys.Key.scancode(3)),seen::add);
+        hotkeys.bind("mouse",List.of(SharedHotkeys.Key.mouse(3)),seen::add);
+        hotkeys.observeMouse(1,3,1);
+        hotkeys.unbind("mouse");
+        hotkeys.dispatch();
+        assertTrue(seen.isEmpty());
+    }
+
     @Test void sharedKeysNotifyEveryOwnerWithoutClaimingTheKey() {
         var hotkeys=new SharedHotkeys(); var seen=new ArrayList<String>();
         hotkeys.bind("pets",List.of(SharedHotkeys.Key.symbol(82)),window -> seen.add("pets:"+window));

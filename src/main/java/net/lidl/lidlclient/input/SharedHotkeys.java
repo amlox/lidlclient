@@ -9,10 +9,14 @@ import java.util.function.BooleanSupplier;
 
 /** Independent, non-consuming hotkeys. No Minecraft KeyMapping registry or key-state writes. */
 public final class SharedHotkeys {
-    public record Key(int symbol,int scancode) {
+    public record Key(int symbol,int scancode,int mouse) {
+        public Key(int symbol,int scancode) { this(symbol,scancode,-1); }
+        public static Key mouse(int button) { return new Key(-1,-1,button); }
         public static Key symbol(int value) { return new Key(value,-1); }
         public static Key scancode(int value) { return new Key(-1,value); }
-        boolean matches(int key,int scan) { return symbol==-1?scancode==scan:symbol==key; }
+        boolean matches(int key,int scan,int button) {
+            return mouse>=0 ? mouse==button : button<0 && (symbol==-1?scancode==scan:symbol==key);
+        }
     }
     private record Binding(List<Key> keys,BooleanSupplier active,LongConsumer onPress) { }
     private record Press(String owner,Binding binding,long window) { }
@@ -27,13 +31,19 @@ public final class SharedHotkeys {
     public void unbind(String owner) { bindings.remove(owner); }
     /** Called by the native callback; defer actions until normal keyboard dispatch has returned. */
     public void observe(long window,int key,int scancode,int action) {
+        observe(window,key,scancode,-1,action);
+    }
+    public void observeMouse(long window,int button,int action) {
+        observe(window,-1,-1,button,action);
+    }
+    private void observe(long window,int key,int scancode,int button,int action) {
         if (action!=1) return; // GLFW_PRESS only; repeats and releases still go to the original callback.
         for (var entry:bindings.entrySet()) {
             if (pending.size()>=64) return;
             Binding binding=entry.getValue();
             if (!binding.active().getAsBoolean()) continue;
             for (Key input:binding.keys()) {
-                if (!input.matches(key,scancode)) continue;
+                if (!input.matches(key,scancode,button)) continue;
                 pending.addLast(new Press(entry.getKey(),binding,window));
                 break;
             }

@@ -16,6 +16,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MouseHandler.class)
 public abstract class MenuCursorMouseMixin implements CursorMouseAccess {
+    @org.spongepowered.asm.mixin.injection.ModifyArg(method="setup",at=@At(value="INVOKE",target="Lcom/mojang/blaze3d/platform/InputConstants;setupMouseCallbacks(Lcom/mojang/blaze3d/platform/Window;Lorg/lwjgl/glfw/GLFWCursorPosCallbackI;Lorg/lwjgl/glfw/GLFWMouseButtonCallbackI;Lorg/lwjgl/glfw/GLFWScrollCallbackI;Lorg/lwjgl/glfw/GLFWDropCallbackI;)V"),index=2)
+    private org.lwjgl.glfw.GLFWMouseButtonCallbackI lidlclient$shareRawMouse(org.lwjgl.glfw.GLFWMouseButtonCallbackI original) {
+        return net.lidl.lidlclient.input.RawKeyboard.observeMouse(original);
+    }
     @Shadow private boolean mouseGrabbed;
     @Shadow private double xpos;
     @Shadow private double ypos;

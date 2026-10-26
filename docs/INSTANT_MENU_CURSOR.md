@@ -2,18 +2,31 @@
 
 Open `/lidl` > **QoL features**, enable **Instant menu cursor**, then right-click
 its card and choose **Edit keybinds**. Use **Add keybind** and press your existing
-menu hotkey, such as R for Pets. Add as many keyboard bindings as you need; duplicate
+menu hotkey, such as R for Pets. Add as many keyboard or mouse-button bindings as you need; duplicate
 keys are ignored. Each row has Remove, and longer lists have Previous/Next pages.
 Keys and the module toggle persist across restarts. Escape cancels key capture.
 The module starts disabled with no keys.
 
-Keep your original mod's menu hotkey configured. Saved cursor keys and slot layouts
+Each binding also has a **Command** button. Set a server command such as `/pets`
+or `/storage 3` to send it once when the binding starts the cursor preview.
+The slash is optional. Save commits the command; Cancel discards changes.
+Leave it blank to only observe another mod's hotkey. Commands persist per binding
+and are removed with the binding. Avoid assigning the same menu command in both
+mods, since both listeners remain active.
+
+Mouse 4 and Mouse 5 are supported: click **Add keybind**, then press the side
+button. Mouse 4 uses GLFW button index 3. Mouse input was previously rejected
+by the key validator and had no callback observer; both are now supported.
+The triggering press is forwarded before the preview begins; subsequent world
+clicks are blocked while waiting, and releases always pass through.
+
+For blank-command bindings, keep your original mod's menu hotkey configured. Saved cursor keys and slot layouts
 carry forward automatically; no rebinding is needed. The cursor module now uses
 an independent **SharedHotkeys** framework, outside Minecraft's KeyMapping system.
 It never registers a competing binding, consumes a key press, clears a key state,
 or changes another mod's assigned keys.
 
-The framework observes the raw GLFW keyboard callback and always forwards the
+The framework observes the raw GLFW keyboard and mouse-button callbacks and always forwards the
 original callback with the same window, key, scancode, action, and modifiers.
 Actions run before the next mouse-movement pass, after the original callback has
 returned. Short press/release taps between frames are retained; repeats and
@@ -28,7 +41,7 @@ mouse-grabbed flag stays true, allowing other mods' raw/tick/held-key handlers t
 continue seeing normal gameplay focus. Camera turning is blocked separately and
 queued look motion is cleared. This also removes the previous one-tick handoff
 delay. The cursor starts at Minecraft's centre position and moves freely while
-the server menu loads. The simulated container is rendered immediately when **Simulate container GUI** is enabled (default). No additional command is sent.
+the server menu loads. The simulated container is rendered immediately when **Simulate container GUI** is enabled (default). An optional configured command is sent once; blank bindings send nothing.
 
 When a real screen arrives, the mouse hook completes the logical release without
 moving the already-free cursor. Escape or timeout restores normal mouse capture.

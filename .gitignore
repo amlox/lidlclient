@@ -38,11 +38,3 @@ hs_err_*.log
 replay_*.log
 *.hprof
 *.jfr
-
-# local WebSocket relay state and Python caches
-__pycache__/
-*.pyc
-/tools/party-sync/rooms.json
-/tools/party-sync/rooms.tmp
-
-.venv/

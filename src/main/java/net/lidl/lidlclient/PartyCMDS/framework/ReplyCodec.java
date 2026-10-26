@@ -3,9 +3,9 @@ package net.lidl.lidlclient.PartyCMDS.framework;
 import com.google.gson.*;
 import java.util.*;
 
-/** Validates local files and incoming room snapshots with the same bounded schema. */
+/** Validates saved command definitions and migrates older reply formats. */
 public final class ReplyCodec {
-    public static final int MAX_COMMANDS=64;
+    public static final int MAX_COMMANDS=128;
     public static final Gson JSON=new Gson();
     private ReplyCodec() { }
     public static PartyReply read(JsonElement value) {
@@ -17,7 +17,11 @@ public final class ReplyCodec {
             throw new IllegalArgumentException("Expected an enabled switch");
         var answers=object.get("answers");
         if (answers==null || !answers.isJsonArray()) throw new IllegalArgumentException("Expected answers");
-        return new PartyReply(trigger,answers.getAsJsonArray().asList().stream().map(ReplyCodec::string).toList(),enabled.getAsBoolean());
+        var destination=object.get("partyChat");
+        if (destination!=null && (!destination.isJsonPrimitive() || !destination.getAsJsonPrimitive().isBoolean()))
+            throw new IllegalArgumentException("Expected a party-chat switch");
+        return new PartyReply(trigger,answers.getAsJsonArray().asList().stream().map(ReplyCodec::string).toList(),
+                enabled.getAsBoolean(),destination==null || destination.getAsBoolean());
     }
     public static String string(JsonElement value) {
         if (value==null || !value.isJsonPrimitive() || !value.getAsJsonPrimitive().isString())

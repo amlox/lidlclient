@@ -21,12 +21,10 @@ public final class PartyCommandsScreen extends Screen {
         int left=(width-296)/2;
         addRenderableWidget(Button.builder(Component.literal("Add command"),b -> Minecraft.getInstance()
                 .setScreen(new PartyReplyScreen(this,null))).bounds(left,34,116,20).build());
-        addRenderableWidget(Button.builder(Component.literal("Shared room"),b -> Minecraft.getInstance()
-                .setScreen(new PartyRoomScreen(this))).bounds(left+122,34,110,20).build());
         for (int row=0;row<perPage && page*perPage+row<commands.size();row++) {
             String trigger=commands.get(page*perPage+row); int y=62+row*24;
             boolean reserved=trigger.equals("!ban") || trigger.equals("!help");
-            String source=PartyReplyLibrary.isLocal(trigger)?"local":PartyReplyLibrary.isShared(trigger)?"room":"built-in";
+            String source=PartyReplyLibrary.isLocal(trigger)?"edited":"built-in";
             var edit=addRenderableWidget(Button.builder(Component.literal(trigger+" ["+source+"]"),b ->
                     Minecraft.getInstance().setScreen(new PartyReplyScreen(this,trigger))).bounds(left,y,158,20).build());
             edit.active=!reserved;
@@ -34,13 +32,9 @@ public final class PartyCommandsScreen extends Screen {
                 PartyCommands.setCommandEnabled(trigger,!PartyCommands.isCommandConfigured(trigger)); rebuildWidgets();
             }).bounds(left+164,y,44,20).build());
             var remove=addRenderableWidget(Button.builder(Component.literal("Remove"),b -> {
-                if (PartyReplyLibrary.isLocal(trigger)) {
-                    PartyReplyLibrary.remove(trigger); message="Local override removed"; rebuildWidgets();
-                } else if (PartyReplyLibrary.isShared(trigger)) PartyRoomSync.delete(trigger,(ok,detail) -> {
-                    message=detail; rebuildWidgets();
-                });
+                PartyReplyLibrary.remove(trigger); message="Custom definition removed"; rebuildWidgets();
             }).bounds(left+214,y,82,20).build());
-            remove.active=PartyReplyLibrary.isLocal(trigger) || PartyReplyLibrary.isShared(trigger)&&PartyRoomSync.connected();
+            remove.active=PartyReplyLibrary.isLocal(trigger);
         }
         int bottom=height-28;
         var previous=addRenderableWidget(Button.builder(Component.literal("Previous"),b -> { page--; rebuildWidgets(); })
@@ -51,12 +45,12 @@ public final class PartyCommandsScreen extends Screen {
     }
     private java.util.List<String> state() {
         return PartyCommands.commandNames().stream().map(trigger -> trigger+":"+PartyCommands.isCommandConfigured(trigger)
-                +":"+PartyReplyLibrary.isLocal(trigger)+":"+PartyReplyLibrary.isShared(trigger)).toList();
+                +":"+PartyReplyLibrary.isLocal(trigger)).toList();
     }
     @Override public void tick() { if (!shown.equals(state())) rebuildWidgets(); }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
         g.fill(0,0,width,height,0xEB0B101B); g.centeredText(font,title,width/2,16,0xFFFFFFFF);
-        g.centeredText(font,message.isEmpty()?"Remove restores a shared / built-in fallback, if present.":message,
+        g.centeredText(font,message.isEmpty()?"Remove restores the built-in command, if present.":message,
                 width/2,height-47,0xFFADBBD0);
         super.extractRenderState(g,mx,my,delta);
     }

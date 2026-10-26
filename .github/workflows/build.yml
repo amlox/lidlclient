@@ -21,15 +21,7 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: test and start local party relay
-        run: |
-          python3 -m venv "$RUNNER_TEMP/party-sync-venv"
-          "$RUNNER_TEMP/party-sync-venv/bin/pip" install -r tools/party-sync/requirements.txt
-          "$RUNNER_TEMP/party-sync-venv/bin/python" -m unittest discover -s tools/party-sync -p 'test_*.py' -v
-          "$RUNNER_TEMP/party-sync-venv/bin/python" tools/party-sync/server.py --data "$RUNNER_TEMP/party-rooms.json" > "$RUNNER_TEMP/party-sync.log" 2>&1 &
       - name: build
-        env:
-          PARTY_SYNC_TEST_URL: ws://127.0.0.1:8765
         run: ./gradlew build
       - name: capture build artifacts
         uses: actions/upload-artifact@v7

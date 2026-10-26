@@ -3,45 +3,43 @@ package net.lidl.lidlclient.PartyCMDS.framework;
 import net.lidl.lidlclient.config.ClientConfig;
 import java.util.*;
 
-/** Local edits override shared replies; shared replies override the legacy handlers. */
+/** One local definition per trigger, with editable overrides for built-in commands. */
 public final class PartyReplyLibrary {
     private static Map<String,PartyReply> local;
-    private static Map<String,PartyReply> shared=Map.of();
     private PartyReplyLibrary() { }
     private static void load() {
         if (local!=null) return;
         try { local=ReplyCodec.readAll(ClientConfig.store().get("party_commands","replies"),true); }
         catch (RuntimeException ignored) { local=new LinkedHashMap<>(); }
+        // Retain previously downloaded replies as local definitions when removing sharing.
+        try {
+            var cached=ReplyCodec.readAll(ClientConfig.store().get("party_commands","roomCache"),true);
+            cached.forEach((trigger,reply) -> {
+                if (local.size()<ReplyCodec.MAX_COMMANDS) local.putIfAbsent(trigger,reply);
+            });
+            if (!cached.isEmpty()) persist();
+        } catch (RuntimeException ignored) { }
+        for (String key:List.of("roomCache","roomCacheScope","roomEndpoint","roomName","roomToken"))
+            if (ClientConfig.store().get("party_commands",key)!=null) ClientConfig.set("party_commands",key,null);
     }
-    public static PartyReply find(String trigger) {
-        load(); return local.containsKey(trigger)?local.get(trigger):shared.get(trigger);
-    }
-    public static Map<String,PartyReply> all() {
-        load(); Map<String,PartyReply> result=new TreeMap<>(shared); result.putAll(local); return Map.copyOf(result);
-    }
+    public static PartyReply find(String trigger) { load(); return local.get(trigger); }
+    public static Map<String,PartyReply> all() { load(); return Map.copyOf(local); }
     public static boolean isLocal(String trigger) { load(); return local.containsKey(trigger); }
-    public static PartyReply roomReply(String trigger) { return shared.get(trigger); }
-    public static boolean isShared(String trigger) { return shared.containsKey(trigger); }
+    public static void create(PartyReply reply) {
+        load();
+        var names=new java.util.HashSet<>(net.lidl.lidlclient.PartyCMDS.PartyCommandSwitches.COMMANDS);
+        names.addAll(local.keySet());
+        PartyReply.requireAvailable(reply.trigger(),names);
+        save(reply);
+    }
     public static void save(PartyReply reply) {
         load();
         if (!local.containsKey(reply.trigger()) && local.size()>=ReplyCodec.MAX_COMMANDS)
-            throw new IllegalArgumentException("Local library is full (64 commands)");
+            throw new IllegalArgumentException("Command library is full (128 commands)");
         local.put(reply.trigger(),reply); persist();
     }
     public static void remove(String trigger) { load(); local.remove(trigger); persist(); }
     private static void persist() { ClientConfig.set("party_commands","replies",local.values()); }
-    public static void acceptRoom(Map<String,PartyReply> replies) {
-        shared=Map.copyOf(replies);
-        ClientConfig.set("party_commands","roomCache",shared.values());
-        ClientConfig.set("party_commands","roomCacheScope",PartyRoomSync.scope());
-    }
-    public static void restoreRoom() {
-        shared=Map.of();
-        if (PartyRoomSync.scope().equals(ClientConfig.string("party_commands","roomCacheScope"))) {
-            try { shared=Map.copyOf(ReplyCodec.readAll(ClientConfig.store().get("party_commands","roomCache"),true)); }
-            catch (RuntimeException ignored) { }
-        }
-    }
     public static PartyReply example(String trigger) {
         return switch (trigger) {
             case "!dice" -> new PartyReply(trigger,List.of("You rolled a {roll:1:6}!"),true);

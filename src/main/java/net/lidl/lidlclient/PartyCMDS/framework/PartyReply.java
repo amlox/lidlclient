@@ -6,7 +6,13 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
 /** Data-only replies: no scripts, URLs to execute, or server-command actions. */
-public record PartyReply(String trigger,List<String> answers,boolean enabled) {
+public record PartyReply(String trigger,List<String> answers,boolean enabled,boolean partyChat) {
+    public PartyReply(String trigger,List<String> answers,boolean enabled) { this(trigger,answers,enabled,true); }
+    public static void requireAvailable(String trigger,java.util.Collection<String> existing) {
+        String normalized=trigger.strip().toLowerCase(Locale.ROOT);
+        if (existing.stream().anyMatch(value -> value.equalsIgnoreCase(normalized)))
+            throw new IllegalArgumentException(normalized+" already exists. Edit the existing command instead.");
+    }
     private static final Pattern ROLL=Pattern.compile("\\{roll:(-?\\d{1,6}):(-?\\d{1,6})}");
     public PartyReply {
         if (trigger==null || !trigger.matches("![A-Za-z0-9_-]{1,24}"))
@@ -27,6 +33,7 @@ public record PartyReply(String trigger,List<String> answers,boolean enabled) {
                 throw new IllegalArgumentException("Roll minimum must not exceed maximum");
         }
     }
+    public PartyReply withEnabled(boolean value) { return new PartyReply(trigger,answers,value,partyChat); }
     public String render(String player,String args) {
         String template=answers.get(ThreadLocalRandom.current().nextInt(answers.size()));
         if (template.contains("{slot1}") || template.contains("{slot2}") || template.contains("{slot3}") || template.contains("{jackpot}"))

@@ -60,10 +60,7 @@ public class PartyCommands implements ClientModInitializer {
     private static final PartyCommandSwitches SWITCHES = new PartyCommandSwitches();
     private static boolean settingsLoaded;
     private static String pendingCommand;
-    private static String pendingEvent;
     private static ClientPacketListener responseConnection;
-    private static boolean claiming;
-    private static long responseGeneration;
 
     private static void loadSettings() {
         if (settingsLoaded) return;
@@ -86,9 +83,6 @@ public class PartyCommands implements ClientModInitializer {
     public static void openEditor() {
         var client=Minecraft.getInstance(); client.setScreen(new PartyCommandsScreen(client.screen));
     }
-    public static void openSharing() {
-        var client=Minecraft.getInstance(); client.setScreen(new PartyRoomScreen(client.screen));
-    }
     public static boolean isEnabled() { loadSettings(); return SWITCHES.isEnabled(); }
     public static boolean isCommandConfigured(String command) {
         loadSettings(); var reply=PartyReplyLibrary.find(command);
@@ -106,7 +100,7 @@ public class PartyCommands implements ClientModInitializer {
     public static void setCommandEnabled(String command, boolean value) {
         loadSettings();
         var reply=PartyReplyLibrary.find(command);
-        if (reply!=null) PartyReplyLibrary.save(new PartyReply(reply.trigger(),reply.answers(),value));
+        if (reply!=null) PartyReplyLibrary.save(reply.withEnabled(value));
         else SWITCHES.set(command, value);
         if (!value && command.equalsIgnoreCase(pendingCommand)) cancelResponse();
         saveSettings();
@@ -133,7 +127,6 @@ public class PartyCommands implements ClientModInitializer {
     public void onInitializeClient() {
 
         loadSettings();
-        PartyRoomSync.initialize();
         LOGGER.info("Party Commands initialized!");
         initializeBanCommand();
 
@@ -162,7 +155,7 @@ public class PartyCommands implements ClientModInitializer {
                     if (response == null) return;
 
                     // Only queue one response at a time
-                    if (pendingMessage != null || claiming) {
+                    if (pendingMessage != null) {
                         LOGGER.info("Another response is already queued.");
                         return;
                     }
@@ -171,7 +164,6 @@ public class PartyCommands implements ClientModInitializer {
                     pendingMessage = response;
                     pendingCommand = PartyCommandSwitches.commandName(partyMessage);
                     pendingSince = System.currentTimeMillis();
-                    pendingEvent = text;
                     responseConnection = Minecraft.getInstance().getConnection();
 
                     LOGGER.info("Queued party response: {}", response);
@@ -180,7 +172,7 @@ public class PartyCommands implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 
             // Nothing waiting to be sent
-            if (pendingMessage == null || claiming) return;
+            if (pendingMessage == null) return;
 
             if (pendingCommand == null || !isCommandEnabled(pendingCommand)) {
                 cancelResponse();
@@ -200,22 +192,7 @@ public class PartyCommands implements ClientModInitializer {
             // Respect the cooldown between messages
             if (lastSent != 0 && now - lastSent < SEND_COOLDOWN) return;
 
-            if (PartyRoomSync.connectingOrConnected()) {
-                claiming=true;
-                long generation=++responseGeneration;
-                String reply=pendingMessage,command=pendingCommand;
-                var connection=responseConnection;
-                String server=client.getCurrentServer()==null?"local":client.getCurrentServer().ip.toLowerCase(Locale.ROOT);
-                PartyRoomSync.claim(server,pendingEvent,(granted,detail) -> {
-                    if (generation!=responseGeneration) return;
-                    if (granted && client.getConnection()==connection && isCommandEnabled(command)) {
-                        sendPartyMessage(reply,command); lastSent=System.currentTimeMillis();
-                    }
-                    cancelResponse();
-                });
-            } else {
-                sendPartyMessage(pendingMessage,pendingCommand); lastSent=now; cancelResponse();
-            }
+            sendPartyMessage(pendingMessage,pendingCommand); lastSent=now; cancelResponse();
         });
     }
 
@@ -273,8 +250,7 @@ public class PartyCommands implements ClientModInitializer {
     }
 
     private static void cancelResponse() {
-        pendingMessage=null; pendingCommand=null; pendingEvent=null; responseConnection=null;
-        claiming=false; responseGeneration++;
+        pendingMessage=null; pendingCommand=null; responseConnection=null;
     }
 
     private static String handleCommand(String message, String playerName) {
@@ -385,12 +361,14 @@ public class PartyCommands implements ClientModInitializer {
         var connection=client.getConnection();
         client.execute(() -> {
 
-            if (connection==null || client.getConnection()!=connection || !isCommandEnabled(command)) return;
+            if (connection==null || client.getConnection()!=connection || client.player==null || !isCommandEnabled(command)) return;
 
             LOGGER.info("Sending party message: {}", message);
 
-            // Sends /pc <message>
-            client.getConnection().sendCommand("pc " + message);
+            var definition=PartyReplyLibrary.find(command);
+            if (definition!=null && !definition.partyChat())
+                client.player.sendSystemMessage(Component.literal("[Party Commands — Only me] "+message));
+            else client.getConnection().sendCommand("pc " + message);
         });
     }
 

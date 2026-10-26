@@ -44,4 +44,28 @@ class PartyReplyTest {
         var duplicate=JsonParser.parseString("["+ReplyCodec.JSON.toJson(reply)+","+ReplyCodec.JSON.toJson(reply)+"]");
         assertThrows(IllegalArgumentException.class,()->ReplyCodec.readAll(duplicate,false));
     }
+    @Test void duplicateTriggersAreBlockedIncludingBuiltInsAndDifferentCapitalization() {
+        var commands=java.util.List.of("!dice","!hello","!hi");
+        for (String trigger:java.util.List.of("!dice","!DICE"," !Hello ")) {
+            var error=assertThrows(IllegalArgumentException.class,()->PartyReply.requireAvailable(trigger,commands));
+            assertTrue(error.getMessage().contains("already exists"));
+        }
+        assertDoesNotThrow(()->PartyReply.requireAvailable("!high",commands));
+        assertDoesNotThrow(()->PartyReply.requireAvailable("!new",commands));
+    }
+    @Test void oldRepliesDefaultToPartyChatAndPrivateOutputSurvivesSaveAndToggle() {
+        var legacy=ReplyCodec.read(JsonParser.parseString("""
+                {"trigger":"!hello","answers":["Hello"],"enabled":true}
+                """));
+        assertTrue(legacy.partyChat());
+        var privateReply=new PartyReply("!hello",List.of("Private answer"),true,false);
+        assertEquals(privateReply,ReplyCodec.read(ReplyCodec.JSON.toJsonTree(privateReply)));
+        var disabled=privateReply.withEnabled(false);
+        assertFalse(disabled.enabled()); assertFalse(disabled.partyChat());
+        assertEquals(privateReply,disabled.withEnabled(true));
+        assertThrows(IllegalArgumentException.class,()->ReplyCodec.read(JsonParser.parseString("""
+                {"trigger":"!hello","answers":["Hi"],"enabled":true,"partyChat":"false"}
+                """)));
+    }
+
 }

@@ -96,7 +96,6 @@ public final class ModuleRegistry {
     private static List<ModuleSetting> partySettings() {
         List<ModuleSetting> settings=new ArrayList<>();
         settings.add(new ActionSetting("Edit commands / replies",PartyCommands::openEditor));
-        settings.add(new ActionSetting("Shared room",PartyCommands::openSharing));
 
         return settings;
     }

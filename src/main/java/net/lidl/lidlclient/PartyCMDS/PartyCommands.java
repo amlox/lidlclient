@@ -2,6 +2,7 @@ package net.lidl.lidlclient.PartyCMDS;
 
 import net.fabricmc.api.ClientModInitializer;
 import java.util.Map;
+import net.lidl.lidlclient.PartyCMDS.framework.*;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -59,6 +60,10 @@ public class PartyCommands implements ClientModInitializer {
     private static final PartyCommandSwitches SWITCHES = new PartyCommandSwitches();
     private static boolean settingsLoaded;
     private static String pendingCommand;
+    private static String pendingEvent;
+    private static ClientPacketListener responseConnection;
+    private static boolean claiming;
+    private static long responseGeneration;
 
     private static void loadSettings() {
         if (settingsLoaded) return;
@@ -74,25 +79,36 @@ public class PartyCommands implements ClientModInitializer {
         SWITCHES.snapshot().forEach((command, value) -> ClientConfig.set("party_commands", command, value));
     }
 
-    public static List<String> commandNames() { return PartyCommandSwitches.COMMANDS; }
+    public static List<String> commandNames() {
+        var commands=new java.util.TreeSet<>(PartyCommandSwitches.COMMANDS);
+        commands.addAll(PartyReplyLibrary.all().keySet()); return List.copyOf(commands);
+    }
+    public static void openEditor() {
+        var client=Minecraft.getInstance(); client.setScreen(new PartyCommandsScreen(client.screen));
+    }
+    public static void openSharing() {
+        var client=Minecraft.getInstance(); client.setScreen(new PartyRoomScreen(client.screen));
+    }
     public static boolean isEnabled() { loadSettings(); return SWITCHES.isEnabled(); }
-    public static boolean isCommandConfigured(String command) { loadSettings(); return SWITCHES.configured(command); }
-    public static boolean isCommandEnabled(String command) { loadSettings(); return SWITCHES.allows(command); }
+    public static boolean isCommandConfigured(String command) {
+        loadSettings(); var reply=PartyReplyLibrary.find(command);
+        return reply==null?SWITCHES.configured(command):reply.enabled();
+    }
+    public static boolean isCommandEnabled(String command) { return isEnabled() && isCommandConfigured(command); }
 
     public static void setEnabled(boolean value) {
         loadSettings();
         SWITCHES.setEnabled(value);
-        if (!value) { pendingMessage = null; pendingCommand = null; }
+        if (!value) cancelResponse();
         saveSettings();
     }
 
     public static void setCommandEnabled(String command, boolean value) {
         loadSettings();
-        SWITCHES.set(command, value);
-        if (!value && command.equalsIgnoreCase(pendingCommand)) {
-            pendingMessage = null;
-            pendingCommand = null;
-        }
+        var reply=PartyReplyLibrary.find(command);
+        if (reply!=null) PartyReplyLibrary.save(new PartyReply(reply.trigger(),reply.answers(),value));
+        else SWITCHES.set(command, value);
+        if (!value && command.equalsIgnoreCase(pendingCommand)) cancelResponse();
         saveSettings();
     }
 
@@ -117,6 +133,7 @@ public class PartyCommands implements ClientModInitializer {
     public void onInitializeClient() {
 
         loadSettings();
+        PartyRoomSync.initialize();
         LOGGER.info("Party Commands initialized!");
         initializeBanCommand();
 
@@ -129,8 +146,6 @@ public class PartyCommands implements ClientModInitializer {
                     String text = message.getString()
                             .replaceAll("(?i)§[0-9a-fk-or]", "");
 
-                    // debug, delete after
-                    LOGGER.info("[GAME CHAT] {}", text);
                     // Find party messages
                     Matcher matcher = PARTY_PATTERN.matcher(text);
 
@@ -147,7 +162,7 @@ public class PartyCommands implements ClientModInitializer {
                     if (response == null) return;
 
                     // Only queue one response at a time
-                    if (pendingMessage != null) {
+                    if (pendingMessage != null || claiming) {
                         LOGGER.info("Another response is already queued.");
                         return;
                     }
@@ -156,55 +171,25 @@ public class PartyCommands implements ClientModInitializer {
                     pendingMessage = response;
                     pendingCommand = PartyCommandSwitches.commandName(partyMessage);
                     pendingSince = System.currentTimeMillis();
+                    pendingEvent = text;
+                    responseConnection = Minecraft.getInstance().getConnection();
 
                     LOGGER.info("Queued party response: {}", response);
                 }
         );
-        // Debug incoming player chat
-        ClientReceiveMessageEvents.CHAT.register(
-                (message, signedMessage, sender, params, timestamp) -> {
-
-                    String text = message.getString();
-
-                    LOGGER.info("[PLAYER CHAT] {}", text);
-                }
-        );
-        /* Local testing command
-        ClientCommandRegistrationCallback.EVENT.register(
-                (dispatcher, registryAccess) -> {
-
-                    dispatcher.register(
-                            ClientCommands.literal("partytest")
-                                    .executes(context -> {
-
-                                        String response = handleCommand("!dice");
-
-                                        context.getSource().sendFeedback(
-                                                Component.literal(
-                                                        "[Party Test] " + response
-                                                )
-                                        );
-
-                                        return 1;
-                                    })
-                    );
-                }
-        );*/
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 
             // Nothing waiting to be sent
-            if (pendingMessage == null) return;
+            if (pendingMessage == null || claiming) return;
 
             if (pendingCommand == null || !isCommandEnabled(pendingCommand)) {
-                pendingMessage = null;
-                pendingCommand = null;
+                cancelResponse();
                 return;
             }
 
             // Don't send while disconnected
-            if (client.getConnection() == null) {
-                pendingMessage = null;
-                return;
+            if (client.getConnection() == null || client.getConnection()!=responseConnection) {
+                cancelResponse(); return;
             }
 
             long now = System.currentTimeMillis();
@@ -215,17 +200,76 @@ public class PartyCommands implements ClientModInitializer {
             // Respect the cooldown between messages
             if (lastSent != 0 && now - lastSent < SEND_COOLDOWN) return;
 
-            // Send our queued response
-            sendPartyMessage(pendingMessage, pendingCommand);
-
-            lastSent = now;
-            pendingMessage = null;
+            if (PartyRoomSync.connectingOrConnected()) {
+                claiming=true;
+                long generation=++responseGeneration;
+                String reply=pendingMessage,command=pendingCommand;
+                var connection=responseConnection;
+                String server=client.getCurrentServer()==null?"local":client.getCurrentServer().ip.toLowerCase(Locale.ROOT);
+                PartyRoomSync.claim(server,pendingEvent,(granted,detail) -> {
+                    if (generation!=responseGeneration) return;
+                    if (granted && client.getConnection()==connection && isCommandEnabled(command)) {
+                        sendPartyMessage(reply,command); lastSent=System.currentTimeMillis();
+                    }
+                    cancelResponse();
+                });
+            } else {
+                sendPartyMessage(pendingMessage,pendingCommand); lastSent=now; cancelResponse();
+            }
         });
     }
 
     // ========================================
     // COMMAND HANDLER
     // ========================================
+
+    public static PartyReply editableReply(String trigger) {
+        var existing=PartyReplyLibrary.find(trigger);
+        if (existing!=null) return existing;
+        if (trigger.equals("!tesco")) return new PartyReply(trigger,java.util.Arrays.stream(legacyOracleAnswers())
+                .map(answer -> "[MVP+] Tesco_Manager: "+answer.replaceAll("[\\p{Cc}\\p{Cf}]"," ")).toList(),
+                isCommandConfigured(trigger));
+        var example=PartyReplyLibrary.example(trigger);
+        return new PartyReply(example.trigger(),example.answers(),isCommandConfigured(trigger));
+    }
+    private static String[] legacyOracleAnswers() {
+        return new String[] {
+                        "fallamatugang",
+                        "i dont like em chocolate colored people",
+                        "they should add ｓｌａｖｅｓ to skyblock",
+                        "i blame the chocolate people",
+                        "grubrbi hand",
+                        "just cvm in me",
+                        "grubberberg tail",
+                        "i dont like the illegals",
+                        "doctor house can get it",
+                        "doctor house is gey",
+                        "why do i look like a horse",
+                        "jew",
+                        "whos walking, im RUNNING",
+                        "i have so many ｓｌａｖｅｓ",
+                        "im beating my dead frozen baby with my big black veiny dihh",
+                        "i love substance abuse",
+                        "I got head from my hamster",
+                        "take off your clothes",
+                        "circle of penetration",
+                        "cousins by chance lovers by choice",
+                        "wall breaker left",
+                        "okay garmin video schrieben",
+                        "schriepen",
+                        "i dislocated my toe",
+                        "his dih pattern is recognizable",
+                        "i only have jerk mate premium",
+                        "rocks are made of rocks",
+                        "ive actually gooned to a penguin before",
+                        "that rock over is actually my favourite. \nit reminds me of the penguin",
+                };
+    }
+
+    private static void cancelResponse() {
+        pendingMessage=null; pendingCommand=null; pendingEvent=null; responseConnection=null;
+        claiming=false; responseGeneration++;
+    }
 
     private static String handleCommand(String message, String playerName) {
 
@@ -236,6 +280,8 @@ public class PartyCommands implements ClientModInitializer {
 
         if (!isCommandEnabled(command)) return null;
 
+        var custom=PartyReplyLibrary.find(command);
+        if (custom!=null) return custom.render(playerName,args);
         return switch (command) {
 
             case "!iq" -> {
@@ -287,37 +333,7 @@ public class PartyCommands implements ClientModInitializer {
                     yield "Usage: !tesco <question>";
                 }
 
-                String[] answers = {
-                        "fallamatugang",
-                        "i dont like em chocolate colored people",
-                        "they should add ｓｌａｖｅｓ to skyblock",
-                        "i blame the chocolate people",
-                        "grubrbi hand",
-                        "just cvm in me",
-                        "grubberberg tail",
-                        "i dont like the illegals",
-                        "doctor house can get it",
-                        "doctor house is gey",
-                        "why do i look like a horse",
-                        "jew",
-                        "whos walking, im RUNNING",
-                        "i have so many ｓｌａｖｅｓ",
-                        "im beating my dead frozen baby with my big black veiny dihh",
-                        "i love substance abuse",
-                        "I got head from my hamster",
-                        "take off your clothes",
-                        "circle of penetration",
-                        "cousins by chance lovers by choice",
-                        "wall breaker left",
-                        "okay garmin video schrieben",
-                        "schriepen",
-                        "i dislocated my toe",
-                        "his dih pattern is recognizable",
-                        "i only have jerk mate premium",
-                        "rocks are made of rocks",
-                        "ive actually gooned to a penguin before",
-                        "that rock over is actually my favourite. \nit reminds me of the penguin",
-                };
+                String[] answers = legacyOracleAnswers();
 
                 int index = ThreadLocalRandom.current()
                         .nextInt(answers.length);
@@ -344,7 +360,7 @@ public class PartyCommands implements ClientModInitializer {
                 yield result;
             }
 
-            case "!help" -> "Commands: " + String.join(", ", SWITCHES.activeCommands());
+            case "!help" -> "Commands: " + String.join(", ", commandNames().stream().filter(PartyCommands::isCommandEnabled).toList());
             //when x times !help call retarded
             // Unknown command
             default -> null;
@@ -359,9 +375,10 @@ public class PartyCommands implements ClientModInitializer {
 
         Minecraft client = Minecraft.getInstance();
 
+        var connection=client.getConnection();
         client.execute(() -> {
 
-            if (client.getConnection() == null || !isCommandEnabled(command)) return;
+            if (connection==null || client.getConnection()!=connection || !isCommandEnabled(command)) return;
 
             LOGGER.info("Sending party message: {}", message);
 

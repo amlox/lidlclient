@@ -85,15 +85,20 @@ public final class ModuleRegistry {
                 NameChanger::isEnabled, NameChanger::setEnabled,
                 new ActionSetting("Edit your name", NameChanger::openEditor)));
 
-        // Party commands retain the existing controller placeholder until connected.
+        // Both dynamic replies and legacy command switches live in the command editor.
         modules.add(new GuiModule("party_commands", "PartyCMDS", "QoL features", "Party commands",
                 PartyCommands::isEnabled, PartyCommands::setEnabled,
-                PartyCommands.commandNames().stream().<ModuleSetting>map(command ->
-                        new BooleanSetting(command,
-                                () -> PartyCommands.isCommandConfigured(command),
-                                value -> PartyCommands.setCommandEnabled(command, value))).toList()));
+                partySettings()));
 
         return validate(modules.stream().map(module -> ModulePersistence.bind(module, ClientConfig.store())).toList());
+    }
+
+    private static List<ModuleSetting> partySettings() {
+        List<ModuleSetting> settings=new ArrayList<>();
+        settings.add(new ActionSetting("Edit commands / replies",PartyCommands::openEditor));
+        settings.add(new ActionSetting("Shared room",PartyCommands::openSharing));
+
+        return settings;
     }
 
     public static List<GuiModule> modules() { return MODULES; }

@@ -92,12 +92,12 @@ public final class SlotOverlayScreen extends Screen {
             String icon=draft.icons().get(inventory?slot+54:slot);
             g.fill(x-1,y-1,x+size+1,y+size+1,0xFF576176);
             g.fill(x,y,x+size,y+size,0xFF18202E);
+            if (colour!=null) g.fill(x,y,x+size,y+size,SlotOverlay.translucent(colour,MenuCursor.overlayOpacity()));
             if (icon!=null) {
                 var stack=iconCache.computeIfAbsent(icon,SlotIcons::decode);
                 g.pose().pushMatrix(); g.pose().translate(x,y); g.pose().scale(size/16f,size/16f);
                 g.item(stack,0,0); g.pose().popMatrix();
             }
-            if (colour!=null) g.fill(x,y,x+size,y+size,SlotOverlay.translucent(colour,MenuCursor.overlayOpacity()));
             if (pitch>=16 && icon==null) {
                 var number=Component.literal(Integer.toString(slot+1));
                 g.text(font,number,x+(size-font.width(number))/2,y+(size-8)/2,0xFFFFFFFF,false);

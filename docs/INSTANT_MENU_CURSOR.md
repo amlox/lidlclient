@@ -67,7 +67,9 @@ in each editor area start at 1. The inventory's bottom row is the hotbar.
 Each key has its own saved size and colours. Previously configured keybinds still
 work and start with no highlighted slots. Removing a key also removes its overlay.
 The preview renders Minecraft's vanilla chest texture at the chosen size, with
-its inventory label, live player inventory and hotbar, and a loading title. This
+its inventory label, live player inventory and hotbar, and a loading title. The
+world around the preview stays undimmed, and slot highlights render behind item
+icons so their colours remain unchanged. This
 is a visual simulation: it does not install a screen or change the player's active
 container, so other mods' menu hotkeys retain gameplay focus. Clicking while waiting
 cannot move items or send container actions. The real server GUI replaces it when

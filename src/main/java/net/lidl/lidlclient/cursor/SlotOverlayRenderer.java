@@ -20,7 +20,6 @@ public final class SlotOverlayRenderer {
         int rows=overlay.rows(),left=(g.guiWidth()-176)/2,top=(g.guiHeight()-(114+rows*18))/2;
         if (gui) {
             // Same two texture slices as vanilla ContainerScreen, for all six chest sizes.
-            g.fill(0,0,g.guiWidth(),g.guiHeight(),0x70000000);
             g.blit(RenderPipelines.GUI_TEXTURED,TEXTURE,left,top,0,0,176,rows*18+17,256,256);
             g.blit(RenderPipelines.GUI_TEXTURED,TEXTURE,left,top+rows*18+17,0,126,176,96,256,256);
             g.text(client.font,"Loading…",left+8,top+6,0xFF404040,false);
@@ -32,15 +31,15 @@ public final class SlotOverlayRenderer {
         }
         for (int slot=0;slot<rows*9;slot++) {
             int x=SlotOverlayLayout.x(g.guiWidth(),slot),y=SlotOverlayLayout.y(g.guiHeight(),rows,slot);
-            if (showIcons) item(g,icons.getOrDefault(slot,ItemStack.EMPTY),x,y);
             if (highlights) highlight(g,overlay.slots().get(slot),x,y);
+            if (showIcons) item(g,icons.getOrDefault(slot,ItemStack.EMPTY),x,y);
         }
         for (int slot=0;slot<36;slot++) {
             int x=SlotOverlayLayout.x(g.guiWidth(),slot),y=SlotOverlayLayout.inventoryY(g.guiHeight(),rows,slot);
             ItemStack stack=showIcons ? icons.get(slot+54) : null;
             if (stack==null && gui) stack=client.player.getInventory().getItem(slot<27 ? slot+9 : slot-27);
-            if (stack!=null) item(g,stack,x,y);
             if (highlights) highlight(g,overlay.inventorySlots().get(slot),x,y);
+            if (stack!=null) item(g,stack,x,y);
         }
     }
     private static void item(GuiGraphicsExtractor g,ItemStack stack,int x,int y) {

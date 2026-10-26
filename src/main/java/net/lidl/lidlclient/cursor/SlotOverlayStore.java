@@ -27,7 +27,31 @@ public final class SlotOverlayStore {
                     } catch (NumberFormatException ignored) { }
                 });
             }
-            result.put(entry.getKey(),new SlotOverlay(rows,slots));
+            Map<Integer,Integer> inventory = new LinkedHashMap<>();
+            var savedInventory=value.get("inventorySlots");
+            if (savedInventory != null && savedInventory.isJsonObject()) {
+                savedInventory.getAsJsonObject().entrySet().forEach(slot -> {
+                    try {
+                        int index=Integer.parseInt(slot.getKey());
+                        Integer colour=integer(slot.getValue(),0,0xFFFFFF);
+                        if (index>=0 && index<36 && colour!=null) inventory.put(index,colour);
+                    } catch (NumberFormatException ignored) { }
+                });
+            }
+            Map<Integer,String> icons = new LinkedHashMap<>();
+            var savedIcons=value.get("icons");
+            if (savedIcons != null && savedIcons.isJsonObject()) {
+                savedIcons.getAsJsonObject().entrySet().forEach(slot -> {
+                    try {
+                        int index=Integer.parseInt(slot.getKey());
+                        var icon=slot.getValue();
+                        if (index>=0 && index<90 && icon.isJsonPrimitive()
+                                && icon.getAsJsonPrimitive().isString() && icon.getAsString().length()<=65536)
+                            icons.put(index,icon.getAsString());
+                    } catch (NumberFormatException ignored) { }
+                });
+            }
+            result.put(entry.getKey(),new SlotOverlay(rows,slots,inventory,icons));
         });
         return result;
     }

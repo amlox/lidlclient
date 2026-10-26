@@ -60,6 +60,45 @@ class SlotOverlayTest {
         assertEquals(SlotOverlay.empty(),restored.get("key.keyboard.g"));
         assertFalse(restored.containsKey("key.keyboard.h"));
     }
+    @Test void inventoryAndHotbarAlignForEveryChestSize() {
+        for (int rows=1;rows<=6;rows++) {
+            int top=(360-(114+rows*18))/2;
+            assertEquals(top+rows*18+31,SlotOverlayLayout.inventoryY(360,rows,0));
+            assertEquals(top+rows*18+67,SlotOverlayLayout.inventoryY(360,rows,26));
+            assertEquals(top+rows*18+89,SlotOverlayLayout.inventoryY(360,rows,27));
+            assertEquals(top+rows*18+89,SlotOverlayLayout.inventoryY(360,rows,35));
+            assertEquals(SlotOverlayLayout.x(640,8),SlotOverlayLayout.x(640,35));
+        }
+    }
+    @Test void inventoryHighlightsAndIconsSurviveSizeChangesAndSaveRoundTrips() {
+        String icon="{\"id\":\"minecraft:player_head\",\"count\":1}";
+        var overlay=SlotOverlay.empty().withSlot(53,0x123456)
+                .withColour(true,0,0xFF0000).withColour(true,35,0x00FF00)
+                .withIcon(53,icon).withIcon(89,icon);
+        var small=overlay.withRows(1);
+        assertEquals(overlay,small.withRows(6));
+        assertEquals(0x00FF00,small.inventorySlots().get(35));
+        var restored=SlotOverlayStore.read(new Gson().toJsonTree(Map.of("key.keyboard.r",small)));
+        assertEquals(small,restored.get("key.keyboard.r"));
+        assertEquals(overlay.slots(),overlay.withColour(true,0,null).slots());
+        assertFalse(overlay.withColour(true,0,null).inventorySlots().containsKey(0));
+        assertFalse(overlay.withIcon(89,null).icons().containsKey(89));
+        assertThrows(UnsupportedOperationException.class,()->overlay.inventorySlots().put(1,0));
+        assertThrows(UnsupportedOperationException.class,()->overlay.icons().put(1,icon));
+    }
+    @Test void malformedInventoryAndIconsDoNotDiscardOldHighlights() {
+        var restored=SlotOverlayStore.read(JsonParser.parseString("""
+                {"r":{"rows":2,"slots":{"0":42},
+                "inventorySlots":{"0":123,"35":456,"36":789,"-1":1,"x":1,"2":1.5},
+                "icons":{"0":"{}","89":"{}","90":"{}","-1":"{}","1":42,"2":false}},
+                "g":{"rows":1,"slots":{"1":55}}}
+                """));
+        assertEquals(Map.of(0,123,35,456),restored.get("r").inventorySlots());
+        assertEquals(Map.of(0,"{}",89,"{}"),restored.get("r").icons());
+        assertEquals(new SlotOverlay(1,Map.of(1,55)),restored.get("g"));
+        assertEquals(Map.of(0,42),restored.get("r").slots());
+        assertTrue(SlotOverlay.empty().withIcon(0,"x".repeat(65537)).icons().isEmpty());
+    }
     @Test void liveSquaresAreAlwaysTranslucentAndPreserveRgb() {
         assertEquals(0x4D55D9FF,SlotOverlay.translucent(0x55D9FF,30));
         assertEquals(0xCC55D9FF,SlotOverlay.translucent(0x55D9FF,100));

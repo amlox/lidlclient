@@ -23,7 +23,14 @@ public final class MenuCursor {
     private static final Map<String,SlotOverlay> OVERLAYS = SlotOverlayStore.read(ClientConfig.store().get(ID,"slotOverlays"));
     private static boolean showOverlay = ClientConfig.bool(ID,"Show slot overlay",false);
     private static double overlayOpacity = savedOpacity();
+    private static final SlotOverlayRenderer RENDERER=new SlotOverlayRenderer();
+    private static boolean simulateGui=ClientConfig.bool(ID,"Simulate container GUI",true);
+    private static boolean showIcons=ClientConfig.bool(ID,"Show item icons",true);
     private static String activeKey;
+    private static net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> observedScreen;
+    private static String observedKey;
+    private static ClientPacketListener observedConnection;
+    private static final Map<String,Map<Integer,String>> LAST_ICONS=new java.util.HashMap<>();
     private static boolean enabled = ClientConfig.bool(ID,"enabled",false);
     private static double timeout = savedTimeout();
     private static ClientPacketListener connection;
@@ -47,6 +54,32 @@ public final class MenuCursor {
     private static boolean validKey(InputConstants.Key key) {
         return key != InputConstants.UNKNOWN && key.getType() != InputConstants.Type.MOUSE
                 && !(key.getType() == InputConstants.Type.KEYSYM && key.getValue() == GLFW.GLFW_KEY_ESCAPE);
+    }
+    public static boolean simulateGui() { return simulateGui; }
+    public static void setSimulateGui(boolean value) {
+        simulateGui=value; ClientConfig.set(ID,"Simulate container GUI",value);
+    }
+    public static boolean showIcons() { return showIcons; }
+    public static void setShowIcons(boolean value) {
+        showIcons=value; ClientConfig.set(ID,"Show item icons",value);
+    }
+    public static Map<Integer,String> lastIcons(InputConstants.Key key) {
+        return LAST_ICONS.getOrDefault(key.getName(),Map.of());
+    }
+    /** Snapshot only the server menu associated with this hotkey, after its contents have loaded. */
+    public static void beforeScreenChange() {
+        var client=Minecraft.getInstance();
+        if (observedScreen!=null && client.screen==observedScreen && client.getConnection()==observedConnection
+                && KEYS.stream().anyMatch(key -> key.getName().equals(observedKey))) {
+            Map<Integer,String> icons=new java.util.LinkedHashMap<>();
+            int count=((net.minecraft.world.inventory.ChestMenu)observedScreen.getMenu()).getRowCount()*9;
+            for (int slot=0;slot<count;slot++) {
+                String icon=SlotIcons.encode(observedScreen.getMenu().getSlot(slot).getItem());
+                if (icon!=null) icons.put(slot,icon);
+            }
+            LAST_ICONS.put(observedKey,Map.copyOf(icons));
+        }
+        observedScreen=null; observedKey=null; observedConnection=null;
     }
     private static double savedOpacity() {
         Double saved = ClientConfig.number(ID,"Slot opacity (%)");
@@ -93,7 +126,8 @@ public final class MenuCursor {
     }
     public static void removeKey(int index) {
         if (index >= 0 && index < KEYS.size()) {
-            OVERLAYS.remove(KEYS.remove(index).getName());
+            String removed=KEYS.remove(index).getName();
+            OVERLAYS.remove(removed); LAST_ICONS.remove(removed);
             ClientConfig.set(ID,"slotOverlays",OVERLAYS);
             saveKeys();
         }
@@ -129,17 +163,9 @@ public final class MenuCursor {
         syncHotkeys();
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,LidlClient.id("menu_cursor_slots"),
                 (graphics,deltaTracker) -> {
-                    if (!showOverlay || !waitingInWorld() || activeKey == null) return;
-                    var overlay=OVERLAYS.get(activeKey);
-                    if (overlay==null) return;
-                    for (var entry:overlay.slots().entrySet()) {
-                        int slot=entry.getKey();
-                        if (slot>=overlay.rows()*9) continue;
-                        int x=SlotOverlayLayout.x(graphics.guiWidth(),slot);
-                        int y=SlotOverlayLayout.y(graphics.guiHeight(),overlay.rows(),slot);
-                        graphics.fill(x,y,x+SlotOverlayLayout.SIZE,y+SlotOverlayLayout.SIZE,
-                                SlotOverlay.translucent(entry.getValue(),overlayOpacity));
-                    }
+                    if (!waitingInWorld() || activeKey == null) return;
+                    RENDERER.draw(graphics,OVERLAYS.getOrDefault(activeKey,SlotOverlay.empty()),
+                            simulateGui,showOverlay,showIcons);
                 });
         ClientTickEvents.END_CLIENT_TICK.register(MenuCursor::updateWait);
     }
@@ -150,7 +176,7 @@ public final class MenuCursor {
         if (result == CursorWait.Result.RESTORE) restore(client);
         if (result != CursorWait.Result.WAITING) {
             ((CursorMouseAccess)client.mouseHandler).lidlclient$finishCursorRelease();
-            connection = null; activeKey = null;
+            connection = null; activeKey = null; RENDERER.clear();
         }
     }
     /** Called by the independent raw-input dispatcher; never consumes another mod's binding. */
@@ -177,11 +203,18 @@ public final class MenuCursor {
                 && client.getConnection() == connection && client.isWindowActive();
     }
     public static void screenChanged() {
-        if (Minecraft.getInstance().screen != null) {
+        var client=Minecraft.getInstance();
+        if (client.screen != null) {
+            if (WAIT.pending() && activeKey!=null && client.getConnection()==connection
+                    && client.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
+                    && screen.getMenu() instanceof net.minecraft.world.inventory.ChestMenu) {
+                observedScreen=screen; observedKey=activeKey; observedConnection=connection;
+            }
             WAIT.cancel();
             ((CursorMouseAccess)Minecraft.getInstance().mouseHandler).lidlclient$finishCursorRelease();
             connection = null;
             activeKey = null;
+            RENDERER.clear();
         }
     }
     public static void cancelAndRestore() {
@@ -194,6 +227,7 @@ public final class MenuCursor {
         }
         connection = null;
         activeKey = null;
+        RENDERER.clear();
     }
     private static void restore(Minecraft client) {
         ((CursorMouseAccess)client.mouseHandler).lidlclient$finishCursorRelease();

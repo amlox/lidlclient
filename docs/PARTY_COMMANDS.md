@@ -78,3 +78,19 @@ relay server, WebSocket dependency, or sharing UI.
    Restart and verify the saved answer, output mode and enabled state.
 4. Edit and reset a base command, and check that Cancel discards the draft. Remove
    a custom override and confirm the original built-in response returns.
+
+## Consecutive-use limit
+
+In a command's editor, type a whole number into **Max in a row (0 = unlimited)**,
+then Save. For example, 3 permits three consecutive outputs for that trigger and
+silently ignores further attempts until a different command produces an output.
+The count is shared across party members, ignores capitalization, and does not
+reset when arguments change. Only completed outputs count; dropped, disabled,
+unknown, cancelled, and invalid-command attempts do not reset or advance it.
+The limit applies to Party chat, Only me, and /Commands, even with Allow ! replies on.
+
+Existing definitions default to 0, preserving their behavior and original answers.
+Limits persist across restarts and command On/Off changes; streaks are session-only
+and reset on reconnect or when the whole module is turned off. Reset base changes
+answers only. Reserved !help and !ban do not have editable definitions; this setting
+is available for editable built-in commands and custom commands.

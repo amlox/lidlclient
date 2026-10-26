@@ -59,6 +59,9 @@ public class PartyCommands implements ClientModInitializer {
 
     private static final PartyCommandSwitches SWITCHES = new PartyCommandSwitches();
     private static boolean settingsLoaded;
+    private static final net.lidl.lidlclient.PartyCMDS.framework.ConsecutiveCommandLimit CONSECUTIVE =
+            new net.lidl.lidlclient.PartyCMDS.framework.ConsecutiveCommandLimit();
+    private static ClientPacketListener streakConnection;
     private static String pendingCommand;
     private static ClientPacketListener responseConnection;
 
@@ -93,7 +96,7 @@ public class PartyCommands implements ClientModInitializer {
     public static void setEnabled(boolean value) {
         loadSettings();
         SWITCHES.setEnabled(value);
-        if (!value) cancelResponse();
+        if (!value) { cancelResponse(); CONSECUTIVE.reset(); }
         saveSettings();
     }
 
@@ -154,6 +157,14 @@ public class PartyCommands implements ClientModInitializer {
                     // Ignore unknown commands
                     if (response == null) return;
 
+                    var currentConnection=Minecraft.getInstance().getConnection();
+                    if (currentConnection!=streakConnection) {
+                        CONSECUTIVE.reset(); streakConnection=currentConnection;
+                    }
+                    String trigger=PartyCommandSwitches.commandName(partyMessage);
+                    var definition=PartyReplyLibrary.find(trigger);
+                    if (!CONSECUTIVE.allows(trigger,definition==null?0:definition.consecutiveLimit())) return;
+
                     // Only queue one response at a time
                     if (pendingMessage != null) {
                         LOGGER.info("Another response is already queued.");
@@ -171,6 +182,9 @@ public class PartyCommands implements ClientModInitializer {
         );
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 
+            if (client.getConnection()!=streakConnection) {
+                CONSECUTIVE.reset(); streakConnection=client.getConnection();
+            }
             // Nothing waiting to be sent
             if (pendingMessage == null) return;
 
@@ -365,15 +379,21 @@ public class PartyCommands implements ClientModInitializer {
 
             LOGGER.info("Sending party message: {}", message);
 
+            if (connection!=streakConnection) {
+                CONSECUTIVE.reset(); streakConnection=connection;
+            }
             var definition=PartyReplyLibrary.find(command);
+            if (!CONSECUTIVE.allows(command,definition==null?0:definition.consecutiveLimit())) return;
             if (definition!=null && definition.runCommands()) {
                 try { connection.sendCommand(definition.commandToRun(message)); }
                 catch (IllegalArgumentException error) {
                     client.player.sendSystemMessage(Component.literal("[Party Commands] "+error.getMessage()));
+                    return;
                 }
             } else if (definition!=null && !definition.partyChat())
                 client.player.sendSystemMessage(Component.literal("[Party Commands — Only me] "+message));
             else connection.sendCommand("pc " + message);
+            CONSECUTIVE.completed(command);
         });
     }
 

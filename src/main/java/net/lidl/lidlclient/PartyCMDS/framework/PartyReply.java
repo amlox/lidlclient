@@ -7,10 +7,22 @@ import java.util.regex.Pattern;
 
 /** Saved reply templates with explicit output and loop-protection choices. */
 public record PartyReply(String trigger,List<String> answers,boolean enabled,boolean partyChat,
-                         boolean bypassLoopProtection,boolean runCommands) {
+                         boolean bypassLoopProtection,boolean runCommands,int consecutiveLimit) {
     public PartyReply(String trigger,List<String> answers,boolean enabled) { this(trigger,answers,enabled,true); }
     public PartyReply(String trigger,List<String> answers,boolean enabled,boolean partyChat) {
         this(trigger,answers,enabled,partyChat,false,false);
+    }
+    public PartyReply(String trigger,List<String> answers,boolean enabled,boolean partyChat,
+                      boolean bypassLoopProtection,boolean runCommands) {
+        this(trigger,answers,enabled,partyChat,bypassLoopProtection,runCommands,0);
+    }
+    public static int parseConsecutiveLimit(String value) {
+        try {
+            if (!value.matches("[0-9]{1,10}")) throw new NumberFormatException();
+            return Integer.parseInt(value);
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("Consecutive limit: enter 0–2147483647 (0 = unlimited)");
+        }
     }
     public static void requireAvailable(String trigger,java.util.Collection<String> existing) {
         String normalized=trigger.strip().toLowerCase(Locale.ROOT);
@@ -19,6 +31,7 @@ public record PartyReply(String trigger,List<String> answers,boolean enabled,boo
     }
     private static final Pattern ROLL=Pattern.compile("\\{roll:(-?\\d{1,6}):(-?\\d{1,6})}");
     public PartyReply {
+        if (consecutiveLimit<0) throw new IllegalArgumentException("Consecutive limit cannot be negative");
         if (trigger==null || !trigger.matches("![A-Za-z0-9_-]{1,24}"))
             throw new IllegalArgumentException("Trigger must be ! followed by 1–24 letters, numbers, _ or -");
         trigger=trigger.toLowerCase(Locale.ROOT);
@@ -38,7 +51,7 @@ public record PartyReply(String trigger,List<String> answers,boolean enabled,boo
                 throw new IllegalArgumentException("Roll minimum must not exceed maximum");
         }
     }
-    public PartyReply withEnabled(boolean value) { return new PartyReply(trigger,answers,value,partyChat,bypassLoopProtection,runCommands); }
+    public PartyReply withEnabled(boolean value) { return new PartyReply(trigger,answers,value,partyChat,bypassLoopProtection,runCommands,consecutiveLimit); }
     public String render(String player,String args) {
         String template=answers.get(ThreadLocalRandom.current().nextInt(answers.size()));
         if (template.contains("{slot1}") || template.contains("{slot2}") || template.contains("{slot3}") || template.contains("{jackpot}"))

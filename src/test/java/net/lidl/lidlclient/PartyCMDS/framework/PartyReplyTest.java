@@ -7,6 +7,29 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PartyReplyTest {
+    @Test void consecutiveLimitsPersistWithoutChangingAnswersOrOtherOptions() {
+        var reply=new PartyReply("!hello",List.of("Hello"),true,false,true,false,3);
+        assertEquals(reply,ReplyCodec.read(ReplyCodec.JSON.toJsonTree(reply)));
+        assertEquals(reply,reply.withEnabled(false).withEnabled(true));
+        assertEquals(0,new PartyReply("!hello",List.of("Hello"),true).consecutiveLimit());
+        var old=ReplyCodec.read(JsonParser.parseString("""
+                {"trigger":"!hello","answers":["Hello"],"enabled":true}
+                """));
+        assertEquals(0,old.consecutiveLimit());
+        assertThrows(IllegalArgumentException.class,()->new PartyReply("!hello",List.of("Hello"),true,true,false,false,-1));
+    }
+    @Test void consecutiveLimitRequiresANonNegativeWholeNumber() {
+        assertEquals(0,PartyReply.parseConsecutiveLimit("0"));
+        assertEquals(1234,PartyReply.parseConsecutiveLimit("1234"));
+        assertEquals(Integer.MAX_VALUE,PartyReply.parseConsecutiveLimit("2147483647"));
+        for (String value:List.of("","-1","1.5","abc","2147483648","+1"))
+            assertThrows(IllegalArgumentException.class,()->PartyReply.parseConsecutiveLimit(value));
+        for (String value:List.of("-1","1.5","true","null","\"3\"","2147483648")) {
+            var json=JsonParser.parseString("{\"trigger\":\"!hello\",\"answers\":[\"Hello\"],\"enabled\":true,\"consecutiveLimit\":"+value+"}");
+            assertThrows(IllegalArgumentException.class,()->ReplyCodec.read(json));
+        }
+    }
+
     @Test void templatesSubstitutePlayerArgumentsAndInclusiveRolls() {
         var reply=new PartyReply("!DICE",List.of("{player}: {args} ({roll:2:2})"),true);
         assertEquals("!dice",reply.trigger());

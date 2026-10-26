@@ -22,7 +22,14 @@ public final class ReplyCodec {
             throw new IllegalArgumentException("Expected a party-chat switch");
         return new PartyReply(trigger,answers.getAsJsonArray().asList().stream().map(ReplyCodec::string).toList(),
                 enabled.getAsBoolean(),destination==null || destination.getAsBoolean(),
-                flag(object,"bypassLoopProtection"),flag(object,"runCommands"));
+                flag(object,"bypassLoopProtection"),flag(object,"runCommands"),limit(object));
+    }
+    private static int limit(JsonObject object) {
+        var value=object.get("consecutiveLimit");
+        if (value==null) return 0;
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber())
+            throw new IllegalArgumentException("Expected a whole-number consecutive limit");
+        return PartyReply.parseConsecutiveLimit(value.getAsString());
     }
     private static boolean flag(JsonObject object,String name) {
         var value=object.get(name);

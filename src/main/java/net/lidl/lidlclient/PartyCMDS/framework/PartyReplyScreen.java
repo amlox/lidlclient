@@ -16,7 +16,7 @@ public final class PartyReplyScreen extends Screen {
     private int selected;
     private boolean enabled=true,partyChat=true,bypassLoopProtection,runCommands;
     private EditBox trigger,input;
-    private String triggerDraft="!hello",message="";
+    private String triggerDraft="!hello",message="",limitDraft="0";
     public PartyReplyScreen(Screen parent,String trigger) {
         super(Component.literal(trigger==null?"New party reply":"Edit "+trigger));
         this.parent=parent; original=trigger;
@@ -25,6 +25,7 @@ public final class PartyReplyScreen extends Screen {
             var reply=PartyCommands.editableReply(trigger);
             answers.addAll(reply.answers()); enabled=reply.enabled(); partyChat=reply.partyChat(); triggerDraft=reply.trigger();
             bypassLoopProtection=reply.bypassLoopProtection(); runCommands=reply.runCommands();
+            limitDraft=Integer.toString(reply.consecutiveLimit());
         }
     }
     private void retain() {
@@ -67,10 +68,13 @@ public final class PartyReplyScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("Allow ! replies: "+(bypassLoopProtection?"On":"Off")),b -> {
             retain(); bypassLoopProtection=!bypassLoopProtection; rebuildWidgets();
         }).bounds(left+150,136,146,20).build());
+        var limit=addRenderableWidget(new EditBox(font,left+204,160,92,20,Component.literal("Consecutive limit (0 = unlimited)")));
+        limit.setMaxLength(10); limit.setValue(limitDraft);
+        limit.setResponder(value -> limitDraft=value);
         addRenderableWidget(Button.builder(Component.literal("Preview"),b -> {
             try { retain(); message=definition().render("TestPlayer","example arguments"); }
             catch (RuntimeException error) { message=error.getMessage(); }
-        }).bounds(left,164,144,20).build());
+        }).bounds(left,186,144,20).build());
         addRenderableWidget(Button.builder(Component.literal("Reset base"),b -> {
             retain();
             try {
@@ -78,13 +82,13 @@ public final class PartyReplyScreen extends Screen {
                 answers.clear(); answers.addAll(base.answers()); selected=0;
                 message="Original base restored in draft"; rebuildWidgets();
             } catch (RuntimeException error) { message=error.getMessage(); }
-        }).bounds(left+150,164,146,20).build());
+        }).bounds(left+150,186,146,20).build());
         addRenderableWidget(Button.builder(Component.literal("Save"),b -> save())
                 .bounds(left,height-28,144,20).build());
         addRenderableWidget(Button.builder(Component.literal("Cancel"),b -> onClose()).bounds(left+150,height-28,146,20).build());
         setInitialFocus(original==null?trigger:input);
     }
-    private PartyReply definition() { return new PartyReply(triggerDraft.strip(),List.copyOf(answers),enabled,partyChat,bypassLoopProtection,runCommands); }
+    private PartyReply definition() { return new PartyReply(triggerDraft.strip(),List.copyOf(answers),enabled,partyChat,bypassLoopProtection,runCommands,PartyReply.parseConsecutiveLimit(limitDraft)); }
     private void save() {
         try {
             retain(); var reply=definition();
@@ -95,10 +99,10 @@ public final class PartyReplyScreen extends Screen {
     }
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
         int left=(width-296)/2;
-        g.fill(0,0,width,height,0xEB0B101B); g.centeredText(font,title,width/2,16,0xFFFFFFFF);
+        g.fill(0,0,width,height,0xEB0B101B); g.centeredText(font,message.isEmpty()?title:Component.literal(font.plainSubstrByWidth(message,width-24)),width/2,16,0xFFFFFFFF);
         g.text(font,"Trigger",left,31,0xFFADBBD0);
         g.text(font,"Answer "+(selected+1)+"/"+answers.size()+"  {player} {args} {roll:1:6}",left,72,0xFFADBBD0);
-        if (!message.isEmpty()) g.text(font,font.plainSubstrByWidth(message,width-24),12,height-47,0xFFFFFFFF);
+        g.text(font,"Max in a row (0 = unlimited)",left,166,0xFFADBBD0);
         super.extractRenderState(g,mx,my,delta);
     }
     @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }

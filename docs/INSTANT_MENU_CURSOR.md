@@ -57,8 +57,9 @@ Left-click grid slots to select/unselect them. **Brush** chooses a colour for ne
 selections; right-click any slot to choose its individual colour with the mouse
 picker or hex input. **Save** commits the entire layout; **Cancel**/Escape discards
 the draft, and **Clear** clears it. Drafts survive the colour picker and resizing.
-Use **Area: Container / Inventory** to edit either the chest or the player's 27
-main inventory slots and 9 hotbar slots. Inventory highlights have their own colours
+The editor shows the container and the player's 27 main inventory slots plus 9
+hotbar slots together, with the inventory below the container. Click both areas
+to edit it directly; no area switch is needed. Inventory highlights have their own colours
 and follow the inventory when chest size changes. Changing row counts keeps selections
 from other sizes, but only chest slots within the chosen size render. Slot numbers
 in each editor area start at 1. The inventory's bottom row is the hotbar.
@@ -92,7 +93,7 @@ Verify that disabling the overlay keeps the existing cursor-release behaviour.
 
 In the slot editor, switch to **Mode: Icons**. Left-click a target slot to choose
 an icon; right-click removes that slot's icon. Icons and colours can be combined in
-either area. The picker includes your current inventory and items captured from the
+both areas. The picker includes your current inventory and items captured from the
 last chest menu opened with that hotkey. To obtain menu-only icons, enable the module,
 open the desired server menu with the configured key, wait for its items to load,
 then close it and return to the editor. Pick icons and **Save** the layout. The last
@@ -122,6 +123,6 @@ with large sets of custom heads still needs an in-game check; no FPS claim is ma
   chest size and GUI scale, and compare alignment when the server menu arrives.
 - Choose a SkyBlock custom head and glint item from the picker; save, restart and
   check their icons. Confirm colour edits and icons survive size changes and that
-  Cancel, Clear, right-click removal, and both editor areas behave as described.
+  Cancel, Clear, right-click removal, and both visible editor areas behave as described.
 - Test timeout, Escape, focus loss, disconnect, and screen handoff with the usual
   menu mod. No item action should be sent by clicking the simulated container.

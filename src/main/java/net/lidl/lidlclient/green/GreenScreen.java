@@ -9,8 +9,17 @@ import net.lidl.lidlclient.LidlClient;
 /** A purely visual, full-screen translucent green tint. */
 public final class GreenScreen {
     private static boolean enabled;
-    // ARGB: 35% opacity, pure green.
-    private static final int TINT = 0x5900FF00;
+    private static double strength=35;
+    public static double strength() { return strength; }
+    public static void setStrength(double value) {
+        if (!Double.isFinite(value)) return;
+        strength=Math.clamp(value,0,100);
+        ClientConfig.set("green_screen","Green strength (%)",strength);
+    }
+    public static int tint(double percent) {
+        double opacity=Double.isFinite(percent)?Math.clamp(percent,0,100):35;
+        return ((int)Math.round(opacity*255/100)<<24)|0x00FF00;
+    }
 
     private GreenScreen() { }
 
@@ -29,7 +38,7 @@ public final class GreenScreen {
                 LidlClient.id("green_screen"),
                 (graphics, deltaTracker) -> {
                     if (enabled) {
-                        graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), TINT);
+                        graphics.fill(0, 0, graphics.guiWidth(), graphics.guiHeight(), tint(strength));
                     }
                 });
     }

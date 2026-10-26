@@ -3,10 +3,11 @@ package net.lidl.lidlclient.names;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.lidl.lidlclient.config.ClientConfig;
+import net.lidl.lidlclient.config.BuiltInFeatures;
 import net.minecraft.client.Minecraft;
 import java.util.*;
 
-/** Saved custom-name switch. Built-in aliases always remain active. */
+/** Saved self-name override with separately switchable built-in aliases. */
 public final class NameChanger {
     private static boolean enabled = true;
     private static boolean initialized;
@@ -25,6 +26,7 @@ public final class NameChanger {
         if (initialized) return;
         initialized = true;
         customName = NameAliasRules.cleanCustomName(ClientConfig.string("name_changer", "self_name"));
+        rebuildResolver();
         ClientLifecycleEvents.CLIENT_STARTED.register(NameChanger::updatePlayer);
         ClientTickEvents.END_CLIENT_TICK.register(NameChanger::updatePlayer);
     }
@@ -33,17 +35,22 @@ public final class NameChanger {
         String username = client.player == null ? client.getUser().getName() : client.player.getName().getString();
         if (!Objects.equals(username, localUsername)) {
             localUsername = username;
-            resolver = new NameAliasRules.Resolver(localUsername, customName);
+            rebuildResolver();
             refreshChat();
         }
     }
 
-    public static List<NameAliasRules.Match> findMatches(String text) { return enabled ? resolver.find(text) : NameAliasRules.find(text); }
+    public static List<NameAliasRules.Match> findMatches(String text) { return resolver.find(text); }
+
+    private static void rebuildResolver() {
+        resolver=new NameAliasRules.Resolver(localUsername,enabled?customName:"",BuiltInFeatures.nameAliases());
+    }
+    public static void refreshBuiltIns() { rebuildResolver(); refreshChat(); }
 
     public static void setCustomName(String value) {
         customName = NameAliasRules.cleanCustomName(value);
         ClientConfig.set("name_changer", "self_name", customName);
-        resolver = new NameAliasRules.Resolver(localUsername, customName);
+        rebuildResolver();
         refreshChat();
     }
 
@@ -61,6 +68,6 @@ public final class NameChanger {
         boolean changed = enabled != value;
         enabled = value;
         ClientConfig.set("name_changer", "enabled", value);
-        if (changed) refreshChat();
+        if (changed) { rebuildResolver(); refreshChat(); }
     }
 }

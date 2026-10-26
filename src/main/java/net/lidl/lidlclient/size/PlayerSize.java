@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import java.util.UUID;
 import java.util.Map;
 import net.lidl.lidlclient.config.ClientConfig;
+import net.lidl.lidlclient.config.BuiltInFeatures;
 
 /** Client-only scaling with built-in player defaults and a local-only override. */
 public final class PlayerSize implements ClientModInitializer {
@@ -36,7 +37,7 @@ public final class PlayerSize implements ClientModInitializer {
     private static double ownAxis(Double value) {
         if (value != null) return value;
         var player = Minecraft.getInstance().player;
-        return PlayerSizeRules.defaultScale(player == null ? null : player.getName().getString());
+        return PlayerSizeRules.defaultScale(player == null ? null : player.getName().getString(),BuiltInFeatures.playerSizes());
     }
 
     public static double getScaleX() { load(); return ownAxis(localX); }
@@ -70,7 +71,7 @@ public final class PlayerSize implements ClientModInitializer {
         load();
         var player = Minecraft.getInstance().player;
         return PlayerSizeRules.axesFor(name, player != null && player.getUUID().equals(id),
-                localX, localY, localZ, enabled);
+                localX, localY, localZ, enabled,BuiltInFeatures.playerSizes());
     }
 
     public static void resetSize() {

@@ -13,6 +13,7 @@ import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
 
 import net.lidl.lidlclient.config.ClientConfig;
+import net.lidl.lidlclient.config.BuiltInFeatures;
 import net.lidl.lidlclient.config.ModulePersistence;
 import net.lidl.lidlclient.names.NameChanger;
 import net.lidl.lidlclient.cursor.MenuCursor;
@@ -36,6 +37,12 @@ public final class ModuleRegistry {
                 new ActionSetting("Accent colour", GuiAppearance::editAccent),
                 new ActionSetting("Background colour", GuiAppearance::editBackground),
                 new ActionSetting("Reset colours", GuiAppearance::reset)));
+        modules.add(new GuiModule("built_in_features", "Built-in features", "General settings",
+                "Toggle shipped player presets and warp shortcut",
+                BuiltInFeatures::isEnabled, BuiltInFeatures::setEnabled,
+                new BooleanSetting("Player sizes", BuiltInFeatures::sizes, BuiltInFeatures::setSizes),
+                new BooleanSetting("Name aliases", BuiltInFeatures::names, BuiltInFeatures::setNames),
+                new BooleanSetting("Warp shortcut", BuiltInFeatures::warp, BuiltInFeatures::setWarp)));
         modules.add(new GuiModule("slots", "Slots", "Gambling", "Virtual slot machine",
                 Slots::isEnabled, Slots::setEnabled,
                 new BooleanSetting("Mute chat", Slots::isMuteMessages, Slots::setMuteMessages),
@@ -43,7 +50,9 @@ public final class ModuleRegistry {
 
         modules.add(new GuiModule("green_screen", "im so fucking green", "Fun features",
                 "Transparent green screen tint",
-                GreenScreen::isEnabled, GreenScreen::setEnabled));
+                GreenScreen::isEnabled, GreenScreen::setEnabled,
+                new NumberSetting("Green strength (%)", 0, 100, 1,
+                        GreenScreen::strength, GreenScreen::setStrength)));
 
         modules.add(new GuiModule("menu_cursor", "Instant menu cursor", "QoL features",
                 "Release cursor while your menu hotkey loads", MenuCursor::isEnabled, MenuCursor::setEnabled,
@@ -61,7 +70,7 @@ public final class ModuleRegistry {
                 "Close after pet selection and suppress automatic reopen",
                 ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));
         modules.add(new GuiModule("player_size", "Player size", "Fun features",
-                "Custom self X/Y/Z size (built-in sizes always active)",
+                "Custom self X/Y/Z size; presets controlled in General",
                 PlayerSize::isEnabled, PlayerSize::setEnabled,
                 new NumberSetting("X (width)", 0.25, 3.0, 0.05,
                         PlayerSize::getScaleX, PlayerSize::setScaleX),
@@ -72,7 +81,7 @@ public final class ModuleRegistry {
                 new ActionSetting("Reset to default", PlayerSize::resetSize)));
 
         modules.add(new GuiModule("name_changer", "Name changer", "Fun features",
-                "Custom self name (built-in aliases always active)",
+                "Custom self name; presets controlled in General",
                 NameChanger::isEnabled, NameChanger::setEnabled,
                 new ActionSetting("Edit your name", NameChanger::openEditor)));
 

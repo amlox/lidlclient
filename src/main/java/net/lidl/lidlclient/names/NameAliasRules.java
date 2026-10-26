@@ -69,7 +69,10 @@ public final class NameAliasRules {
         private final Pattern names;
 
         public Resolver(String selfUsername, String customName) {
-            ALIASES.forEach(alias -> aliases.put(alias.username(), alias));
+            this(selfUsername,customName,true);
+        }
+        public Resolver(String selfUsername,String customName,boolean builtIns) {
+            if (builtIns) ALIASES.forEach(alias -> aliases.put(alias.username(), alias));
             String custom = cleanCustomName(customName);
             if (selfUsername != null && selfUsername.matches("[A-Za-z0-9_]{1,16}") && !custom.isEmpty()) {
                 String real = selfUsername.toLowerCase(Locale.ROOT);
@@ -79,7 +82,7 @@ public final class NameAliasRules {
                 if (!alias.display().isBlank()) aliases.put(real, alias);
             }
             String alternatives = String.join("|", aliases.keySet().stream().map(Pattern::quote).toList());
-            names = Pattern.compile("(?<![A-Za-z0-9_])(?:" + alternatives + ")(?![A-Za-z0-9_])",
+            names = alternatives.isEmpty() ? Pattern.compile("(?!)") : Pattern.compile("(?<![A-Za-z0-9_])(?:" + alternatives + ")(?![A-Za-z0-9_])",
                     Pattern.CASE_INSENSITIVE);
         }
 

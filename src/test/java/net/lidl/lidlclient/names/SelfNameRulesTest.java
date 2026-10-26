@@ -40,6 +40,17 @@ class SelfNameRulesTest {
                 .find("OtherPlayer").getFirst().alias().display().length());
     }
 
+    @Test void disablingBuiltInsKeepsOnlyTheCustomSelfAlias() {
+        var resolver=new NameAliasRules.Resolver("SyntocxLeftFoot","My name",false);
+        var matches=resolver.find("SyntocxLeftFoot invited SyntocxRightFoot");
+        assertEquals(1,matches.size());
+        assertEquals("My name",matches.getFirst().alias().display());
+        assertEquals(0xFFFFFF,matches.getFirst().alias().color(0));
+        assertTrue(new NameAliasRules.Resolver("SyntocxLeftFoot","",false)
+                .find("SyntocxLeftFoot invited SyntocxRightFoot").isEmpty());
+        assertFalse(new NameAliasRules.Resolver(null,"",true).find("SyntocxRightFoot").isEmpty());
+    }
+
     @Test void validatesInputWithoutSplittingUnicodeCharacters() {
         assertEquals("§cHello", NameAliasRules.cleanCustomName("  §cHello\n  "));
         assertEquals("", NameAliasRules.cleanCustomName(null));

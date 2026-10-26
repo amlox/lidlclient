@@ -1,8 +1,14 @@
 # Name changer
 
-Built-in aliases are always active. The **Name changer** toggle in /lidl > Fun features
-only enables/disables your custom self name. Disabling it restores your built-in
-alias, or your real username if unlisted. Your custom input stays saved.
+Built-in aliases can be toggled under **/lidl > General settings > Built-in features**.
+The master switch controls all built-in features; right-click it to switch **Name
+aliases**, **Player sizes**, and **Warp shortcut** individually. These default to on
+to preserve existing behaviour. Disabling built-in aliases immediately restores real
+usernames, except for an enabled custom self name.
+
+The **Name changer** toggle in Fun features only enables/disables your custom self
+name. Disabling it restores your built-in alias when aliases are on, or your real
+username otherwise. Your custom input stays saved.
 
 | Real username | Visual alias | RGB color |
 | --- | --- | --- |
@@ -37,7 +43,8 @@ are not in the built-in list.
 
 The override applies only to the currently logged-in player's real username on
 your own client and saves in config/lidlclient.json as name_changer.self_name.
-It retains your built-in alias color/gradient if one exists; otherwise it uses white.
+It retains your built-in alias color/gradient if one exists and built-in aliases are
+enabled; otherwise it uses white.
 Other players keep their built-in aliases, and other clients do not receive your
 custom override. The text editor displays literal input without applying aliases.
 

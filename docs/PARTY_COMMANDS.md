@@ -26,9 +26,13 @@ later room edits reach you. A local override is deliberately not replaced by roo
 updates. Remove it to follow the room again. Both libraries are bounded to 64
 commands; downloaded replies are cached only for the configured server and room.
 
-Existing generated commands keep their old behaviour until you save a text
-replacement. Dice, coinflip, IQ, and the existing random-answer command have editable
-starting responses; editing another generated command starts a new text override.
+Every existing editable command starts with its original answer pool, wording and
+random ranges. **Reset base** restores those responses in the draft; Save commits
+the reset, while Cancel discards it. Existing local and room edits are preserved.
+Saving an unchanged base retains the original generated behaviour, including special
+player rules, the question requirement, and slot-machine symbols/jackpots. Editing
+the base creates a text override. Custom slot replies can use `{slot1}`, `{slot2}`,
+`{slot3}` and `{jackpot}` to retain the original symbol pool and jackpot suffix.
 `!help` automatically lists enabled commands; `!help` and `!ban` are reserved and
 cannot be replaced or distributed through the room. The existing !ban toggle and
 special handler remain separate.
@@ -64,7 +68,7 @@ all answer the same event.
 
 Each saved room update has a revision. If another person edited first, the server
 rejects the stale update, downloads the latest room state, and leaves your draft
-open. Use **Room version** to compare the current first answer, then review and save
+open. Use **Room** to compare the current first answer, then review and save
 again, or use Local only. The relay persists accepted updates
 before broadcasting them; restarting it keeps the library and revisions.
 

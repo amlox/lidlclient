@@ -29,6 +29,8 @@ public record PartyReply(String trigger,List<String> answers,boolean enabled) {
     }
     public String render(String player,String args) {
         String template=answers.get(ThreadLocalRandom.current().nextInt(answers.size()));
+        if (template.contains("{slot1}") || template.contains("{slot2}") || template.contains("{slot3}") || template.contains("{jackpot}"))
+            template=slots(template,randomSymbol(),randomSymbol(),randomSymbol());
         var matcher=ROLL.matcher(template);
         StringBuilder rendered=new StringBuilder();
         while (matcher.find()) {
@@ -41,6 +43,14 @@ public record PartyReply(String trigger,List<String> answers,boolean enabled) {
         if (result.stripLeading().startsWith("!")) result="[Reply] "+result;
         if (result.length()>240) result=result.substring(0,Character.isHighSurrogate(result.charAt(239))?239:240);
         return result.strip();
+    }
+    private static String randomSymbol() {
+        var symbols=List.of("<3",":star:",":yes:",":no:",":java:",":arrow:");
+        return symbols.get(ThreadLocalRandom.current().nextInt(symbols.size()));
+    }
+    static String slots(String template,String first,String second,String third) {
+        return template.replace("{slot1}",first).replace("{slot2}",second).replace("{slot3}",third)
+                .replace("{jackpot}",first.equals(second)&&second.equals(third)?":star: JACKPOT! :star:":"");
     }
     private static String clean(String text) {
         return text==null?"":text.replaceAll("[\\p{Cc}\\p{Cf}]","");

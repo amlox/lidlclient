@@ -47,6 +47,11 @@ public final class PartyReplyLibrary {
             case "!dice" -> new PartyReply(trigger,List.of("You rolled a {roll:1:6}!"),true);
             case "!coinflip" -> new PartyReply(trigger,List.of("Coinflip: Heads!","Coinflip: Tails!"),true);
             case "!iq" -> new PartyReply(trigger,List.of("{player} has {roll:-100:200} IQ!"),true);
+            case "!jew" -> new PartyReply(trigger,List.of("{player} is {roll:1:100}% a jew!"),true);
+            case "!autism" -> new PartyReply(trigger,List.of("{player} is {roll:1:100}% autistic!"),true);
+            case "!white" -> new PartyReply(trigger,List.of("{player} is {roll:1:100}% white!"),true);
+            case "!mexican" -> new PartyReply(trigger,List.of("{player} is {roll:1:100}% mexican!"),true);
+            case "!slots" -> new PartyReply(trigger,List.of("Rolled [ {slot1} | {slot2} | {slot3} ]{jackpot}"),true);
             case "!femboy" -> new PartyReply(trigger,List.of("{player} is {roll:1:100}% a femboy!"),true);
             default -> new PartyReply(trigger,List.of("Hello {player}!"),true);
         };

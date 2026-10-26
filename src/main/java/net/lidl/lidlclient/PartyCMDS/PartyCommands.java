@@ -226,11 +226,17 @@ public class PartyCommands implements ClientModInitializer {
     public static PartyReply editableReply(String trigger) {
         var existing=PartyReplyLibrary.find(trigger);
         if (existing!=null) return existing;
+        var base=baseReply(trigger);
+        return new PartyReply(base.trigger(),base.answers(),isCommandConfigured(trigger));
+    }
+    public static PartyReply baseReply(String trigger) {
         if (trigger.equals("!tesco")) return new PartyReply(trigger,java.util.Arrays.stream(legacyOracleAnswers())
-                .map(answer -> "[MVP+] Tesco_Manager: "+answer.replaceAll("[\\p{Cc}\\p{Cf}]"," ")).toList(),
-                isCommandConfigured(trigger));
-        var example=PartyReplyLibrary.example(trigger);
-        return new PartyReply(example.trigger(),example.answers(),isCommandConfigured(trigger));
+                .map(answer -> "[MVP+] Tesco_Manager: "+answer.replaceAll("[\\p{Cc}\\p{Cf}]"," ")).toList(),true);
+        return PartyReplyLibrary.example(trigger);
+    }
+    public static boolean usesOriginalReply(PartyReply reply) {
+        return PartyCommandSwitches.COMMANDS.contains(reply.trigger())
+                && reply.answers().equals(baseReply(reply.trigger()).answers());
     }
     private static String[] legacyOracleAnswers() {
         return new String[] {
@@ -281,7 +287,8 @@ public class PartyCommands implements ClientModInitializer {
         if (!isCommandEnabled(command)) return null;
 
         var custom=PartyReplyLibrary.find(command);
-        if (custom!=null) return custom.render(playerName,args);
+        // Saving the unchanged base must preserve original special cases and generated logic.
+        if (custom!=null && !usesOriginalReply(custom)) return custom.render(playerName,args);
         return switch (command) {
 
             case "!iq" -> {

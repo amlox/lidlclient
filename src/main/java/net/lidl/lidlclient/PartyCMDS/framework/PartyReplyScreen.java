@@ -54,15 +54,23 @@ public final class PartyReplyScreen extends Screen {
         }).bounds(left+238,110,58,20).build()); remove.active=answers.size()>1;
         addRenderableWidget(Button.builder(Component.literal(enabled?"Reply: On":"Reply: Off"),b -> {
             retain(); enabled=!enabled; rebuildWidgets();
-        }).bounds(left,136,100,20).build());
-        addRenderableWidget(Button.builder(Component.literal("Room version"),b -> {
+        }).bounds(left,136,66,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Room"),b -> {
             var current=PartyReplyLibrary.roomReply(triggerDraft);
             message=current==null?"No shared definition":("Room: "+current.answers().getFirst());
-        }).bounds(left+106,136,90,20).build());
+        }).bounds(left+72,136,70,20).build());
         addRenderableWidget(Button.builder(Component.literal("Preview"),b -> {
             try { retain(); message=definition().render("TestPlayer","example arguments"); }
             catch (RuntimeException error) { message=error.getMessage(); }
-        }).bounds(left+202,136,94,20).build());
+        }).bounds(left+148,136,70,20).build());
+        addRenderableWidget(Button.builder(Component.literal("Reset base"),b -> {
+            retain();
+            try {
+                var base=PartyCommands.baseReply(triggerDraft.strip());
+                answers.clear(); answers.addAll(base.answers()); selected=0;
+                message="Original base restored in draft"; rebuildWidgets();
+            } catch (RuntimeException error) { message=error.getMessage(); }
+        }).bounds(left+224,136,72,20).build());
         save=addRenderableWidget(Button.builder(Component.literal(PartyRoomSync.connected()?"Save & share":"Save locally"),b -> save(false))
                 .bounds(left,height-28,106,20).build()); save.active=!busy;
         var local=addRenderableWidget(Button.builder(Component.literal("Local only"),b -> save(true))

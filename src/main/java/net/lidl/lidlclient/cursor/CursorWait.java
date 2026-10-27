@@ -15,6 +15,11 @@ public final class CursorWait {
         return true;
     }
     public boolean pending() { return pending; }
+    /** Consume one screen handoff; expired/cancelled waits never count as a menu opening. */
+    public boolean acceptScreen(long now, boolean sameConnection, boolean focused) {
+        long elapsed = now - startedAt;
+        return cancel() && sameConnection && focused && elapsed >= 0 && elapsed < timeout;
+    }
     public boolean cancel() {
         boolean wasPending = pending;
         pending = false;

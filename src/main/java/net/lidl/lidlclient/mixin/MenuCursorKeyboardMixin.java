@@ -21,6 +21,10 @@ public abstract class MenuCursorKeyboardMixin {
                 && event.isEscape() && MenuCursor.waitingInWorld()) {
             MenuCursor.cancelAndRestore();
             ci.cancel();
+        } else if (window == Minecraft.getInstance().getWindow().handle()
+                && action != GLFW.GLFW_RELEASE && MenuCursor.blockingInput()) {
+            // Discard presses/repeats, but forward releases so no held key can stick.
+            ci.cancel();
         }
     }
     // Chain the raw callback instead of injecting watched keys into Minecraft's keybind dispatch.

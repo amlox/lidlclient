@@ -6,6 +6,7 @@ import net.lidl.lidlclient.gui.GuiColorPickerScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -17,7 +18,7 @@ public final class SlotOverlayScreen extends Screen {
     private final InputConstants.Key key;
     private SlotOverlay draft;
     private int brush = SlotOverlay.DEFAULT_COLOUR;
-    private int left,top,pitch;
+    private SlotEditorLayout layout;
     private boolean iconMode;
     private final java.util.Map<String,net.minecraft.world.item.ItemStack> iconCache=new java.util.HashMap<>();
     public SlotOverlayScreen(Screen parent,InputConstants.Key key) {
@@ -27,9 +28,7 @@ public final class SlotOverlayScreen extends Screen {
         draft = MenuCursor.overlay(key);
     }
     @Override protected void init() {
-        pitch = Math.min(18,Math.max(4,(height-154)/(draft.rows()+4)));
-        left = (width-9*pitch)/2;
-        top = 104;
+        layout=SlotEditorLayout.forScreen(width,height,draft.rows());
         int controls = width/2-115;
         addRenderableWidget(Button.builder(Component.literal(draft.rows()*9+" slots ("+draft.rows()+" rows)"),b -> {
             draft = draft.withRows(draft.rows()%6+1); rebuildWidgets();
@@ -40,7 +39,26 @@ public final class SlotOverlayScreen extends Screen {
                 .bounds(controls+126,34,104,20).build());
         addRenderableWidget(Button.builder(Component.literal(iconMode?"Mode: Icons":"Mode: Colours"),b -> {
             iconMode=!iconMode; rebuildWidgets();
-        }).bounds(width/2-52,58,104,20).build());
+        }).bounds(width/2-154,58,100,20).build());
+        if (iconMode) {
+            var importMenu=addRenderableWidget(Button.builder(Component.literal("Import menu"),b -> {
+                var menu=MenuCursor.lastMenu(key);
+                if (menu!=null) {
+                    draft=draft.withRows(menu.rows()).importIcons(false,menu.icons());
+                    iconCache.clear(); rebuildWidgets();
+                }
+            }).bounds(width/2-50,58,100,20).build());
+            importMenu.active=MenuCursor.lastMenu(key)!=null;
+            importMenu.setTooltip(Tooltip.create(Component.literal(importMenu.active
+                    ? "Copy the last menu's icons and row count; empty slots clear old icons."
+                    : "Open the server menu with this key once before importing.")));
+            var importInventory=addRenderableWidget(Button.builder(Component.literal("Import inventory"),b -> {
+                draft=draft.importIcons(true,MenuCursor.inventoryIcons());
+                iconCache.clear();
+            }).bounds(width/2+54,58,100,20).build());
+            importInventory.active=Minecraft.getInstance().player!=null;
+            importInventory.setTooltip(Tooltip.create(Component.literal("Copy your inventory and hotbar into matching slots; empty slots clear old icons.")));
+        }
         int bottom = height-28;
         addRenderableWidget(Button.builder(Component.literal("Save"),b -> {
             MenuCursor.setOverlay(key,draft); onClose();
@@ -56,12 +74,12 @@ public final class SlotOverlayScreen extends Screen {
             for (int index=0;index<draft.rows()*9+36;index++) {
                 boolean inventory=index>=draft.rows()*9;
                 int slot=inventory?index-draft.rows()*9:index;
-                int x=left+(slot%9)*pitch,y=slotY(inventory,slot);
-                if (event.x()<x || event.x()>=x+pitch-2 || event.y()<y || event.y()>=y+pitch-2) continue;
+                int x=layout.x(slot),y=layout.y(inventory,slot);
+                if (event.x()<x || event.x()>=x+layout.size() || event.y()<y || event.y()>=y+layout.size()) continue;
                 if (iconMode) {
                     final int chosen=inventory?slot+54:slot;
                     if (event.button()==1) draft=draft.withIcon(chosen,null);
-                    else Minecraft.getInstance().setScreen(new SlotIconScreen(this,key,
+                    else Minecraft.getInstance().setScreen(new SlotIconScreen(this,key,draft.rows(),
                             icon -> draft=draft.withIcon(chosen,icon)));
                 } else if (event.button()==0) draft=draft.withColour(inventory,slot,
                         (inventory?draft.inventorySlots():draft.slots()).containsKey(slot)?null:brush);
@@ -82,12 +100,12 @@ public final class SlotOverlayScreen extends Screen {
         g.text(font,title,(width-font.width(title))/2,16,0xFFFFFFFF,false);
         var help=Component.literal(iconMode?"Left: choose icon   Right: remove icon":"Left: toggle slot   Right: slot colour");
         g.text(font,help,(width-font.width(help))/2,80,0xFFADBBD0,false);
-        g.text(font,"Container",left,top-10,0xFFADBBD0,false);
-        g.text(font,"Inventory",left,top+draft.rows()*pitch+4,0xFFADBBD0,false);
+        g.text(font,"Container",layout.left(),layout.top()-10,0xFFADBBD0,false);
+        g.text(font,"Inventory",layout.left(),layout.top()+draft.rows()*layout.pitch()+4,0xFFADBBD0,false);
         for (int index=0;index<draft.rows()*9+36;index++) {
             boolean inventory=index>=draft.rows()*9;
             int slot=inventory?index-draft.rows()*9:index;
-            int x=left+(slot%9)*pitch,y=slotY(inventory,slot),size=pitch-2;
+            int x=layout.x(slot),y=layout.y(inventory,slot),size=layout.size();
             Integer colour=(inventory?draft.inventorySlots():draft.slots()).get(slot);
             String icon=draft.icons().get(inventory?slot+54:slot);
             g.fill(x-1,y-1,x+size+1,y+size+1,0xFF576176);
@@ -96,17 +114,14 @@ public final class SlotOverlayScreen extends Screen {
             if (icon!=null) {
                 var stack=iconCache.computeIfAbsent(icon,SlotIcons::decode);
                 g.pose().pushMatrix(); g.pose().translate(x,y); g.pose().scale(size/16f,size/16f);
-                g.item(stack,0,0); g.pose().popMatrix();
+                g.item(stack,0,0); g.itemDecorations(font,stack,0,0); g.pose().popMatrix();
             }
-            if (pitch>=16 && icon==null) {
+            if (layout.pitch()>=16 && icon==null) {
                 var number=Component.literal(Integer.toString(slot+1));
                 g.text(font,number,x+(size-font.width(number))/2,y+(size-8)/2,0xFFFFFFFF,false);
             }
         }
         super.extractRenderState(g,mx,my,delta);
-    }
-    private int slotY(boolean inventory,int slot) {
-        return top+(inventory?draft.rows()*pitch+16:0)+(slot/9)*pitch+(inventory&&slot>=27?4:0);
     }
     @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }

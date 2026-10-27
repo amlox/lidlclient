@@ -31,7 +31,7 @@ public final class MenuCursor {
     private static net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> observedScreen;
     private static String observedKey;
     private static ClientPacketListener observedConnection;
-    private static final Map<String,Map<Integer,String>> LAST_ICONS=new java.util.HashMap<>();
+    private static final Map<String,MenuIconSnapshot> LAST_MENUS=new java.util.HashMap<>();
     private static boolean enabled = ClientConfig.bool(ID,"enabled",false);
     private static double timeout = savedTimeout();
     private static ClientPacketListener connection;
@@ -86,8 +86,17 @@ public final class MenuCursor {
     public static void setShowIcons(boolean value) {
         showIcons=value; ClientConfig.set(ID,"Show item icons",value);
     }
-    public static Map<Integer,String> lastIcons(InputConstants.Key key) {
-        return LAST_ICONS.getOrDefault(key.getName(),Map.of());
+    public static MenuIconSnapshot lastMenu(InputConstants.Key key) {
+        return LAST_MENUS.get(key.getName());
+    }
+    public static Map<Integer,String> inventoryIcons() {
+        var player=Minecraft.getInstance().player;
+        Map<Integer,String> icons=new java.util.LinkedHashMap<>();
+        if (player!=null) for (int slot=0;slot<36;slot++) {
+            String icon=SlotIcons.encode(player.getInventory().getItem(SlotEditorLayout.inventoryIndex(slot)));
+            if (icon!=null) icons.put(slot,icon);
+        }
+        return Map.copyOf(icons);
     }
     /** Snapshot only the server menu associated with this hotkey, after its contents have loaded. */
     public static void beforeScreenChange() {
@@ -95,12 +104,12 @@ public final class MenuCursor {
         if (observedScreen!=null && client.screen==observedScreen && client.getConnection()==observedConnection
                 && KEYS.stream().anyMatch(key -> key.getName().equals(observedKey))) {
             Map<Integer,String> icons=new java.util.LinkedHashMap<>();
-            int count=((net.minecraft.world.inventory.ChestMenu)observedScreen.getMenu()).getRowCount()*9;
-            for (int slot=0;slot<count;slot++) {
+            int rows=((net.minecraft.world.inventory.ChestMenu)observedScreen.getMenu()).getRowCount();
+            for (int slot=0;slot<rows*9;slot++) {
                 String icon=SlotIcons.encode(observedScreen.getMenu().getSlot(slot).getItem());
                 if (icon!=null) icons.put(slot,icon);
             }
-            LAST_ICONS.put(observedKey,Map.copyOf(icons));
+            LAST_MENUS.put(observedKey,new MenuIconSnapshot(rows,icons));
         }
         observedScreen=null; observedKey=null; observedConnection=null;
     }
@@ -150,7 +159,7 @@ public final class MenuCursor {
     public static void removeKey(int index) {
         if (index >= 0 && index < KEYS.size()) {
             String removed=KEYS.remove(index).getName();
-            OVERLAYS.remove(removed); LAST_ICONS.remove(removed);
+            OVERLAYS.remove(removed); LAST_MENUS.remove(removed);
             COMMANDS.remove(removed); ClientConfig.set(ID,"commands",COMMANDS);
             ClientConfig.set(ID,"slotOverlays",OVERLAYS);
             saveKeys();

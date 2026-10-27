@@ -67,4 +67,8 @@ public abstract class MenuCursorMouseMixin implements CursorMouseAccess {
         // Let releases through so a button held before the hotkey cannot get stuck.
         if (action == GLFW.GLFW_PRESS && MenuCursor.waitingInWorld()) ci.cancel();
     }
+    @Inject(method="onScroll(JDD)V",at=@At("HEAD"),cancellable=true)
+    private void lidlclient$ignoreWorldScroll(long window,double horizontal,double vertical,CallbackInfo ci) {
+        if (window == Minecraft.getInstance().getWindow().handle() && MenuCursor.blockingInput()) ci.cancel();
+    }
 }

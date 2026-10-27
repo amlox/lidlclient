@@ -4,6 +4,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvents;
 import net.lidl.lidlclient.input.RawKeyboard;
 import net.lidl.lidlclient.input.SharedHotkeys;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -27,11 +30,15 @@ public final class MenuCursor {
     private static final SlotOverlayRenderer RENDERER=new SlotOverlayRenderer();
     private static boolean simulateGui=ClientConfig.bool(ID,"Simulate container GUI",true);
     private static boolean showIcons=ClientConfig.bool(ID,"Show item icons",true);
+    private static boolean autoImportMenu=ClientConfig.bool(ID,"Auto import menu icons",false);
+    private static boolean autoImportInventory=ClientConfig.bool(ID,"Auto import inventory icons",false);
+    private static boolean legitMode=ClientConfig.bool(ID,"Legit mode",false);
+    private static boolean dingOnOpen=ClientConfig.bool(ID,"Ding on GUI open",false);
     private static String activeKey;
     private static net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> observedScreen;
     private static String observedKey;
     private static ClientPacketListener observedConnection;
-    private static final Map<String,Map<Integer,String>> LAST_ICONS=new java.util.HashMap<>();
+    private static final Map<String,MenuIconSnapshot> LAST_MENUS=new java.util.HashMap<>();
     private static boolean enabled = ClientConfig.bool(ID,"enabled",false);
     private static double timeout = savedTimeout();
     private static ClientPacketListener connection;
@@ -79,6 +86,15 @@ public final class MenuCursor {
         ClientConfig.set(ID,"commands",COMMANDS);
     }
     public static boolean simulateGui() { return simulateGui; }
+    public static boolean legitMode() { return legitMode; }
+    public static void setLegitMode(boolean value) {
+        legitMode=value; ClientConfig.set(ID,"Legit mode",value);
+        if (blockingInput()) KeyMapping.releaseAll();
+    }
+    public static boolean dingOnOpen() { return dingOnOpen; }
+    public static void setDingOnOpen(boolean value) {
+        dingOnOpen=value; ClientConfig.set(ID,"Ding on GUI open",value);
+    }
     public static void setSimulateGui(boolean value) {
         simulateGui=value; ClientConfig.set(ID,"Simulate container GUI",value);
     }
@@ -86,21 +102,64 @@ public final class MenuCursor {
     public static void setShowIcons(boolean value) {
         showIcons=value; ClientConfig.set(ID,"Show item icons",value);
     }
-    public static Map<Integer,String> lastIcons(InputConstants.Key key) {
-        return LAST_ICONS.getOrDefault(key.getName(),Map.of());
+    public static boolean autoImportMenu() { return autoImportMenu; }
+    public static void setAutoImportMenu(boolean value) {
+        autoImportMenu=value; ClientConfig.set(ID,"Auto import menu icons",value);
+        refreshAutoImports();
+    }
+    public static boolean autoImportInventory() { return autoImportInventory; }
+    public static void setAutoImportInventory(boolean value) {
+        autoImportInventory=value; ClientConfig.set(ID,"Auto import inventory icons",value);
+        refreshAutoImports();
+    }
+    /** Null means leave that area alone; only persist when the imported content changed. */
+    private static boolean importAutomatically(String key,MenuIconSnapshot menu,Map<Integer,String> inventory) {
+        var previous=OVERLAYS.getOrDefault(key,SlotOverlay.empty());
+        var next=previous;
+        if (menu!=null) next=next.withRows(menu.rows()).importIcons(false,menu.icons());
+        if (inventory!=null) next=next.importIcons(true,inventory);
+        if (next.equals(previous)) return false;
+        OVERLAYS.put(key,next);
+        return true;
+    }
+    private static void refreshAutoImports() {
+        if (!enabled) return;
+        var client=Minecraft.getInstance();
+        Map<Integer,String> inventory=autoImportInventory && client.player!=null && client.level!=null
+                ? inventoryIcons() : null;
+        boolean changed=false;
+        for (var key:KEYS) changed|=importAutomatically(key.getName(),
+                autoImportMenu?LAST_MENUS.get(key.getName()):null,inventory);
+        if (changed) ClientConfig.set(ID,"slotOverlays",OVERLAYS);
+    }
+    public static MenuIconSnapshot lastMenu(InputConstants.Key key) {
+        return LAST_MENUS.get(key.getName());
+    }
+    public static Map<Integer,String> inventoryIcons() {
+        var player=Minecraft.getInstance().player;
+        Map<Integer,String> icons=new java.util.LinkedHashMap<>();
+        if (player!=null) for (int slot=0;slot<36;slot++) {
+            String icon=SlotIcons.encode(player.getInventory().getItem(SlotEditorLayout.inventoryIndex(slot)));
+            if (icon!=null) icons.put(slot,icon);
+        }
+        return Map.copyOf(icons);
     }
     /** Snapshot only the server menu associated with this hotkey, after its contents have loaded. */
     public static void beforeScreenChange() {
         var client=Minecraft.getInstance();
         if (observedScreen!=null && client.screen==observedScreen && client.getConnection()==observedConnection
+                && client.player!=null && client.level!=null
                 && KEYS.stream().anyMatch(key -> key.getName().equals(observedKey))) {
             Map<Integer,String> icons=new java.util.LinkedHashMap<>();
-            int count=((net.minecraft.world.inventory.ChestMenu)observedScreen.getMenu()).getRowCount()*9;
-            for (int slot=0;slot<count;slot++) {
+            int rows=((net.minecraft.world.inventory.ChestMenu)observedScreen.getMenu()).getRowCount();
+            for (int slot=0;slot<rows*9;slot++) {
                 String icon=SlotIcons.encode(observedScreen.getMenu().getSlot(slot).getItem());
                 if (icon!=null) icons.put(slot,icon);
             }
-            LAST_ICONS.put(observedKey,Map.copyOf(icons));
+            var snapshot=new MenuIconSnapshot(rows,icons);
+            LAST_MENUS.put(observedKey,snapshot);
+            if (enabled && importAutomatically(observedKey,autoImportMenu?snapshot:null,
+                    autoImportInventory?inventoryIcons():null)) ClientConfig.set(ID,"slotOverlays",OVERLAYS);
         }
         observedScreen=null; observedKey=null; observedConnection=null;
     }
@@ -136,6 +195,7 @@ public final class MenuCursor {
         enabled = value;
         ClientConfig.set(ID,"enabled",value);
         if (!value) cancelAndRestore();
+        else refreshAutoImports();
     }
     public static double timeout() { return timeout; }
     public static void setTimeout(double value) {
@@ -150,7 +210,7 @@ public final class MenuCursor {
     public static void removeKey(int index) {
         if (index >= 0 && index < KEYS.size()) {
             String removed=KEYS.remove(index).getName();
-            OVERLAYS.remove(removed); LAST_ICONS.remove(removed);
+            OVERLAYS.remove(removed); LAST_MENUS.remove(removed);
             COMMANDS.remove(removed); ClientConfig.set(ID,"commands",COMMANDS);
             ClientConfig.set(ID,"slotOverlays",OVERLAYS);
             saveKeys();
@@ -192,6 +252,10 @@ public final class MenuCursor {
                     RENDERER.draw(graphics,OVERLAYS.getOrDefault(activeKey,SlotOverlay.empty()),
                             simulateGui,showOverlay,showIcons);
                 });
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            updateWait(client);
+            if (blockingInput()) KeyMapping.releaseAll();
+        });
         ClientTickEvents.END_CLIENT_TICK.register(MenuCursor::updateWait);
     }
     private static void updateWait(Minecraft client) {
@@ -213,9 +277,12 @@ public final class MenuCursor {
                 || !WAIT.begin(System.nanoTime(),(long)(timeout*1_000_000_000L))) return;
         connection=client.getConnection();
         activeKey=key.getName();
+        if (autoImportInventory && importAutomatically(activeKey,null,inventoryIcons()))
+            ClientConfig.set(ID,"slotOverlays",OVERLAYS);
         // Keep logical gameplay focus intact for other mods, while freeing the physical cursor.
         ((CursorMouseAccess)client.mouseHandler).lidlclient$releaseCursor();
         clearMotion(client);
+        if (blockingInput()) KeyMapping.releaseAll();
         String command=command(key);
         if (!command.isEmpty()) connection.sendCommand(command);
     }
@@ -229,15 +296,20 @@ public final class MenuCursor {
         return enabled && WAIT.pending() && client.screen == null && client.player != null
                 && client.getConnection() == connection && client.isWindowActive();
     }
+    public static boolean blockingInput() { return legitMode && waitingInWorld(); }
     public static void screenChanged() {
         var client=Minecraft.getInstance();
         if (client.screen != null) {
-            if (WAIT.pending() && activeKey!=null && client.getConnection()==connection
-                    && client.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
-                    && screen.getMenu() instanceof net.minecraft.world.inventory.ChestMenu) {
-                observedScreen=screen; observedKey=activeKey; observedConnection=connection;
+            boolean handoff=WAIT.acceptScreen(System.nanoTime(),
+                    enabled && activeKey!=null && client.player!=null && client.getConnection()==connection,
+                    client.isWindowActive());
+            if (handoff && client.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+                if (screen.getMenu() instanceof net.minecraft.world.inventory.ChestMenu) {
+                    observedScreen=screen; observedKey=activeKey; observedConnection=connection;
+                }
+                if (dingOnOpen) client.getSoundManager().play(
+                        SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP,1f));
             }
-            WAIT.cancel();
             ((CursorMouseAccess)Minecraft.getInstance().mouseHandler).lidlclient$finishCursorRelease();
             connection = null;
             activeKey = null;

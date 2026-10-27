@@ -40,6 +40,16 @@ public record SlotOverlay(int rows, Map<Integer,Integer> slots, Map<Integer,Inte
         return new SlotOverlay(rows,slots,inventorySlots,next);
     }
     public SlotOverlay withIcons(Map<Integer,String> next) { return new SlotOverlay(rows,slots,inventorySlots,next); }
+    /** Replace only this area's icons, including empty slots; retain colours and the other area. */
+    public SlotOverlay importIcons(boolean inventory,Map<Integer,String> source) {
+        int offset=inventory?54:0,limit=inventory?36:rows*9;
+        Map<Integer,String> next=new LinkedHashMap<>(icons);
+        next.keySet().removeIf(slot -> inventory?slot>=54:slot<54);
+        source.forEach((slot,icon) -> {
+            if (slot!=null && slot>=0 && slot<limit && icon!=null) next.put(offset+slot,icon);
+        });
+        return withIcons(next);
+    }
     public static int translucent(int rgb,double opacityPercent) {
         double opacity = Double.isFinite(opacityPercent) ? Math.clamp(opacityPercent,5,80) : 30;
         return ((int)Math.round(opacity * 255 / 100) << 24) | (rgb & 0xFFFFFF);

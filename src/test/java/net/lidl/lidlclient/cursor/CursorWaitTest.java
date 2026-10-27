@@ -5,6 +5,29 @@ import static net.lidl.lidlclient.cursor.CursorWait.Result.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class CursorWaitTest {
+    @Test void screenHandoffIsAcceptedOnlyOnceDuringAnActiveWait() {
+        var wait = new CursorWait();
+        assertFalse(wait.acceptScreen(100,true,true));
+        wait.begin(100,1000);
+        assertTrue(wait.acceptScreen(200,true,true));
+        assertFalse(wait.pending());
+        assertFalse(wait.acceptScreen(201,true,true));
+    }
+    @Test void unrelatedOrLateScreensCannotTriggerAnOpeningNotification() {
+        var wait = new CursorWait();
+        wait.begin(100,1000);
+        assertFalse(wait.acceptScreen(200,false,true));
+        assertFalse(wait.pending());
+        wait.begin(100,1000);
+        assertFalse(wait.acceptScreen(200,true,false));
+        wait.begin(100,1000);
+        assertFalse(wait.acceptScreen(1100,true,true));
+        wait.begin(100,1000);
+        assertFalse(wait.acceptScreen(99,true,true));
+        wait.begin(100,1000);
+        wait.cancel();
+        assertFalse(wait.acceptScreen(200,true,true));
+    }
     @Test void releasesOnceAndDoesNotExtendTheDeadlineOnRepeatedPresses() {
         var wait = new CursorWait();
         assertEquals(NONE,wait.update(0,false,true,true));

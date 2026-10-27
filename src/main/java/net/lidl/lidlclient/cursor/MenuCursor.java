@@ -27,6 +27,8 @@ public final class MenuCursor {
     private static final SlotOverlayRenderer RENDERER=new SlotOverlayRenderer();
     private static boolean simulateGui=ClientConfig.bool(ID,"Simulate container GUI",true);
     private static boolean showIcons=ClientConfig.bool(ID,"Show item icons",true);
+    private static boolean autoImportMenu=ClientConfig.bool(ID,"Auto import menu icons",false);
+    private static boolean autoImportInventory=ClientConfig.bool(ID,"Auto import inventory icons",false);
     private static String activeKey;
     private static net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> observedScreen;
     private static String observedKey;
@@ -86,6 +88,36 @@ public final class MenuCursor {
     public static void setShowIcons(boolean value) {
         showIcons=value; ClientConfig.set(ID,"Show item icons",value);
     }
+    public static boolean autoImportMenu() { return autoImportMenu; }
+    public static void setAutoImportMenu(boolean value) {
+        autoImportMenu=value; ClientConfig.set(ID,"Auto import menu icons",value);
+        refreshAutoImports();
+    }
+    public static boolean autoImportInventory() { return autoImportInventory; }
+    public static void setAutoImportInventory(boolean value) {
+        autoImportInventory=value; ClientConfig.set(ID,"Auto import inventory icons",value);
+        refreshAutoImports();
+    }
+    /** Null means leave that area alone; only persist when the imported content changed. */
+    private static boolean importAutomatically(String key,MenuIconSnapshot menu,Map<Integer,String> inventory) {
+        var previous=OVERLAYS.getOrDefault(key,SlotOverlay.empty());
+        var next=previous;
+        if (menu!=null) next=next.withRows(menu.rows()).importIcons(false,menu.icons());
+        if (inventory!=null) next=next.importIcons(true,inventory);
+        if (next.equals(previous)) return false;
+        OVERLAYS.put(key,next);
+        return true;
+    }
+    private static void refreshAutoImports() {
+        if (!enabled) return;
+        var client=Minecraft.getInstance();
+        Map<Integer,String> inventory=autoImportInventory && client.player!=null && client.level!=null
+                ? inventoryIcons() : null;
+        boolean changed=false;
+        for (var key:KEYS) changed|=importAutomatically(key.getName(),
+                autoImportMenu?LAST_MENUS.get(key.getName()):null,inventory);
+        if (changed) ClientConfig.set(ID,"slotOverlays",OVERLAYS);
+    }
     public static MenuIconSnapshot lastMenu(InputConstants.Key key) {
         return LAST_MENUS.get(key.getName());
     }
@@ -102,6 +134,7 @@ public final class MenuCursor {
     public static void beforeScreenChange() {
         var client=Minecraft.getInstance();
         if (observedScreen!=null && client.screen==observedScreen && client.getConnection()==observedConnection
+                && client.player!=null && client.level!=null
                 && KEYS.stream().anyMatch(key -> key.getName().equals(observedKey))) {
             Map<Integer,String> icons=new java.util.LinkedHashMap<>();
             int rows=((net.minecraft.world.inventory.ChestMenu)observedScreen.getMenu()).getRowCount();
@@ -109,7 +142,10 @@ public final class MenuCursor {
                 String icon=SlotIcons.encode(observedScreen.getMenu().getSlot(slot).getItem());
                 if (icon!=null) icons.put(slot,icon);
             }
-            LAST_MENUS.put(observedKey,new MenuIconSnapshot(rows,icons));
+            var snapshot=new MenuIconSnapshot(rows,icons);
+            LAST_MENUS.put(observedKey,snapshot);
+            if (enabled && importAutomatically(observedKey,autoImportMenu?snapshot:null,
+                    autoImportInventory?inventoryIcons():null)) ClientConfig.set(ID,"slotOverlays",OVERLAYS);
         }
         observedScreen=null; observedKey=null; observedConnection=null;
     }
@@ -145,6 +181,7 @@ public final class MenuCursor {
         enabled = value;
         ClientConfig.set(ID,"enabled",value);
         if (!value) cancelAndRestore();
+        else refreshAutoImports();
     }
     public static double timeout() { return timeout; }
     public static void setTimeout(double value) {
@@ -222,6 +259,8 @@ public final class MenuCursor {
                 || !WAIT.begin(System.nanoTime(),(long)(timeout*1_000_000_000L))) return;
         connection=client.getConnection();
         activeKey=key.getName();
+        if (autoImportInventory && importAutomatically(activeKey,null,inventoryIcons()))
+            ClientConfig.set(ID,"slotOverlays",OVERLAYS);
         // Keep logical gameplay focus intact for other mods, while freeing the physical cursor.
         ((CursorMouseAccess)client.mouseHandler).lidlclient$releaseCursor();
         clearMotion(client);

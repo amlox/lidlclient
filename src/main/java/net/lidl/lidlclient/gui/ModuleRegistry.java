@@ -59,6 +59,8 @@ public final class ModuleRegistry {
                 new ActionSetting("Edit keybinds", MenuCursor::openBindings),
                 new BooleanSetting("Simulate container GUI", MenuCursor::simulateGui, MenuCursor::setSimulateGui),
                 new BooleanSetting("Show item icons", MenuCursor::showIcons, MenuCursor::setShowIcons),
+                new BooleanSetting("Auto import menu icons", MenuCursor::autoImportMenu, MenuCursor::setAutoImportMenu),
+                new BooleanSetting("Auto import inventory icons", MenuCursor::autoImportInventory, MenuCursor::setAutoImportInventory),
                 new BooleanSetting("Show slot overlay", MenuCursor::showOverlay, MenuCursor::setShowOverlay),
                 new NumberSetting("Slot opacity (%)", 5, 80, 5, MenuCursor::overlayOpacity, MenuCursor::setOverlayOpacity),
                 new NumberSetting("Wait timeout (seconds)", .25, 5, .25, MenuCursor::timeout, MenuCursor::setTimeout)));

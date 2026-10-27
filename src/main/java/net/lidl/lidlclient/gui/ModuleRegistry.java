@@ -57,6 +57,8 @@ public final class ModuleRegistry {
         modules.add(new GuiModule("menu_cursor", "Instant menu cursor", "QoL features",
                 "Release cursor while your menu hotkey loads", MenuCursor::isEnabled, MenuCursor::setEnabled,
                 new ActionSetting("Edit keybinds", MenuCursor::openBindings),
+                new BooleanSetting("Legit mode", MenuCursor::legitMode, MenuCursor::setLegitMode),
+                new BooleanSetting("Ding on GUI open", MenuCursor::dingOnOpen, MenuCursor::setDingOnOpen),
                 new BooleanSetting("Simulate container GUI", MenuCursor::simulateGui, MenuCursor::setSimulateGui),
                 new BooleanSetting("Show item icons", MenuCursor::showIcons, MenuCursor::setShowIcons),
                 new BooleanSetting("Auto import menu icons", MenuCursor::autoImportMenu, MenuCursor::setAutoImportMenu),

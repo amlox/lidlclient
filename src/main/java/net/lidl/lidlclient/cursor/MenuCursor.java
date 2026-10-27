@@ -4,6 +4,9 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvents;
 import net.lidl.lidlclient.input.RawKeyboard;
 import net.lidl.lidlclient.input.SharedHotkeys;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -29,6 +32,8 @@ public final class MenuCursor {
     private static boolean showIcons=ClientConfig.bool(ID,"Show item icons",true);
     private static boolean autoImportMenu=ClientConfig.bool(ID,"Auto import menu icons",false);
     private static boolean autoImportInventory=ClientConfig.bool(ID,"Auto import inventory icons",false);
+    private static boolean legitMode=ClientConfig.bool(ID,"Legit mode",false);
+    private static boolean dingOnOpen=ClientConfig.bool(ID,"Ding on GUI open",false);
     private static String activeKey;
     private static net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> observedScreen;
     private static String observedKey;
@@ -81,6 +86,15 @@ public final class MenuCursor {
         ClientConfig.set(ID,"commands",COMMANDS);
     }
     public static boolean simulateGui() { return simulateGui; }
+    public static boolean legitMode() { return legitMode; }
+    public static void setLegitMode(boolean value) {
+        legitMode=value; ClientConfig.set(ID,"Legit mode",value);
+        if (blockingInput()) KeyMapping.releaseAll();
+    }
+    public static boolean dingOnOpen() { return dingOnOpen; }
+    public static void setDingOnOpen(boolean value) {
+        dingOnOpen=value; ClientConfig.set(ID,"Ding on GUI open",value);
+    }
     public static void setSimulateGui(boolean value) {
         simulateGui=value; ClientConfig.set(ID,"Simulate container GUI",value);
     }
@@ -238,6 +252,10 @@ public final class MenuCursor {
                     RENDERER.draw(graphics,OVERLAYS.getOrDefault(activeKey,SlotOverlay.empty()),
                             simulateGui,showOverlay,showIcons);
                 });
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            updateWait(client);
+            if (blockingInput()) KeyMapping.releaseAll();
+        });
         ClientTickEvents.END_CLIENT_TICK.register(MenuCursor::updateWait);
     }
     private static void updateWait(Minecraft client) {
@@ -264,6 +282,7 @@ public final class MenuCursor {
         // Keep logical gameplay focus intact for other mods, while freeing the physical cursor.
         ((CursorMouseAccess)client.mouseHandler).lidlclient$releaseCursor();
         clearMotion(client);
+        if (blockingInput()) KeyMapping.releaseAll();
         String command=command(key);
         if (!command.isEmpty()) connection.sendCommand(command);
     }
@@ -277,15 +296,20 @@ public final class MenuCursor {
         return enabled && WAIT.pending() && client.screen == null && client.player != null
                 && client.getConnection() == connection && client.isWindowActive();
     }
+    public static boolean blockingInput() { return legitMode && waitingInWorld(); }
     public static void screenChanged() {
         var client=Minecraft.getInstance();
         if (client.screen != null) {
-            if (WAIT.pending() && activeKey!=null && client.getConnection()==connection
-                    && client.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen
-                    && screen.getMenu() instanceof net.minecraft.world.inventory.ChestMenu) {
-                observedScreen=screen; observedKey=activeKey; observedConnection=connection;
+            boolean handoff=WAIT.acceptScreen(System.nanoTime(),
+                    enabled && activeKey!=null && client.player!=null && client.getConnection()==connection,
+                    client.isWindowActive());
+            if (handoff && client.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+                if (screen.getMenu() instanceof net.minecraft.world.inventory.ChestMenu) {
+                    observedScreen=screen; observedKey=activeKey; observedConnection=connection;
+                }
+                if (dingOnOpen) client.getSoundManager().play(
+                        SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP,1f));
             }
-            WAIT.cancel();
             ((CursorMouseAccess)Minecraft.getInstance().mouseHandler).lidlclient$finishCursorRelease();
             connection = null;
             activeKey = null;

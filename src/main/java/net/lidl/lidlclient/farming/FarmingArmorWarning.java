@@ -5,7 +5,7 @@ import java.util.List;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
-import net.lidl.lidlclient.LidlClient;
+import net.minecraft.resources.Identifier;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
@@ -39,7 +39,7 @@ public final class FarmingArmorWarning {
         initialized = true;
         ClientTickEvents.END_CLIENT_TICK.register(FarmingArmorWarning::tick);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
-                LidlClient.id("farming_armor_warning"), (graphics, delta) -> {
+                Identifier.fromNamespaceAndPath("lidlclient", "farming_armor_warning"), (graphics, delta) -> {
                     Minecraft client = Minecraft.getInstance();
                     if (!enabled || visibleTicks == 0 || client.player == null
                             || client.screen != null) return;

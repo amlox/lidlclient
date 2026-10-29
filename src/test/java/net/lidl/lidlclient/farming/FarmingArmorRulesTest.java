@@ -6,20 +6,25 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FarmingArmorRulesTest {
     @Test void allowsEveryApprovedSetAndMixedPieces() {
-        for (String set : List.of("HELIANTHUS", "FERMENTO", "SQUASH", "CROPIE")) {
-            assertTrue(FarmingArmorRules.allowedArmor(List.of(set + "_HELMET", set + "_CHESTPLATE",
-                    set + "_LEGGINGS", set + "_BOOTS")));
+        for (String set : List.of("Helianthus", "Fermento", "Squash", "Cropie")) {
+            assertTrue(FarmingArmorRules.allowedArmor(List.of(set + " Helmet", set + " Chestplate",
+                    set + " Leggings", set + " Boots")));
         }
-        assertTrue(FarmingArmorRules.allowedArmor(List.of("HELIANTHUS_HELMET", "FERMENTO_CHESTPLATE",
-                "SQUASH_LEGGINGS", "CROPIE_BOOTS")));
+        assertTrue(FarmingArmorRules.allowedArmor(List.of("§6Mossy Helianthus Helmet ✦",
+                "§aBustling FERMENTO Chestplate", "Ancient squash Leggings ★★★★★", "cropie Boots")));
     }
 
-    @Test void rejectsMissingWrongAndLookalikePieces() {
-        for (String head : List.of("", "RANCHERS_BOOTS", "FERMENTO", "FAKE_FERMENTO_HELMET")) {
-            assertFalse(FarmingArmorRules.allowedArmor(List.of(head, "FERMENTO_CHESTPLATE",
-                    "FERMENTO_LEGGINGS", "FERMENTO_BOOTS")));
+    @Test void rejectsMissingAndWrongPiecesInAnySlot() {
+        var names = List.of("Helianthus Helmet", "Fermento Chestplate", "Squash Leggings", "Cropie Boots");
+        for (int slot = 0; slot < 4; slot++) {
+            for (String wrong : java.util.Arrays.asList("", null, "Rancher's Boots", "Diamond Helmet")) {
+                var equipped = new java.util.ArrayList<>(names);
+                equipped.set(slot, wrong);
+                assertFalse(FarmingArmorRules.allowedArmor(equipped));
+            }
         }
         assertFalse(FarmingArmorRules.allowedArmor(List.of()));
+        assertFalse(FarmingArmorRules.allowedArmor(names.subList(0, 3)));
     }
 
     @Test void gardenRequiresSkyblockAndAnActualAreaOrLocation() {

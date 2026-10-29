@@ -8,7 +8,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.resources.Identifier;
 import net.lidl.lidlclient.config.ClientConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
@@ -67,14 +66,12 @@ public final class FarmingArmorWarning {
     }
 
     private static boolean allowedArmor(Minecraft client) {
-        List<String> ids = new ArrayList<>(4);
+        List<String> names = new ArrayList<>(4);
         for (EquipmentSlot slot : ARMOR) {
             var stack = client.player.getItemBySlot(slot);
-            var data = stack.get(DataComponents.CUSTOM_DATA);
-            ids.add(data == null ? "" : data.copyTag().getCompoundOrEmpty("ExtraAttributes")
-                    .getStringOr("id", ""));
+            names.add(stack.isEmpty() ? "" : stack.getHoverName().getString());
         }
-        return FarmingArmorRules.allowedArmor(ids);
+        return FarmingArmorRules.allowedArmor(names);
     }
 
     private static boolean inGarden(Minecraft client) {

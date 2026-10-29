@@ -25,7 +25,9 @@ While holding attack on a crop in Hypixel SkyBlock's Garden, a red **WRONG ARMOR
 warning appears in the center for two seconds, refreshed while harvesting.
 All four armor slots must contain Helianthus, Fermento, Squash, or Cropie pieces;
 mixing those sets is allowed. Empty slots and other armor (including Rancher's Boots)
-trigger the warning. Item IDs are checked rather than display names.
+trigger the warning. Each equipped item's display name must contain one of those four
+set names, ignoring capitalization and formatting codes. Reforge prefixes and upgrade
+suffixes are accepted; internal item IDs are not required.
 
 The warning clears when you equip allowed armor, leave the Garden, open a screen,
 disconnect, or disable the module. Garden detection reads the live SkyBlock sidebar

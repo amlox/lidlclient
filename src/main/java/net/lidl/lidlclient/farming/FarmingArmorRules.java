@@ -4,22 +4,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/** Pure rules: never infer armor identity from a renameable display name. */
+/** Match the visible armor names, including reforges, formatting and upgrade suffixes. */
 final class FarmingArmorRules {
-    private static final Set<String> SETS = Set.of("HELIANTHUS", "FERMENTO", "SQUASH", "CROPIE");
-    private static final List<String> SLOTS = List.of("HELMET", "CHESTPLATE", "LEGGINGS", "BOOTS");
+    private static final Set<String> SETS = Set.of("helianthus", "fermento", "squash", "cropie");
 
     private FarmingArmorRules() { }
 
-    static boolean allowedArmor(List<String> ids) {
-        if (ids.size() != SLOTS.size()) return false;
-        for (int i = 0; i < SLOTS.size(); i++) {
-            String suffix = "_" + SLOTS.get(i);
-            String id = ids.get(i);
-            if (id == null || !id.endsWith(suffix)
-                    || !SETS.contains(id.substring(0, id.length() - suffix.length()))) return false;
-        }
-        return true;
+    static boolean allowedArmor(List<String> names) {
+        return names.size() == 4 && names.stream().allMatch(name -> {
+            String normalized = plain(name).toLowerCase(Locale.ROOT);
+            return SETS.stream().anyMatch(normalized::contains);
+        });
     }
 
     static String plain(String text) {

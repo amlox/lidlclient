@@ -99,6 +99,8 @@ public final class FarmingArmorWarning {
                 || state.is(Blocks.NETHER_WART) || state.is(Blocks.COCOA)
                 || state.is(Blocks.MELON) || state.is(Blocks.PUMPKIN)
                 || state.is(Blocks.BROWN_MUSHROOM) || state.is(Blocks.RED_MUSHROOM)
+                || state.is(Blocks.SUNFLOWER) || state.is(Blocks.BLUE_ORCHID)
+                || state.is(Blocks.ROSE_BUSH)
                 || state.is(Blocks.CACTUS);
     }
 }

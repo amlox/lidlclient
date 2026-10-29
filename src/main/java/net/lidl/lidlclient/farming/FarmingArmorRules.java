@@ -37,6 +37,6 @@ final class FarmingArmorRules {
         if (tab.stream().map(FarmingArmorRules::plain)
                 .anyMatch(line -> line.matches("Area:\\s*(?:The )?Garden"))) return true;
         return sidebar.stream().map(FarmingArmorRules::plain)
-                .anyMatch(line -> line.matches("⏣\\s*(?:The )?Garden"));
+                .anyMatch(line -> line.matches("[⏣]\\s*(?:The )?Garden"));
     }
 }

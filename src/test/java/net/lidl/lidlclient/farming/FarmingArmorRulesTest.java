@@ -24,6 +24,7 @@ class FarmingArmorRulesTest {
 
     @Test void gardenRequiresSkyblockAndAnActualAreaOrLocation() {
         assertTrue(FarmingArmorRules.garden("§e§lSKYBLOCK", List.of("§a⏣ The Garden"), List.of()));
+        assertTrue(FarmingArmorRules.garden("SKYBLOCK", List.of("§a The Garden"), List.of()));
         assertTrue(FarmingArmorRules.garden("SKYBLOCK CO-OP", List.of("⏣ Custom Plot"),
                 List.of("§bArea: §aGarden")));
         assertFalse(FarmingArmorRules.garden("BED WARS", List.of("⏣ Garden"), List.of("Area: Garden")));

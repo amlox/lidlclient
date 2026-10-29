@@ -23,8 +23,13 @@ jobs:
         run: chmod +x ./gradlew
       - name: build
         run: ./gradlew build
+      - name: test browser controls
+        run: node --test browser-extension/content.test.cjs
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
           name: Artifacts
-          path: build/libs/
+          path: |
+            build/libs/
+            browser-extension/
+            docs/REELS_CONTROLS.md

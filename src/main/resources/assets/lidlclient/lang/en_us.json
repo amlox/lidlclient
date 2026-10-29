@@ -1,4 +1,8 @@
 {
   "key.category.lidlclient.hotbar": "LidlClient",
-  "key.lidlclient.dungeonbreaker_swap": "Dungeonbreaker swap"
+  "key.lidlclient.dungeonbreaker_swap": "Dungeonbreaker swap",
+  "key.category.lidlclient.reels": "Reels Controls",
+  "key.lidlclient.reels.0": "Next Reel",
+  "key.lidlclient.reels.1": "Previous Reel",
+  "key.lidlclient.reels.2": "Play / Pause Reel"
 }

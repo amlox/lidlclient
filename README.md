@@ -21,3 +21,8 @@ or the wait is cancelled.
 ## License
 
 This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
+
+## Browser Reels Controls
+
+Next, Previous and Play/Pause keybinds for Instagram in Firefox or Opera/GX.
+See [setup and browser extension instructions](docs/REELS_CONTROLS.md).

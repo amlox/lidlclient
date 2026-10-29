@@ -11,6 +11,7 @@ import net.lidl.lidlclient.PartyCMDS.PartyCommands;
 import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
+import net.lidl.lidlclient.farming.FarmingArmorWarning;
 
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.BuiltInFeatures;
@@ -70,6 +71,9 @@ public final class ModuleRegistry {
                 "Select Dungeonbreaker from your hotbar",
                 DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,
                 new KeybindSetting("Keybind", DungeonbreakerSwap::keyName, DungeonbreakerSwap::bindKey)));
+        modules.add(new GuiModule("farming_armor_warning", "Farming armor warning", "QoL features",
+                "Garden crop warning unless all armor is Helianthus, Fermento, Squash or Cropie",
+                FarmingArmorWarning::isEnabled, FarmingArmorWarning::setEnabled));
         modules.add(new GuiModule("instant_pets", "Instant Pets close", "Cheats",
                 "Close after pet selection and suppress automatic reopen",
                 ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));

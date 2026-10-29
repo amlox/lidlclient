@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Lidl Reels Controls",
+  "version": "1.0.0",
+  "description": "Receive local Next, Previous and Play/Pause commands from LidlClient.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://127.0.0.1/*", "https://www.instagram.com/*"],
+  "background": {"scripts": ["background.js"], "service_worker": "background.js"},
+  "action": {"default_popup": "popup.html"},
+  "content_scripts": [{"matches": ["https://www.instagram.com/*"], "js": ["content.js"], "run_at": "document_idle"}],
+  "browser_specific_settings": {"gecko": {"id": "reels-controls@lidlclient.local", "strict_min_version": "140.0", "data_collection_permissions": {"required": ["none"]}}}
+}

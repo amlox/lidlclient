@@ -11,6 +11,8 @@ import net.lidl.lidlclient.PartyCMDS.PartyCommands;
 import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
+import net.lidl.lidlclient.reels.ReelsControls;
+import net.lidl.lidlclient.farming.FarmingArmorWarning;
 
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.BuiltInFeatures;
@@ -70,6 +72,17 @@ public final class ModuleRegistry {
                 "Select Dungeonbreaker from your hotbar",
                 DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,
                 new KeybindSetting("Keybind", DungeonbreakerSwap::keyName, DungeonbreakerSwap::bindKey)));
+        modules.add(new GuiModule("farming_armor_warning", "Farming armor warning", "QoL features",
+                "Garden crop warning unless all armor is Helianthus, Fermento, Squash or Cropie",
+                FarmingArmorWarning::isEnabled, FarmingArmorWarning::setEnabled));
+        modules.add(new GuiModule("reels_controls", "Reels Controls", "QoL features",
+                "Control Instagram in Firefox or Opera/GX via the companion extension",
+                ReelsControls::isEnabled, ReelsControls::setEnabled,
+                new KeybindSetting("Next Reel", () -> ReelsControls.keyName(0), key -> ReelsControls.bind(0, key)),
+                new KeybindSetting("Previous Reel", () -> ReelsControls.keyName(1), key -> ReelsControls.bind(1, key)),
+                new KeybindSetting("Play / Pause", () -> ReelsControls.keyName(2), key -> ReelsControls.bind(2, key)),
+                new ActionSetting("Copy connection code", ReelsControls::copyCode),
+                new ActionSetting("Connection status", ReelsControls::showStatus)));
         modules.add(new GuiModule("instant_pets", "Instant Pets close", "Cheats",
                 "Close after pet selection and suppress automatic reopen",
                 ZeroPingPets::isEnabled, ZeroPingPets::setEnabled));

@@ -12,6 +12,7 @@ import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.lidl.lidlclient.green.GreenScreen;
 import net.lidl.lidlclient.reels.ReelsControls;
+import net.lidl.lidlclient.farming.FarmingArmorWarning;
 
 import net.lidl.lidlclient.config.ClientConfig;
 import net.lidl.lidlclient.config.BuiltInFeatures;
@@ -71,6 +72,9 @@ public final class ModuleRegistry {
                 "Select Dungeonbreaker from your hotbar",
                 DungeonbreakerSwap::isEnabled, DungeonbreakerSwap::setEnabled,
                 new KeybindSetting("Keybind", DungeonbreakerSwap::keyName, DungeonbreakerSwap::bindKey)));
+        modules.add(new GuiModule("farming_armor_warning", "Farming armor warning", "QoL features",
+                "Garden crop warning unless all armor is Helianthus, Fermento, Squash or Cropie",
+                FarmingArmorWarning::isEnabled, FarmingArmorWarning::setEnabled));
         modules.add(new GuiModule("reels_controls", "Reels Controls", "QoL features",
                 "Control Instagram in Firefox or Opera/GX via the companion extension",
                 ReelsControls::isEnabled, ReelsControls::setEnabled,

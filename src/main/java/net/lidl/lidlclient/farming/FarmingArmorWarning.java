@@ -3,6 +3,8 @@ package net.lidl.lidlclient.farming;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
+import net.minecraft.world.InteractionResult;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.resources.Identifier;
@@ -36,6 +38,17 @@ public final class FarmingArmorWarning {
     public static void initialize() {
         if (initialized) return;
         initialized = true;
+        // Observe the block before vanilla removes it locally during instant harvesting.
+        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
+            Minecraft client = Minecraft.getInstance();
+            if (player == client.player && level == client.level && enabled
+                    && client.player != null && client.level != null && client.screen == null
+                    && !client.player.isSpectator() && crop(level.getBlockState(pos))
+                    && inGarden(client) && !allowedArmor(client)) {
+                visibleTicks = 40;
+            }
+            return InteractionResult.PASS;
+        });
         ClientTickEvents.END_CLIENT_TICK.register(FarmingArmorWarning::tick);
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
                 Identifier.fromNamespaceAndPath("lidlclient", "farming_armor_warning"), (graphics, delta) -> {
@@ -59,7 +72,7 @@ public final class FarmingArmorWarning {
             return;
         }
         if (visibleTicks > 0) visibleTicks--;
-        // Read held attack each tick so continuous harvesting is covered as well as the first click.
+        // Keep the warning visible during slower breaking; instant crops are caught by the attack callback.
         if (client.options.keyAttack.isDown() && client.hitResult instanceof BlockHitResult hit
                 && hit.getType() == HitResult.Type.BLOCK
                 && crop(client.level.getBlockState(hit.getBlockPos()))) visibleTicks = 40;

@@ -38,7 +38,7 @@ public final class SlotIconScreen extends Screen {
     }
     @Override public boolean mouseClicked(MouseButtonEvent event,boolean doubleClick) {
         int slot=layout.iconSlotAt(event.x(),event.y());
-        if (event.button()==0 && slot>=0 && !items.getOrDefault(slot,ItemStack.EMPTY).isEmpty()) {
+        if (event.button()==InputConstants.MOUSE_BUTTON_LEFT && slot>=0 && !items.getOrDefault(slot,ItemStack.EMPTY).isEmpty()) {
             accept.accept(icons.get(slot)); onClose();
             return true;
         }
@@ -66,6 +66,6 @@ public final class SlotIconScreen extends Screen {
         }
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
+    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

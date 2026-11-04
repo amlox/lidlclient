@@ -16,7 +16,6 @@ import java.util.Map;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.lidl.lidlclient.LidlClient;
-import org.lwjgl.glfw.GLFW;
 
 /** Watches existing menu hotkeys without registering competing key mappings. */
 public final class MenuCursor {
@@ -61,8 +60,8 @@ public final class MenuCursor {
     }
     private static boolean validKey(InputConstants.Key key) {
         return key != InputConstants.UNKNOWN
-                && (key.getType()!=InputConstants.Type.MOUSE || key.getValue()>=0 && key.getValue()<=GLFW.GLFW_MOUSE_BUTTON_LAST)
-                && !(key.getType() == InputConstants.Type.KEYSYM && key.getValue() == GLFW.GLFW_KEY_ESCAPE);
+                && (key.getType()!=InputConstants.Type.MOUSE || key.getValue()>=InputConstants.MOUSE_BUTTON_LEFT && key.getValue()<=InputConstants.MOUSE_BUTTON_8)
+                && !(key.getType() == InputConstants.Type.KEYBOARD && key.getValue() == InputConstants.KEY_ESCAPE);
     }
     private static Map<String,String> loadCommands() {
         Map<String,String> commands=new java.util.HashMap<>();
@@ -147,7 +146,7 @@ public final class MenuCursor {
     /** Snapshot only the server menu associated with this hotkey, after its contents have loaded. */
     public static void beforeScreenChange() {
         var client=Minecraft.getInstance();
-        if (observedScreen!=null && client.screen==observedScreen && client.getConnection()==observedConnection
+        if (observedScreen!=null && client.gui.screen()==observedScreen && client.getConnection()==observedConnection
                 && client.player!=null && client.level!=null
                 && KEYS.stream().anyMatch(key -> key.getName().equals(observedKey))) {
             Map<Integer,String> icons=new java.util.LinkedHashMap<>();
@@ -227,20 +226,19 @@ public final class MenuCursor {
         HOTKEY_OWNERS.clear();
         for (var key:KEYS) {
             var raw=key.getType()==InputConstants.Type.MOUSE ? SharedHotkeys.Key.mouse(key.getValue())
-                    : key.getType()==InputConstants.Type.SCANCODE
-                    ? SharedHotkeys.Key.scancode(key.getValue()) : SharedHotkeys.Key.symbol(key.getValue());
+                    : SharedHotkeys.Key.symbol(key.getValue());
             String owner=ID+":"+key.getName();
             HOTKEY_OWNERS.add(owner);
             RawKeyboard.HOTKEYS.bind(owner,List.of(raw),() -> {
                 var client=Minecraft.getInstance();
                 return enabled && client.isWindowActive() && client.player!=null
-                        && client.getConnection()!=null && client.screen==null && client.mouseHandler.isMouseGrabbed();
+                        && client.getConnection()!=null && client.gui.screen()==null && client.mouseHandler.isMouseGrabbed();
             },window -> keyPressed(window,key));
         }
     }
     public static void openBindings() {
         var client = Minecraft.getInstance();
-        client.setScreen(new MenuCursorKeysScreen(client.screen));
+        client.gui.setScreen(new MenuCursorKeysScreen(client.gui.screen()));
     }
     public static void initialize() {
         if (initialized) return;
@@ -260,7 +258,7 @@ public final class MenuCursor {
     }
     private static void updateWait(Minecraft client) {
         if (!WAIT.pending()) return;
-        var result = WAIT.update(System.nanoTime(),client.screen != null,
+        var result = WAIT.update(System.nanoTime(),client.gui.screen() != null,
                 client.player != null && client.getConnection() == connection,client.isWindowActive());
         if (result == CursorWait.Result.RESTORE) restore(client);
         if (result != CursorWait.Result.WAITING) {
@@ -272,7 +270,7 @@ public final class MenuCursor {
     private static void keyPressed(long window,InputConstants.Key key) {
         var client=Minecraft.getInstance();
         if (!enabled || window!=client.getWindow().handle() || !client.isWindowActive()
-                || client.player==null || client.getConnection()==null || client.screen!=null
+                || client.player==null || client.getConnection()==null || client.gui.screen()!=null
                 || !client.mouseHandler.isMouseGrabbed()
                 || !WAIT.begin(System.nanoTime(),(long)(timeout*1_000_000_000L))) return;
         connection=client.getConnection();
@@ -293,17 +291,17 @@ public final class MenuCursor {
     }
     public static boolean waitingInWorld() {
         var client = Minecraft.getInstance();
-        return enabled && WAIT.pending() && client.screen == null && client.player != null
+        return enabled && WAIT.pending() && client.gui.screen() == null && client.player != null
                 && client.getConnection() == connection && client.isWindowActive();
     }
     public static boolean blockingInput() { return legitMode && waitingInWorld(); }
     public static void screenChanged() {
         var client=Minecraft.getInstance();
-        if (client.screen != null) {
+        if (client.gui.screen() != null) {
             boolean handoff=WAIT.acceptScreen(System.nanoTime(),
                     enabled && activeKey!=null && client.player!=null && client.getConnection()==connection,
                     client.isWindowActive());
-            if (handoff && client.screen instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
+            if (handoff && client.gui.screen() instanceof net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<?> screen) {
                 if (screen.getMenu() instanceof net.minecraft.world.inventory.ChestMenu) {
                     observedScreen=screen; observedKey=activeKey; observedConnection=connection;
                 }
@@ -318,7 +316,7 @@ public final class MenuCursor {
     }
     public static void cancelAndRestore() {
         var client = Minecraft.getInstance();
-        boolean restore = client.screen == null && client.player != null && client.isWindowActive()
+        boolean restore = client.gui.screen() == null && client.player != null && client.isWindowActive()
                 && client.getConnection() == connection;
         if (WAIT.cancel()) {
             if (restore) restore(client);

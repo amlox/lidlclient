@@ -105,6 +105,6 @@ public final class PartyReplyScreen extends Screen {
         g.text(font,"Max in a row (0 = unlimited)",left,166,0xFFADBBD0);
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
+    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

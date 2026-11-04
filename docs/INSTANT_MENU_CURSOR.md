@@ -15,24 +15,23 @@ and are removed with the binding. Avoid assigning the same menu command in both
 mods, since both listeners remain active.
 
 Mouse 4 and Mouse 5 are supported: click **Add keybind**, then press the side
-button. Mouse 4 uses GLFW button index 3. Mouse input was previously rejected
-by the key validator and had no callback observer; both are now supported.
+button. Mouse buttons use Minecraft's SDL-backed InputConstants values.
 The triggering press is forwarded before the preview begins; subsequent world
 clicks are blocked while waiting, and releases always pass through.
 
 For blank-command bindings, keep your original mod's menu hotkey configured. Saved cursor keys and slot layouts
-carry forward automatically; no rebinding is needed. The cursor module now uses
+use named Minecraft key identifiers. Check bindings after upgrading; legacy platform-specific
+`scancode.*` bindings must be rebound for SDL. The cursor module now uses
 an independent **SharedHotkeys** framework, outside Minecraft's KeyMapping system.
 It never registers a competing binding, consumes a key press, clears a key state,
 or changes another mod's assigned keys.
 
-The framework observes the raw GLFW keyboard and mouse-button callbacks and always forwards the
-original callback with the same window, key, scancode, action, and modifiers.
-Actions run before the next mouse-movement pass, after the original callback has
-returned. Short press/release taps between frames are retained; repeats and
+The framework observes vanilla KeyboardHandler and MouseHandler events at entry,
+without consuming the triggering event. Actions run before the next mouse-movement
+pass, after normal input dispatch has returned. Short press/release taps between frames are retained; repeats and
 releases never retrigger. Multiple listeners may share a key. Removed/rebound
 listeners discard stale queued presses, and the input queue is bounded. Screen,
-focus, and gameplay eligibility are captured before the original callback runs
+focus, and gameplay eligibility are captured before vanilla handles the event
 and checked again when the action executes. A key that closes another GUI cannot
 accidentally start a cursor wait.
 
@@ -55,8 +54,7 @@ In-game checks: assign the same menu key in both mods, enable the cursor module,
 press and quickly release the key, and confirm the other mod still opens its menu
 while cursor movement does not turn the camera. Also test held keys, two different
 menu keys, no-response timeout, Escape, focus loss, reconnecting, and screen arrival
-without cursor recentering. Mods that inspect native GLFW cursor mode directly or
-replace callbacks without forwarding them still require testing with the actual
+without cursor recentering. Mods that replace SDL input dispatch or inspect native cursor state directly still require testing with the actual
 mod pack; unit/build checks cannot verify those integrations.
 
 ## Slot aim overlay

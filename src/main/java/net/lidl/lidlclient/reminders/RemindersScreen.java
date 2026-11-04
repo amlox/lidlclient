@@ -78,6 +78,6 @@ public final class RemindersScreen extends Screen {
         }
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() { Minecraft.getInstance().setScreen(null); }
+    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(null); }
     @Override public boolean isPauseScreen() { return false; }
 }

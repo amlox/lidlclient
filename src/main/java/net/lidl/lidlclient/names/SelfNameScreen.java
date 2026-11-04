@@ -1,5 +1,6 @@
 package net.lidl.lidlclient.names;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
@@ -7,7 +8,6 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 /** A real text input, with explicit save/cancel and a blank-name reset. */
 public final class SelfNameScreen extends Screen {
@@ -51,7 +51,7 @@ public final class SelfNameScreen extends Screen {
     }
 
     @Override public boolean keyPressed(KeyEvent event) {
-        if (event.key() == GLFW.GLFW_KEY_ENTER || event.key() == GLFW.GLFW_KEY_KP_ENTER) {
+        if (event.key() == InputConstants.KEY_RETURN || event.key() == InputConstants.KEY_NUMPADENTER) {
             save();
             return true;
         }
@@ -70,7 +70,7 @@ public final class SelfNameScreen extends Screen {
 
     @Override public void onClose() {
         NameChanger.setEditing(false);
-        Minecraft.getInstance().setScreen(parent);
+        Minecraft.getInstance().gui.setScreen(parent);
     }
 
     @Override public boolean isPauseScreen() { return false; }

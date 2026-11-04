@@ -60,8 +60,11 @@ class PetsClickTargetsTest {
                         "keyPress(JILnet/minecraft/client/input/KeyEvent;)V"),
                 "net/minecraft/client/MouseHandler", List.of(
                         "grabMouse()V", "releaseMouse()V",
-                        "onButton(JLnet/minecraft/client/input/MouseButtonInfo;I)V"),
-                "net/minecraft/client/Minecraft", List.of(
+                        "onButton(JLnet/minecraft/client/input/MouseButtonInfo;I)V",
+                        "onScroll(JDD)V", "handleAccumulatedMovement()V", "turnPlayer(D)V"),
+                "com/mojang/blaze3d/platform/InputConstants", List.of(
+                        "releaseMouse(Lcom/mojang/blaze3d/platform/Window;DD)V"),
+                "net/minecraft/client/gui/Gui", List.of(
                         "setScreen(Lnet/minecraft/client/gui/screens/Screen;)V"));
         for (var entry : expected.entrySet()) {
             Set<String> actual = methods(entry.getKey());

@@ -1,12 +1,12 @@
 package net.lidl.lidlclient.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.*;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.*;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 import java.util.function.IntConsumer;
 
 /** Drag saturation/brightness and hue; optional hex input stays in sync with the preview. */
@@ -45,17 +45,17 @@ public final class GuiColorPickerScreen extends Screen {
         else if(drag==2) hue=Math.clamp((x-left)/(size-1),0,1);updateHex();
     }
     @Override public boolean mouseClicked(MouseButtonEvent e,boolean doubleClick) {
-        if(e.button()==0) {
+        if(e.button()==InputConstants.MOUSE_BUTTON_LEFT) {
             if(inside(e.x(),e.y(),left,top,size,size)) drag=1;
             else if(inside(e.x(),e.y(),left,hueY,size,14)) drag=2;
             if(drag!=0) {pick(e.x(),e.y());return true;}
         }
         return super.mouseClicked(e,doubleClick);
     }
-    @Override public boolean mouseDragged(MouseButtonEvent e,double dx,double dy) {if(e.button()==0&&drag!=0) {pick(e.x(),e.y());return true;}return super.mouseDragged(e,dx,dy);}
+    @Override public boolean mouseDragged(MouseButtonEvent e,double dx,double dy) {if(e.button()==InputConstants.MOUSE_BUTTON_LEFT&&drag!=0) {pick(e.x(),e.y());return true;}return super.mouseDragged(e,dx,dy);}
     @Override public boolean mouseReleased(MouseButtonEvent e) {boolean was=drag!=0;drag=0;return was||super.mouseReleased(e);}
     private void save() {Integer rgb=GuiColor.parse(hex.getValue());if(rgb!=null) {accept.accept(rgb);onClose();}}
-    @Override public boolean keyPressed(KeyEvent e) {if(e.key()==GLFW.GLFW_KEY_ENTER||e.key()==GLFW.GLFW_KEY_KP_ENTER) {save();return true;}return super.keyPressed(e);}
+    @Override public boolean keyPressed(KeyEvent e) {if(e.key()==InputConstants.KEY_RETURN||e.key()==InputConstants.KEY_NUMPADENTER) {save();return true;}return super.keyPressed(e);}
     @Override public void extractRenderState(GuiGraphicsExtractor g,int mx,int my,float delta) {
         g.fill(0,0,width,height,0xEB0B101B);g.text(font,title,(width-font.width(title))/2,18,0xFFFFFFFF,true);
         net.lidl.lidlclient.gui.render.ColorPickerRenderer.draw(g,left,top,size,hueY,hue);
@@ -69,6 +69,6 @@ public final class GuiColorPickerScreen extends Screen {
         g.text(font,Component.literal(save.active?"Drag to choose":"Invalid hex code"),sideX,top+88,save.active?0xFFADBBD0:0xFFFF6666,false);
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() {Minecraft.getInstance().setScreen(parent);}
+    @Override public void onClose() {Minecraft.getInstance().gui.setScreen(parent);}
     @Override public boolean isPauseScreen() {return false;}
 }

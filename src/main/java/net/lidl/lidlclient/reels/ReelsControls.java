@@ -61,7 +61,7 @@ public final class ReelsControls implements ClientModInitializer {
     @Override public void onInitializeClient() {
         var category = KeyMapping.Category.register(Identifier.fromNamespaceAndPath("lidlclient", "reels"));
         for (int i = 0; i < 3; i++) KEYS[i] = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.lidlclient.reels." + i, InputConstants.Type.KEYSYM, InputConstants.UNKNOWN.getValue(), category));
+                "key.lidlclient.reels." + i, InputConstants.Type.KEYBOARD, InputConstants.UNKNOWN.getValue(), category));
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
             for (int i = 0; i < 3; i++) {
                 String saved = ClientConfig.string(MODULE, LABELS[i]);
@@ -76,7 +76,7 @@ public final class ReelsControls implements ClientModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> { if (bridge != null) bridge.close(); });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             boolean active = ready && enabled && bridge != null && client.player != null
-                    && client.screen == null && client.isWindowActive();
+                    && client.gui.screen() == null && client.isWindowActive();
             if (!active && bridge != null) bridge.clear();
             for (int i = 0; i < 3; i++) {
                 if (ready) {

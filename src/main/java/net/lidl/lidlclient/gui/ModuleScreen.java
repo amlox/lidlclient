@@ -8,7 +8,6 @@ import net.lidl.lidlclient.gui.settings.BooleanSetting;
 import net.lidl.lidlclient.gui.settings.KeybindSetting;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.input.KeyEvent;
-import org.lwjgl.glfw.GLFW;
 import net.lidl.lidlclient.gui.settings.ActionSetting;
 import net.lidl.lidlclient.gui.settings.ModuleSetting;
 import net.lidl.lidlclient.gui.settings.NumberSetting;
@@ -274,7 +273,7 @@ public class ModuleScreen extends Screen {
         updateSlide();
         clampScroll();
         // The star straddles the edge, so its complete hit area is tested first.
-        if (event.button() == 0 && contentHeight() > viewportHeight()
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && contentHeight() > viewportHeight()
                 && contains(event.x(), event.y(), panelX + panelWidth - 16, TOP, 23, viewportHeight())) {
             draggingScrollbar = true;
             scrollbarGrab = Math.abs(event.y() - indicatorY()) <= 10 ? event.y() - indicatorY() : 0;
@@ -284,7 +283,7 @@ public class ModuleScreen extends Screen {
         if (!contains(event.x(), event.y(), panelX, TOP, panelWidth, viewportHeight())) {
             return super.mouseClicked(event, doubleClick);
         }
-        if (event.button() == 0 && event.x() < panelX + RAIL) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && event.x() < panelX + RAIL) {
             for (int i = 0; i < categories.size(); i++) {
                 if (contains(event.x(), event.y(), panelX + 7,
                         TOP + i * CATEGORY_PITCH - categoryScroll, 34, 36)) {
@@ -306,8 +305,8 @@ public class ModuleScreen extends Screen {
             int x = animatedCardX(rowIndex);
             double y = TOP + row.top() - scroll;
             if (contains(event.x(), event.y(), x, y, cardWidth(), HEADER)) {
-                if (event.button() == 0) row.module().toggle();
-                else if (event.button() == 1 && !row.module().settings().isEmpty()) {
+                if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) row.module().toggle();
+                else if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT && !row.module().settings().isEmpty()) {
                     expandedId = row.module().id().equals(expandedId) ? null : row.module().id();
                     clampScroll();
                 }
@@ -319,23 +318,23 @@ public class ModuleScreen extends Screen {
                 ModuleSetting setting = row.module().settings().get(index);
                 if (setting instanceof KeybindSetting keybind) {
                     draggingNumber = null;
-                    if (event.button() == 0) bindingKey = keybind;
-                    else if (event.button() == 1) keybind.bind(InputConstants.UNKNOWN);
+                    if (event.button() == InputConstants.MOUSE_BUTTON_LEFT) bindingKey = keybind;
+                    else if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT) keybind.bind(InputConstants.UNKNOWN);
                 }
                 if (setting instanceof ActionSetting action) {
-                    if (event.button() == 0 && contains(event.x(), event.y(),
+                    if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && contains(event.x(), event.y(),
                             x + 6, y + HEADER + index * SETTING + 3,
                             cardWidth() - 12, SETTING - 6)) {
                         draggingNumber = null;
                         action.activate();
                     }
-                } else if (setting instanceof NumberSetting number && event.button() == 0) {
+                } else if (setting instanceof NumberSetting number && event.button() == InputConstants.MOUSE_BUTTON_LEFT) {
                     if (event.y() - y - HEADER - index * SETTING >= 21) {
                         draggingNumber = number;
                         dragNumber(event.x());
                     } else number.change(1);
-                } else if (event.button() == 0 || event.button() == 1) {
-                    setting.change(event.button() == 0 ? 1 : -1);
+                } else if (event.button() == InputConstants.MOUSE_BUTTON_LEFT || event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
+                    setting.change(event.button() == InputConstants.MOUSE_BUTTON_LEFT ? 1 : -1);
                 }
                 return true;
             }
@@ -365,8 +364,8 @@ public class ModuleScreen extends Screen {
     }
 
     @Override public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        if (event.button() == 0 && draggingNumber != null) { dragNumber(event.x()); return true; }
-        if (event.button() == 0 && draggingScrollbar) { dragScrollbar(event.y()); return true; }
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && draggingNumber != null) { dragNumber(event.x()); return true; }
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT && draggingScrollbar) { dragScrollbar(event.y()); return true; }
         return super.mouseDragged(event, deltaX, deltaY);
     }
 
@@ -393,10 +392,10 @@ public class ModuleScreen extends Screen {
             bindingKey = null;
             return true;
         }
-        if (event.key() == GLFW.GLFW_KEY_BACKSPACE || event.key() == GLFW.GLFW_KEY_DELETE) {
+        if (event.key() == InputConstants.KEY_BACKSPACE || event.key() == InputConstants.KEY_DELETE) {
             bindingKey.bind(InputConstants.UNKNOWN);
-        } else if (event.key() != GLFW.GLFW_KEY_UNKNOWN) {
-            bindingKey.bind(InputConstants.Type.KEYSYM.getOrCreate(event.key()));
+        } else if (event.key() != InputConstants.UNKNOWN.getValue()) {
+            bindingKey.bind(InputConstants.Type.KEYBOARD.getOrCreate(event.key()));
         }
         bindingKey = null;
         return true;

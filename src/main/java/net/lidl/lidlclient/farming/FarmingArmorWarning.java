@@ -42,7 +42,7 @@ public final class FarmingArmorWarning {
         AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
             Minecraft client = Minecraft.getInstance();
             if (player == client.player && level == client.level && enabled
-                    && client.player != null && client.level != null && client.screen == null
+                    && client.player != null && client.level != null && client.gui.screen() == null
                     && !client.player.isSpectator() && crop(level.getBlockState(pos))
                     && inGarden(client) && !allowedArmor(client)) {
                 visibleTicks = 40;
@@ -54,7 +54,7 @@ public final class FarmingArmorWarning {
                 Identifier.fromNamespaceAndPath("lidlclient", "farming_armor_warning"), (graphics, delta) -> {
                     Minecraft client = Minecraft.getInstance();
                     if (!enabled || visibleTicks == 0 || client.player == null
-                            || client.screen != null) return;
+                            || client.gui.screen() != null) return;
                     String message = "WRONG ARMOR";
                     graphics.pose().pushMatrix();
                     graphics.pose().translate(graphics.guiWidth() / 2f, graphics.guiHeight() / 2f);
@@ -66,7 +66,7 @@ public final class FarmingArmorWarning {
     }
 
     private static void tick(Minecraft client) {
-        if (!enabled || client.player == null || client.level == null || client.screen != null
+        if (!enabled || client.player == null || client.level == null || client.gui.screen() != null
                 || client.player.isSpectator() || !inGarden(client) || allowedArmor(client)) {
             visibleTicks = 0;
             return;

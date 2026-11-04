@@ -7,7 +7,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 /** A paged, persistent key list; no fixed number of bindings. */
 public final class MenuCursorKeysScreen extends Screen {
@@ -29,10 +28,10 @@ public final class MenuCursorKeysScreen extends Screen {
             int y = 66+row*24;
             var key=keys.get(index);
             addRenderableWidget(Button.builder(key.getDisplayName().copy().append(" · Slots"),b ->
-                    Minecraft.getInstance().setScreen(new SlotOverlayScreen(this,key)))
+                    Minecraft.getInstance().gui.setScreen(new SlotOverlayScreen(this,key)))
                     .bounds(left,y,120,20).build()).active = !capturing;
             addRenderableWidget(Button.builder(Component.literal(MenuCursor.command(key).isEmpty() ? "Command" : "Edit cmd"),b ->
-                    Minecraft.getInstance().setScreen(new MenuCommandScreen(this,key)))
+                    Minecraft.getInstance().gui.setScreen(new MenuCommandScreen(this,key)))
                     .bounds(left+124,y,68,20).build()).active = !capturing;
             addRenderableWidget(Button.builder(Component.literal("Remove"),b -> {
                 MenuCursor.removeKey(index); rebuildWidgets();
@@ -52,9 +51,7 @@ public final class MenuCursorKeysScreen extends Screen {
         if (!capturing) return super.keyPressed(event);
         capturing = false;
         if (!event.isEscape()) {
-            MenuCursor.addKey(event.key() == GLFW.GLFW_KEY_UNKNOWN
-                    ? InputConstants.Type.SCANCODE.getOrCreate(event.scancode())
-                    : InputConstants.Type.KEYSYM.getOrCreate(event.key()));
+            MenuCursor.addKey(InputConstants.getKey(event));
             page = Math.max(0,(MenuCursor.keys().size()-1)/perPage);
         }
         rebuildWidgets();
@@ -78,6 +75,6 @@ public final class MenuCursorKeysScreen extends Screen {
         if (MenuCursor.keys().isEmpty()) g.text(font,Component.literal("No keys added yet."),width/2-55,72,0xFFADBBD0,false);
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
+    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

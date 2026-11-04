@@ -47,7 +47,7 @@ public final class ZeroPingPets implements ClientModInitializer {
                                   int button, ContainerInput input) {
         Minecraft client = Minecraft.getInstance();
         if (!enabled || !onHypixel(client) || client.player == null || slot == null
-                || client.getConnection() == null || client.gameMode == null || client.screen != screen
+                || client.getConnection() == null || client.gameMode == null || client.gui.screen() != screen
                 || !(screen.getMenu() instanceof ChestMenu chest) || client.player.containerMenu != chest
                 || !chest.getCarried().isEmpty()) return false;
         var stack = slot.getItem();

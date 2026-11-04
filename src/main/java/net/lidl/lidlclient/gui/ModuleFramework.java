@@ -17,7 +17,7 @@ public final class ModuleFramework implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("lidl").executes(context -> {
                     Minecraft client = Minecraft.getInstance();
-                    client.schedule(() -> client.setScreen(new ModuleScreen()));
+                    client.schedule(() -> client.gui.setScreen(new ModuleScreen()));
                     return 1;
                 })));
     }

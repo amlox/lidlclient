@@ -1,5 +1,10 @@
 # Lidl Client
 
+## Minecraft 26.3 test port
+
+This branch targets Minecraft **26.3**, Fabric API **0.165.2+26.3**, and **JDK 25**.
+Use the existing project; no new IDEA project is required. See [the port test guide](docs/PORT_26_3.md).
+
 ## Setup
 
 For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.

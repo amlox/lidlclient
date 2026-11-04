@@ -29,7 +29,7 @@ public final class SharedHotkeys {
         bindings.put(owner,new Binding(List.copyOf(keys),active,onPress));
     }
     public void unbind(String owner) { bindings.remove(owner); }
-    /** Called by the native callback; defer actions until normal keyboard dispatch has returned. */
+    /** Called at the start of vanilla input dispatch; defer actions until normal keyboard dispatch has returned. */
     public void observe(long window,int key,int scancode,int action) {
         observe(window,key,scancode,-1,action);
     }
@@ -37,7 +37,7 @@ public final class SharedHotkeys {
         observe(window,-1,-1,button,action);
     }
     private void observe(long window,int key,int scancode,int button,int action) {
-        if (action!=1) return; // GLFW_PRESS only; repeats and releases still go to the original callback.
+        if (action!=1) return; // Press only (InputConstants.PRESS); repeats and releases remain with vanilla.
         for (var entry:bindings.entrySet()) {
             if (pending.size()>=64) return;
             Binding binding=entry.getValue();

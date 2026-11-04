@@ -56,12 +56,12 @@ public final class NameChanger {
 
     public static void openEditor() {
         Minecraft client = Minecraft.getInstance();
-        client.setScreen(new SelfNameScreen(client.screen));
+        client.gui.setScreen(new SelfNameScreen(client.gui.screen()));
     }
 
     private static void refreshChat() {
         Minecraft client = Minecraft.getInstance();
-        if (client != null && client.gui != null) client.gui.getChat().rescaleChat();
+        if (client != null && client.gui != null) client.gui.hud.getChat().rescaleChat();
     }
 
     public static void setEnabled(boolean value) {

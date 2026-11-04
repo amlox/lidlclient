@@ -34,7 +34,7 @@ public final class SlotOverlayScreen extends Screen {
             draft = draft.withRows(draft.rows()%6+1); rebuildWidgets();
         }).bounds(controls,34,120,20).build());
         addRenderableWidget(Button.builder(Component.literal("Brush "+GuiColor.hex(brush)),b ->
-                Minecraft.getInstance().setScreen(new GuiColorPickerScreen(this,"New slot colour",0xFF000000|brush,
+                Minecraft.getInstance().gui.setScreen(new GuiColorPickerScreen(this,"New slot colour",0xFF000000|brush,
                         SlotOverlay.DEFAULT_COLOUR,colour -> brush=colour & 0xFFFFFF)))
                 .bounds(controls+126,34,104,20).build());
         addRenderableWidget(Button.builder(Component.literal(iconMode?"Mode: Icons":"Mode: Colours"),b -> {
@@ -70,7 +70,7 @@ public final class SlotOverlayScreen extends Screen {
                 .bounds(width/2+44,bottom,76,20).build());
     }
     @Override public boolean mouseClicked(MouseButtonEvent event,boolean doubleClick) {
-        if (event.button() == 0 || event.button() == 1) {
+        if (event.button() == InputConstants.MOUSE_BUTTON_LEFT || event.button() == InputConstants.MOUSE_BUTTON_RIGHT) {
             for (int index=0;index<draft.rows()*9+36;index++) {
                 boolean inventory=index>=draft.rows()*9;
                 int slot=inventory?index-draft.rows()*9:index;
@@ -78,15 +78,15 @@ public final class SlotOverlayScreen extends Screen {
                 if (event.x()<x || event.x()>=x+layout.size() || event.y()<y || event.y()>=y+layout.size()) continue;
                 if (iconMode) {
                     final int chosen=inventory?slot+54:slot;
-                    if (event.button()==1) draft=draft.withIcon(chosen,null);
-                    else Minecraft.getInstance().setScreen(new SlotIconScreen(this,key,draft.rows(),
+                    if (event.button()==InputConstants.MOUSE_BUTTON_RIGHT) draft=draft.withIcon(chosen,null);
+                    else Minecraft.getInstance().gui.setScreen(new SlotIconScreen(this,key,draft.rows(),
                             icon -> draft=draft.withIcon(chosen,icon)));
-                } else if (event.button()==0) draft=draft.withColour(inventory,slot,
+                } else if (event.button()==InputConstants.MOUSE_BUTTON_LEFT) draft=draft.withColour(inventory,slot,
                         (inventory?draft.inventorySlots():draft.slots()).containsKey(slot)?null:brush);
                 else {
                     final int chosen=slot;
                     final boolean area=inventory;
-                    Minecraft.getInstance().setScreen(new GuiColorPickerScreen(this,"Slot "+(slot+1)+" colour",
+                    Minecraft.getInstance().gui.setScreen(new GuiColorPickerScreen(this,"Slot "+(slot+1)+" colour",
                             0xFF000000|(inventory?draft.inventorySlots():draft.slots()).getOrDefault(slot,brush),SlotOverlay.DEFAULT_COLOUR,
                             colour -> draft=draft.withColour(area,chosen,colour)));
                 }
@@ -123,6 +123,6 @@ public final class SlotOverlayScreen extends Screen {
         }
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
+    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

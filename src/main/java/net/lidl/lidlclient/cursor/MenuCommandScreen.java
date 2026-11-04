@@ -40,6 +40,6 @@ public final class MenuCommandScreen extends Screen {
         if (!error.isEmpty()) g.centeredText(font,error,width/2,94,0xFFFF7777);
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
+    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

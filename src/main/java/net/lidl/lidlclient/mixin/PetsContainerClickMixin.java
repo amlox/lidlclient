@@ -1,5 +1,6 @@
 package net.lidl.lidlclient.mixin;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.lidl.lidlclient.pets.ZeroPingPets;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -22,7 +23,7 @@ public abstract class PetsContainerClickMixin {
             at = @At("HEAD"), cancellable = true)
     private void lidlclient$selectPetImmediately(MouseButtonEvent event, boolean doubleClick,
                                                 CallbackInfoReturnable<Boolean> cir) {
-        if (event.button() != 0 || event.hasShiftDown()) return;
+        if (event.button() != InputConstants.MOUSE_BUTTON_LEFT || event.hasShiftDown()) return;
         Slot slot = getHoveredSlot(event.x(), event.y());
         if (slot != null && ZeroPingPets.beforeClick((AbstractContainerScreen<?>) (Object) this,
                 slot, slot.index, 0, ContainerInput.PICKUP)) cir.setReturnValue(true);

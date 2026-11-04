@@ -1,27 +1,16 @@
 package net.lidl.lidlclient.input;
 
-import org.lwjgl.glfw.GLFWKeyCallbackI;
-
-/** Wrap the callback being installed; retain and forward it, including modifiers and key releases. */
+/** Observe vanilla's SDL event dispatch without consuming keys or modifying key states. */
 public final class RawKeyboard {
-    public static final SharedHotkeys HOTKEYS=new SharedHotkeys();
-    public static org.lwjgl.glfw.GLFWMouseButtonCallbackI observeMouse(org.lwjgl.glfw.GLFWMouseButtonCallbackI original) {
-        return (window,button,action,modifiers) -> {
-            try { HOTKEYS.observeMouse(window,button,action); }
-            finally { original.invoke(window,button,action,modifiers); }
-        };
-    }
+    public static final SharedHotkeys HOTKEYS = new SharedHotkeys();
     private RawKeyboard() { }
-    public static GLFWKeyCallbackI observe(GLFWKeyCallbackI original) {
-        return (window,key,scancode,action,modifiers) -> {
-            // Capture eligibility before the original callback can open/close a screen.
-            // Observation queues work only; it cannot change Minecraft's cursor or key state.
-            try {
-                HOTKEYS.observe(window,key,scancode,action);
-            } finally {
-                // Forward even if our observer fails; never take ownership of the callback.
-                original.invoke(window,key,scancode,action,modifiers);
-            }
-        };
+
+    public static void observe(long window, int key, int action) {
+        // SDL keyboard keys are physical scancodes. Actions remain deferred until mouse movement.
+        HOTKEYS.observe(window, key, key, action);
+    }
+
+    public static void observeMouse(long window, int button, int action) {
+        HOTKEYS.observeMouse(window, button, action);
     }
 }

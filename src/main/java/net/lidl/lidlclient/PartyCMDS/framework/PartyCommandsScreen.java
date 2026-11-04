@@ -20,13 +20,13 @@ public final class PartyCommandsScreen extends Screen {
         page=Math.clamp(page,0,pages-1);
         int left=(width-296)/2;
         addRenderableWidget(Button.builder(Component.literal("Add command"),b -> Minecraft.getInstance()
-                .setScreen(new PartyReplyScreen(this,null))).bounds(left,34,116,20).build());
+                .gui.setScreen(new PartyReplyScreen(this,null))).bounds(left,34,116,20).build());
         for (int row=0;row<perPage && page*perPage+row<commands.size();row++) {
             String trigger=commands.get(page*perPage+row); int y=62+row*24;
             boolean reserved=trigger.equals("!ban") || trigger.equals("!help");
             String source=PartyReplyLibrary.isLocal(trigger)?"edited":"built-in";
             var edit=addRenderableWidget(Button.builder(Component.literal(trigger+" ["+source+"]"),b ->
-                    Minecraft.getInstance().setScreen(new PartyReplyScreen(this,trigger))).bounds(left,y,158,20).build());
+                    Minecraft.getInstance().gui.setScreen(new PartyReplyScreen(this,trigger))).bounds(left,y,158,20).build());
             edit.active=!reserved;
             addRenderableWidget(Button.builder(Component.literal(PartyCommands.isCommandConfigured(trigger)?"On":"Off"),b -> {
                 PartyCommands.setCommandEnabled(trigger,!PartyCommands.isCommandConfigured(trigger)); rebuildWidgets();
@@ -54,6 +54,6 @@ public final class PartyCommandsScreen extends Screen {
                 width/2,height-47,0xFFADBBD0);
         super.extractRenderState(g,mx,my,delta);
     }
-    @Override public void onClose() { Minecraft.getInstance().setScreen(parent); }
+    @Override public void onClose() { Minecraft.getInstance().gui.setScreen(parent); }
     @Override public boolean isPauseScreen() { return false; }
 }

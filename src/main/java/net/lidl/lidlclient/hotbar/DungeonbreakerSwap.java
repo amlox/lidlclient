@@ -43,7 +43,7 @@ public final class DungeonbreakerSwap implements ClientModInitializer {
     public void onInitializeClient() {
         KeyMapping.Category category = KeyMapping.Category.register(LidlClient.id("hotbar"));
         key = KeyMappingHelper.registerKeyMapping(new KeyMapping(
-                "key.lidlclient.dungeonbreaker_swap", InputConstants.Type.KEYSYM,
+                "key.lidlclient.dungeonbreaker_swap", InputConstants.Type.KEYBOARD,
                 InputConstants.UNKNOWN.getValue(), category));
 
         ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
@@ -66,7 +66,7 @@ public final class DungeonbreakerSwap implements ClientModInitializer {
                 }
             }
             while (key.consumeClick()) {
-                if (!enabled || client.player == null || client.screen != null) continue;
+                if (!enabled || client.player == null || client.gui.screen() != null) continue;
                 var inventory = client.player.getInventory();
                 List<String> names = new ArrayList<>(9);
                 for (int slot = 0; slot < 9; slot++) {
@@ -75,7 +75,7 @@ public final class DungeonbreakerSwap implements ClientModInitializer {
                 }
                 int slot = DungeonbreakerSlots.find(names, inventory.getSelectedSlot());
                 if (slot < 0) {
-                    client.gui.setOverlayMessage(Component.literal(
+                    client.gui.hud.setOverlayMessage(Component.literal(
                             "Dungeonbreaker is not in your hotbar."), false);
                     continue;
                 }

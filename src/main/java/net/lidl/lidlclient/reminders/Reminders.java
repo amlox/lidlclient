@@ -33,7 +33,7 @@ public final class Reminders {
     }
     public static void open() {
         var client=Minecraft.getInstance();
-        client.schedule(() -> client.setScreen(new RemindersScreen()));
+        client.schedule(() -> client.gui.setScreen(new RemindersScreen()));
     }
     public static void initialize() {
         if (initialized) return;
@@ -56,8 +56,8 @@ public final class Reminders {
             book().nextDue(System.currentTimeMillis()).ifPresent(entry -> {
                 Component message=Component.literal("[Lidl "+entry.kind()+"] "+entry.message());
                 client.player.sendSystemMessage(message);
-                client.gui.setOverlayMessage(message,false);
-                client.getToastManager().addToast(SystemToast.multiline(client,ALERT,
+                client.gui.hud.setOverlayMessage(message,false);
+                client.gui.toastManager().addToast(new SystemToast(ALERT,
                         Component.literal("Lidl "+entry.kind()),Component.literal(entry.message())));
                 client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.EXPERIENCE_ORB_PICKUP,1f));
                 remove(entry.id());

@@ -84,7 +84,7 @@ public class PartyCommands implements ClientModInitializer {
         commands.addAll(PartyReplyLibrary.all().keySet()); return List.copyOf(commands);
     }
     public static void openEditor() {
-        var client=Minecraft.getInstance(); client.setScreen(new PartyCommandsScreen(client.screen));
+        var client=Minecraft.getInstance(); client.gui.setScreen(new PartyCommandsScreen(client.gui.screen()));
     }
     public static boolean isEnabled() { loadSettings(); return SWITCHES.isEnabled(); }
     public static boolean isCommandConfigured(String command) {
@@ -528,7 +528,7 @@ public class PartyCommands implements ClientModInitializer {
     
         @Override
         public void onClose() {
-            Minecraft.getInstance().setScreen(new JoinMultiplayerScreen(new TitleScreen()));
+            Minecraft.getInstance().gui.setScreen(new JoinMultiplayerScreen(new TitleScreen()));
         }
     
         @Override

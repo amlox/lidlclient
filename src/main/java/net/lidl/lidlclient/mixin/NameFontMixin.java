@@ -2,9 +2,6 @@ package net.lidl.lidlclient.mixin;
 
 import net.lidl.lidlclient.names.*;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
-import org.joml.Matrix4fc;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 import org.spongepowered.asm.mixin.Mixin;
@@ -26,8 +23,7 @@ public abstract class NameFontMixin {
     @ModifyVariable(method = {
             "width(Lnet/minecraft/util/FormattedCharSequence;)I",
             "prepareText(Lnet/minecraft/util/FormattedCharSequence;FFIZZI)Lnet/minecraft/client/gui/Font$PreparedText;",
-            "drawInBatch(Lnet/minecraft/util/FormattedCharSequence;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
-            "drawInBatch8xOutline(Lnet/minecraft/util/FormattedCharSequence;FFIILorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;I)V"
+            "prepare8xTextOutline(Lnet/minecraft/util/FormattedCharSequence;FFI)Lnet/minecraft/client/gui/Font$PreparedText;"
     }, at = @At("HEAD"), argsOnly = true, ordinal = 0)
     private FormattedCharSequence lidlclient$styledNames(FormattedCharSequence text) { return DisplayNames.replace(text); }
 
@@ -48,14 +44,4 @@ public abstract class NameFontMixin {
         }
     }
 
-    @Inject(method = "drawInBatch(Ljava/lang/String;FFIZLorg/joml/Matrix4fc;Lnet/minecraft/client/renderer/MultiBufferSource;Lnet/minecraft/client/gui/Font$DisplayMode;II)V",
-            at = @At("HEAD"), cancellable = true)
-    private void lidlclient$rawWorldText(String text, float x, float y, int color, boolean shadow,
-            Matrix4fc pose, MultiBufferSource buffers, Font.DisplayMode mode, int background, int light, CallbackInfo ci) {
-        if (NameChanger.isRenderingEnabled() && !NameChanger.findMatches(text).isEmpty()) {
-            ((Font) (Object) this).drawInBatch(DisplayNames.fromString(text), x, y, color,
-                    shadow, pose, buffers, mode, background, light);
-            ci.cancel();
-        }
-    }
 }

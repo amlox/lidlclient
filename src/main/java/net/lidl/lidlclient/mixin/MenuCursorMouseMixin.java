@@ -7,7 +7,6 @@ import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Unique;
 import net.minecraft.client.input.MouseButtonInfo;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,10 +15,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(MouseHandler.class)
 public abstract class MenuCursorMouseMixin implements CursorMouseAccess {
-    @org.spongepowered.asm.mixin.injection.ModifyArg(method="setup",at=@At(value="INVOKE",target="Lcom/mojang/blaze3d/platform/InputConstants;setupMouseCallbacks(Lcom/mojang/blaze3d/platform/Window;Lorg/lwjgl/glfw/GLFWCursorPosCallbackI;Lorg/lwjgl/glfw/GLFWMouseButtonCallbackI;Lorg/lwjgl/glfw/GLFWScrollCallbackI;Lorg/lwjgl/glfw/GLFWDropCallbackI;)V"),index=2)
-    private org.lwjgl.glfw.GLFWMouseButtonCallbackI lidlclient$shareRawMouse(org.lwjgl.glfw.GLFWMouseButtonCallbackI original) {
-        return net.lidl.lidlclient.input.RawKeyboard.observeMouse(original);
-    }
     @Shadow private boolean mouseGrabbed;
     @Shadow private double xpos;
     @Shadow private double ypos;
@@ -30,7 +25,7 @@ public abstract class MenuCursorMouseMixin implements CursorMouseAccess {
         xpos=window.getScreenWidth()/2.0;
         ypos=window.getScreenHeight()/2.0;
         lidlclient$cursorReleased=true;
-        InputConstants.grabOrReleaseMouse(window,GLFW.GLFW_CURSOR_NORMAL,xpos,ypos);
+        InputConstants.releaseMouse(window,xpos,ypos);
     }
     @Override public boolean lidlclient$finishCursorRelease() {
         if (!lidlclient$cursorReleased) return false;
@@ -64,8 +59,9 @@ public abstract class MenuCursorMouseMixin implements CursorMouseAccess {
     }
     @Inject(method="onButton(JLnet/minecraft/client/input/MouseButtonInfo;I)V",at=@At("HEAD"),cancellable=true)
     private void lidlclient$ignoreWorldClicks(long window,MouseButtonInfo button,int action,CallbackInfo ci) {
+        net.lidl.lidlclient.input.RawKeyboard.observeMouse(window,button.button(),action);
         // Let releases through so a button held before the hotkey cannot get stuck.
-        if (action == GLFW.GLFW_PRESS && MenuCursor.waitingInWorld()) ci.cancel();
+        if (action == InputConstants.PRESS && MenuCursor.waitingInWorld()) ci.cancel();
     }
     @Inject(method="onScroll(JDD)V",at=@At("HEAD"),cancellable=true)
     private void lidlclient$ignoreWorldScroll(long window,double horizontal,double vertical,CallbackInfo ci) {

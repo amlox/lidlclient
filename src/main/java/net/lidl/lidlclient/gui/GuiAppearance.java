@@ -34,7 +34,7 @@ public final class GuiAppearance {
     public static void editBackground() { edit(false); }
     private static void edit(boolean isAccent) {
         Minecraft client = Minecraft.getInstance();
-        client.setScreen(new GuiColorPickerScreen(client.screen,
+        client.gui.setScreen(new GuiColorPickerScreen(client.gui.screen(),
                 isAccent ? "GUI accent colour" : "GUI background colour",
                 isAccent ? accent : background,
                 isAccent ? DEFAULT_ACCENT : DEFAULT_BACKGROUND,
